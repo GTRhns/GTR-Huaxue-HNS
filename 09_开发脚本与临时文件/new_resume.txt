@@ -1,0 +1,22 @@
+public taskPendingResume() {
+	rebuildSignupFromOnline();
+	if (g_iSignupCount < 1) {
+		ai_print(0, "换图后没有在线玩家, 取消开赛");
+		g_bPendingMatchStart = false;
+		g_bForceStart = false;
+		g_eState = SIGNUP_IDLE;
+		return;
+	}
+
+	g_bForceStart = true;
+	g_eState = SIGNUP_CLOSE;
+	ai_print(0, "人齐, 全员观战, 按换图前分组一个一个上场 (^3%d^1 人)", g_iSignupCount);
+	specEveryoneNow();
+	if (!g_bKeepSavedTeams)
+		shuffleTeamsNow();
+	g_bKeepSavedTeams = false;
+	buildPlaceQueue(g_iPlaceTeamSize);
+	showGroups(0);
+	startPlacingOneByOne();
+}
+

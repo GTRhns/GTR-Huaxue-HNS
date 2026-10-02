@@ -1,0 +1,16 @@
+[ru]
+GM_NIGTVIPS_PREFIX = [^3GM Night VIP^1]
+GM_NIGHTVIPS_ERROR = ^4Ошибка! ^3Новые значения^1: ^4nightvip_start ^1= ^323:00^1, ^4nightvip_end ^1= ^38:00
+GM_NIGTVIPS_DHUD_START = Включён ночной режим!
+GM_NIGTVIPS_CHAT_START = Включён режим ^3Ночной VIP^1! Вы получили ^4бесплатную VIPку^1!
+GM_NIGTVIPS_DHUD_END = Ночной режим завершён!
+GM_NIGTVIPS_CHAT_END = Ночной режим ^3Завершён^1! ^4VIP ^1доступ ^4снят^1!
+GM_NIGTVIPS_CHAT_IGN = Включён режим ^3Ночной VIP^1! Игроки получили ^4бесплатную VIPку^1!
+[en]
+GM_NIGTVIPS_PREFIX = [^3GM Night VIP^1]
+GM_NIGHTVIPS_ERROR = ^4Error! ^3New values^1: ^4nightvip_start ^1= ^323:00^1, ^4nightvip_end ^1= ^38:00
+GM_NIGTVIPS_DHUD_START = Night mode is on!
+GM_NIGTVIPS_CHAT_START = ^3Night VIP ^1mode is ^4on^1! You have received a ^4free VIP^1!
+GM_NIGTVIPS_DHUD_END = Night mode is complete!
+GM_NIGTVIPS_CHAT_END = Night mode is ^3complete^1! ^4VIP ^1access has been ^4removed^1!
+GM_NIGTVIPS_CHAT_IGN = ^3Night VIP ^1mode is ^4on^1! Players have received a ^4free VIP ^1!

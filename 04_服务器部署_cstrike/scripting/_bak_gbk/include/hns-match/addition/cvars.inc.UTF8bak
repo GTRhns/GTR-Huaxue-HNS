@@ -1,0 +1,228 @@
+static g_pRoundTime;
+
+enum _: CVARS
+{
+	RULES,
+	WINTIME,
+	MAXROUNDS,
+	DUELROUNDS,
+	HNSBOOST,
+	ONEHPMODE,
+	FLASH,
+	SMOKE,
+	LASTGRENADE,
+	Float:DMRESPAWN,
+	SUTVOTETIME,
+	SURTIMEDELAY,
+	RANDOMPICK,
+	Float:TIME_RANDOMPICK,
+	POINTS_DISTANCE_1,
+	POINTS_DISTANCE_2,
+	POINTS_DISTANCE_3,
+	Float:POINTS_ADD_1,
+	Float:POINTS_ADD_2,
+	Float:POINTS_ADD_3,
+	POINTS_B_DEBUG,
+	POINTS_D_DEBUG,
+	POINTSCAP_DETECT_TIME,
+	POINTSCAP_KNIFE_TIME,
+	Float:POINTSCAP_STAY_TIME,
+	Float:POINTSCAP_SCORE_6,
+	Float:POINTSCAP_SCORE_5,
+	Float:POINTSCAP_SCORE_4,
+	Float:POINTSCAP_SCORE_3,
+	POINTSCAP_KNIFE_BONUS,
+	POINTSCAP_TARGET_SCORE,
+	POINTSCAP_VAMP_INIT,
+	POINTSCAP_SOUND_CAPTURE,
+	POINTSCAP_SOUND_KNIFE,
+	POINTSCAP_SOUND_SCORE,
+	KNIFE_DISTANCE,           // 刀的攻击距离
+	KNIFE_VIEWMODEL_ENABLE,   // 是否显示刀模型（全局开关）
+	// String cvars — use pCvar index only, values stored in g_szXxx
+	KNIFEMAP,
+	PREFIX,
+	GAMENAME,
+	WATCHER_FLAG,
+	FULL_WATCHER_FLAG,
+	ADMIN_FLAG,
+	MATCH_ABOUT_SOUND,
+	MATCH_START_SOUND,
+}
+
+new pCvar[CVARS];
+new _:g_iSettings[CVARS];
+
+// Float cvars (separate from g_iSettings to avoid type conflict)
+new Float:g_flDmRespawn;
+new Float:g_flTimeRandomPick;
+new Float:g_flPointsAdd1;
+new Float:g_flPointsAdd2;
+new Float:g_flPointsAdd3;
+
+new g_szKnifeMap[24];
+new g_szPrefix[24];
+new g_szGameName[24];
+new g_szMatchAboutSound[128];
+new g_szMatchStartSound[128];
+new g_szWatcherFlag[4];
+new g_szFullWatcherFlag[4];
+new g_szAdminFlag[4];
+
+stock cvars_init() {
+	g_pRoundTime = get_cvar_pointer("mp_roundtime");
+
+	pCvar[RULES] = create_cvar("hns_rules", "0", FCVAR_NONE, "Match rules (0 - MR 1 - Timer)", true, 0.0, true, 1.0);
+	bind_pcvar_num(pCvar[RULES], g_iSettings[RULES]);
+
+	pCvar[WINTIME] = _:create_cvar("hns_wintime", "15", FCVAR_NONE, "Match wintime (Timer)", true, 0.0, true, 30.0);
+	bind_pcvar_float(pCvar[WINTIME], g_eMatchInfo[e_mWintime]);
+
+	pCvar[MAXROUNDS] = create_cvar("hns_rounds", "6", FCVAR_NONE, "Match rounds (MR)", true, 0.0, true, 10.0);
+	bind_pcvar_num(pCvar[MAXROUNDS], g_iSettings[MAXROUNDS]);
+
+	pCvar[DUELROUNDS] = create_cvar("hns_duel", "3", FCVAR_NONE, "Match 1x1 rounds", true, 0.0, true, 10.0);
+	bind_pcvar_num(pCvar[DUELROUNDS], g_iSettings[DUELROUNDS]);
+
+	pCvar[HNSBOOST] = create_cvar("hns_boost", "0", FCVAR_NONE, "Boost mode (0/1)", true, 0.0, true, 1.0);
+	bind_pcvar_num(pCvar[HNSBOOST], g_iSettings[HNSBOOST]);
+
+	pCvar[ONEHPMODE] = create_cvar("hns_onehpmode", "0", FCVAR_NONE, "One hp mode (0/1)", true, 0.0, true, 1.0);
+	bind_pcvar_num(pCvar[ONEHPMODE], g_iSettings[ONEHPMODE]);
+
+	pCvar[FLASH] = create_cvar("hns_flash", "1", FCVAR_NONE, "Flash num", true, 0.0, true, 10.0);
+	bind_pcvar_num(pCvar[FLASH], g_iSettings[FLASH]);
+
+	pCvar[SMOKE] = create_cvar("hns_smoke", "1", FCVAR_NONE, "Smoke num", true, 0.0, true, 10.0);
+	bind_pcvar_num(pCvar[SMOKE], g_iSettings[SMOKE]);
+
+	pCvar[LASTGRENADE] = create_cvar("hns_last", "1", FCVAR_NONE, "Last grenade TT (0/1)", true, 0.0, true, 1.0);
+	bind_pcvar_num(pCvar[LASTGRENADE], g_iSettings[LASTGRENADE]);
+
+	// ★ 隐藏敌人血量 (0=不隐藏 1=比赛时隐藏 2=始终隐藏)
+	create_cvar("hns_hide_enemy_hp", "1", FCVAR_NONE, "Hide enemy HP (0=off 1=match only 2=always)", true, 0.0, true, 2.0);
+
+	pCvar[DMRESPAWN] = _:create_cvar("hns_dmrespawn", "3", FCVAR_NONE, "Respawn deathmatch time", true, 0.0, true, 10.0);
+	bind_pcvar_float(_:pCvar[DMRESPAWN], g_flDmRespawn);
+
+	pCvar[SUTVOTETIME] = create_cvar("hns_survotetime", "10", FCVAR_NONE, "Surrender vote time", true, 0.0, true, 20.0);
+	bind_pcvar_num(pCvar[SUTVOTETIME], g_iSettings[SUTVOTETIME]);
+
+	pCvar[SURTIMEDELAY] = create_cvar("hns_surtimedelay", "120", FCVAR_NONE, "Surrender time delay", true, 0.0);
+	bind_pcvar_num(pCvar[SURTIMEDELAY], g_iSettings[SURTIMEDELAY]);
+
+	pCvar[RANDOMPICK] = create_cvar("hns_randompick", "1", FCVAR_NONE, "Random pick", true, 0.0, true, 1.0);
+	bind_pcvar_num(pCvar[RANDOMPICK], g_iSettings[RANDOMPICK]);
+
+	pCvar[TIME_RANDOMPICK] = _:create_cvar("hns_time_randompick", "25", FCVAR_NONE, "Time Random pick", true, 10.0, true, 45.0);
+	bind_pcvar_float(_:pCvar[TIME_RANDOMPICK], g_flTimeRandomPick);
+
+	pCvar[KNIFEMAP] = create_cvar("hns_knifemap", "35hp_2", FCVAR_NONE, "Knife map");
+	bind_pcvar_string(pCvar[KNIFEMAP], g_szKnifeMap, charsmax(g_szKnifeMap));
+
+	pCvar[PREFIX] = create_cvar("hns_prefix", "HNS", FCVAR_NONE, "System prefix");
+	bind_pcvar_string(pCvar[PREFIX], g_szPrefix, charsmax(g_szPrefix));
+
+	pCvar[GAMENAME] = create_cvar("hns_gamename", "Hide'n'Seek", FCVAR_NONE, "Game name");
+	bind_pcvar_string(pCvar[GAMENAME], g_szGameName, charsmax(g_szGameName));
+
+	pCvar[WATCHER_FLAG] = create_cvar("hns_watcher_flag", "f", FCVAR_NONE, "Watcher access flag");
+	bind_pcvar_string(pCvar[WATCHER_FLAG], g_szWatcherFlag, charsmax(g_szWatcherFlag));
+
+	pCvar[FULL_WATCHER_FLAG] = create_cvar("hns_fullwatcher_flag", "m", FCVAR_NONE, "Full watcher access flag");
+	bind_pcvar_string(pCvar[FULL_WATCHER_FLAG], g_szFullWatcherFlag, charsmax(g_szFullWatcherFlag));
+
+	// 比赛即将开始声音 (缓冲期开场播报, 放在 sound/ 目录)
+	pCvar[MATCH_ABOUT_SOUND] = create_cvar("hns_match_about_sound", "hns/match_about.wav", FCVAR_NONE, "Match about-to-start sound (path relative to sound/)");
+	bind_pcvar_string(pCvar[MATCH_ABOUT_SOUND], g_szMatchAboutSound, charsmax(g_szMatchAboutSound));
+
+	// 比赛开始声音 (正式开赛播报, 放在 sound/ 目录)
+	pCvar[MATCH_START_SOUND] = create_cvar("hns_match_start_sound", "hns/match_start.wav", FCVAR_NONE, "Match start sound (path relative to sound/)");
+	bind_pcvar_string(pCvar[MATCH_START_SOUND], g_szMatchStartSound, charsmax(g_szMatchStartSound));
+
+	pCvar[ADMIN_FLAG] = create_cvar("hns_admin_flag", "d", FCVAR_NONE, "Admin access flag");
+	bind_pcvar_string(pCvar[ADMIN_FLAG], g_szAdminFlag, charsmax(g_szAdminFlag));
+
+	pCvar[POINTS_DISTANCE_1] = create_cvar("hns_points_distance_1", "150", FCVAR_NONE, "Points 1vs1 distance 1 (units)", true, 0.0, true, 2000.0);
+	bind_pcvar_num(pCvar[POINTS_DISTANCE_1], g_iSettings[POINTS_DISTANCE_1]);
+
+	pCvar[POINTS_DISTANCE_2] = create_cvar("hns_points_distance_2", "250", FCVAR_NONE, "Points 1vs1 distance 2 (units)", true, 0.0, true, 2000.0);
+	bind_pcvar_num(pCvar[POINTS_DISTANCE_2], g_iSettings[POINTS_DISTANCE_2]);
+
+	pCvar[POINTS_DISTANCE_3] = create_cvar("hns_points_distance_3", "350", FCVAR_NONE, "Points 1vs1 distance 3 (units)", true, 0.0, true, 2000.0);
+	bind_pcvar_num(pCvar[POINTS_DISTANCE_3], g_iSettings[POINTS_DISTANCE_3]);
+
+	pCvar[POINTS_ADD_1] = _:create_cvar("hns_points_add_1", "0.25", FCVAR_NONE, "Points 1vs1 add for distance 1", true, 0.0, true, 5.0);
+	bind_pcvar_float(_:pCvar[POINTS_ADD_1], g_flPointsAdd1);
+
+	pCvar[POINTS_ADD_2] = _:create_cvar("hns_points_add_2", "0.1", FCVAR_NONE, "Points 1vs1 add for distance 2", true, 0.0, true, 5.0);
+	bind_pcvar_float(_:pCvar[POINTS_ADD_2], g_flPointsAdd2);
+
+	pCvar[POINTS_ADD_3] = _:create_cvar("hns_points_add_3", "0.05", FCVAR_NONE, "Points 1vs1 add for distance 3", true, 0.0, true, 5.0);
+	bind_pcvar_float(_:pCvar[POINTS_ADD_3], g_flPointsAdd3);
+
+	pCvar[POINTS_B_DEBUG] = create_cvar("hns_points_b_debug", "1", FCVAR_NONE, "Points 1vs1 beam debug (0/1)", true, 0.0, true, 1.0);
+	bind_pcvar_num(pCvar[POINTS_B_DEBUG], g_iSettings[POINTS_B_DEBUG]);
+
+	pCvar[POINTS_D_DEBUG] = create_cvar("hns_points_d_debug", "0", FCVAR_NONE, "Points 1vs1 distance lines debug (0/1)", true, 0.0, true, 1.0);
+	bind_pcvar_num(pCvar[POINTS_D_DEBUG], g_iSettings[POINTS_D_DEBUG]);
+
+	pCvar[POINTSCAP_DETECT_TIME] = create_cvar("hns_pointscap_detect_time", "50", FCVAR_NONE, "PointScap detect time (includes freeze)", true, 10.0, true, 120.0);
+	bind_pcvar_num(pCvar[POINTSCAP_DETECT_TIME], g_iPointScapDetectTime);
+
+	pCvar[POINTSCAP_KNIFE_TIME] = create_cvar("hns_pointscap_knife_time", "40", FCVAR_NONE, "PointScap knife bonus time (excludes freeze)", true, 10.0, true, 90.0);
+	bind_pcvar_num(pCvar[POINTSCAP_KNIFE_TIME], g_iPointScapKnifeTime);
+
+	pCvar[POINTSCAP_STAY_TIME] = _:create_cvar("hns_pointscap_stay_time", "1.0", FCVAR_NONE, "PointScap stay time to capture", true, 0.5, true, 5.0);
+	bind_pcvar_float(_:pCvar[POINTSCAP_STAY_TIME], g_flPointScapStayTime);
+
+	// ★ 6人点已移除，统一使用5人分数 (hns_pointscap_score_5)
+
+	pCvar[POINTSCAP_SCORE_5] = _:create_cvar("hns_pointscap_score_5", "2.0", FCVAR_NONE, "PointScap 5-man point score", true, 0.0, true, 10.0);
+	bind_pcvar_float(_:pCvar[POINTSCAP_SCORE_5], g_flPointScapScore5);
+
+	pCvar[POINTSCAP_SCORE_4] = _:create_cvar("hns_pointscap_score_4", "1.0", FCVAR_NONE, "PointScap 4-man point score", true, 0.0, true, 10.0);
+	bind_pcvar_float(_:pCvar[POINTSCAP_SCORE_4], g_flPointScapScore4);
+
+	pCvar[POINTSCAP_SCORE_3] = _:create_cvar("hns_pointscap_score_3", "0.5", FCVAR_NONE, "PointScap 3-man point score", true, 0.0, true, 10.0);
+	bind_pcvar_float(_:pCvar[POINTSCAP_SCORE_3], g_flPointScapScore3);
+
+	pCvar[POINTSCAP_KNIFE_BONUS] = create_cvar("hns_pointscap_knife_bonus", "2", FCVAR_NONE, "PointScap CT knife all-kill bonus", true, 0.0, true, 10.0);
+	bind_pcvar_num(pCvar[POINTSCAP_KNIFE_BONUS], g_iPointScapKnifeBonus);
+
+	pCvar[POINTSCAP_TARGET_SCORE] = create_cvar("hns_pointscap_target_score", "40", FCVAR_NONE, "PointScap Ascension target score", true, 5.0, true, 100.0);
+	bind_pcvar_num(pCvar[POINTSCAP_TARGET_SCORE], g_iPointScapTargetScore);
+
+	pCvar[POINTSCAP_VAMP_INIT] = create_cvar("hns_pointscap_vamp_init", "40", FCVAR_NONE, "PointScap Vampire initial score", true, 5.0, true, 100.0);
+	bind_pcvar_num(pCvar[POINTSCAP_VAMP_INIT], g_iPointScapVampInit);
+
+	pCvar[POINTSCAP_SOUND_CAPTURE] = create_cvar("hns_pointscap_sound_capture", "1", FCVAR_NONE, "PointScap capture sound (0/1)", true, 0.0, true, 1.0);
+	bind_pcvar_num(pCvar[POINTSCAP_SOUND_CAPTURE], g_iPointScapSoundCapture);
+
+	pCvar[POINTSCAP_SOUND_KNIFE] = create_cvar("hns_pointscap_sound_knife", "1", FCVAR_NONE, "PointScap knife bonus sound (0/1)", true, 0.0, true, 1.0);
+	bind_pcvar_num(pCvar[POINTSCAP_SOUND_KNIFE], g_iPointScapSoundKnife);
+
+	pCvar[POINTSCAP_SOUND_SCORE] = create_cvar("hns_pointscap_sound_score", "1", FCVAR_NONE, "PointScap score sound (0/1)", true, 0.0, true, 1.0);
+	bind_pcvar_num(pCvar[POINTSCAP_SOUND_SCORE], g_iPointScapSoundScore);
+
+	pCvar[KNIFE_DISTANCE] = create_cvar("hns_knife_distance", "64", FCVAR_NONE, "Knife attack distance (units)", true, 32.0, true, 128.0);
+	bind_pcvar_num(pCvar[KNIFE_DISTANCE], g_iSettings[KNIFE_DISTANCE]);
+
+	pCvar[KNIFE_VIEWMODEL_ENABLE] = create_cvar("hns_knife_viewmodel", "1", FCVAR_NONE, "Show knife viewmodel (0=hide, 1=show)", true, 0.0, true, 1.0);
+	bind_pcvar_num(pCvar[KNIFE_VIEWMODEL_ENABLE], g_iSettings[KNIFE_VIEWMODEL_ENABLE]);
+
+	// 穿透 CVAR 由外部插件托管，不再内部维护
+}
+
+stock cvar_update_wintime(Float:flWintime) {
+	g_eMatchInfo[e_mWintime] = flWintime;
+	set_pcvar_float(pCvar[WINTIME], flWintime);
+}
+
+stock Float:get_round_time() {
+	return get_pcvar_float(g_pRoundTime);
+}
+
+stock set_round_time(str[]) {
+	set_pcvar_float(g_pRoundTime, str_to_float(str));
+}

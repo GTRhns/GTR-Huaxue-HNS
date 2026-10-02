@@ -1,0 +1,33 @@
+HnsMatchSystem.sma —— Hide'n'Seek 比赛主系统 版本说明
+====================================================
+作者: OpenHNS（Garey/Cultura 等） 版本号: 2.0.5
+作用: 比赛状态机/模式管理/菜单/native 提供方; AI 报名插件通过 native 驱动它开赛
+
+4 份变体内容各不相同(md5 全异), 请按用途取用:
+
+1. v2.0.5_cstrikeScripting_旧/
+   - 原文件: cstrike/scripting/HnsMatchSystem.sma
+   - 18961 字节, 2026-09-30 03:34
+   - cstrike/scripting 工作副本, 相对较早
+
+2. v2.0.5_source/
+   - 原文件: source/HnsMatchSystem.sma
+   - 19187 字节, 2026-09-30 22:25
+   - 交付源码, 含 AI 报名所需 3 个新 native:
+     hns_ai_enter_lobby / hns_external_set_sponsor_name / hns_begin_external_match
+
+3. v2.0.5_cstrikeAddons/
+   - 原文件: cstrike/addons/amxmodx/scripting/HnsMatchSystem.sma
+   - 18981 字节, 2026-09-30 22:25
+   - 服务器运行侧副本(与 source 有差异)
+
+4. v2.0.5_scripting最新/
+   - 原文件: scripting/HnsMatchSystem.sma
+   - 19202 字节, 2026-10-01 02:06
+   - 最新开发版, 尚未与 source 同步
+
+改动时注意:
+- include/hns_matchsystem.inc 必须与 sma 里的 native 一致(编译用 include/ 那套)
+- 不要用 cstrike/scripting/include/hns_matchsystem.inc(旧 enum 版)
+- native_begin_external_match 会先把当前 T/CT 标成 PLAYER_MATCH 再 mix_start,
+  否则 forceUnmatchedToSpec 会把 AI 刚上场的人再踢回观战

@@ -1,0 +1,12 @@
+start=40358
+end=55331
+oldLen=69345
+newLen=68565
+midLen=14032
+hasMenuszTitle=False
+hasMenuGold=True
+hasMenuConfirmUpgrade=True
+hasCurMatch=True
+dupSqlCount=1
+dupMenuAdmin=1
+dupPool=1

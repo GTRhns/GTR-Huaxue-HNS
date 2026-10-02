@@ -1,0 +1,67 @@
+[en]
+TS_MODE_DESC = Select mode. 0 - Normal, 1 - Random team
+TS_SPEC_DESC = Spectator mode. 0 - Always, 1 - Only after join
+TS_APPEARANCE_DESC = Select Appearance. 1 - On, 0 - Off
+TS_UNLIMITED_DESC = Unlimited choose team. 1 - On, 0 - Off
+TS_TIME_LIMIT_DESC = Limit choosing a team by time. 0.0 - Off
+TS_AUTOJOIN_DESC = Auto select team. 1 - On, 0 - Off
+TS_FLAGS_DESC = Admin flags for spectator mode. "" - Off
+TS_AUTOJOIN_IMMUNITY_DESC = Immunity flags to prevent auto select team. "" - Off
+TS_SELECT_TEAM = Select a team
+TS_ENTER_GAME = Enter the game
+TS_CHANGE_TEAM = Change team
+TS_TEAM_T = Terrorist
+TS_TEAM_CT = Counter-Terrorist
+TS_SPECTATOR = Spectator
+TS_CLOSE = Close
+
+[ru]
+TS_MODE_DESC = Режим меню. 0 - Нормальное, 1 - Случайная команда
+TS_SPEC_DESC = Режим наблюдателя. 0 - Всегда, 1 - Только после входа
+TS_APPEARANCE_DESC = Выбор класса. 1 - Вкл., 0 - Выкл.
+TS_UNLIMITED_DESC = Безлимитный выбор команды. 1 - Вкл., 0 - Выкл.
+TS_TIME_LIMIT_DESC = Ограничить выбор команды по времени. 0.0 - Выкл.
+TS_AUTOJOIN_DESC = Автовход. 1 - On, 0 - Off
+TS_FLAGS_DESC = Флаги админа для режима наблюдателя. "" - Выкл.
+TS_AUTOJOIN_IMMUNITY_DESC = Флаги иммунитета автовхода. "" - Выкл.
+TS_SELECT_TEAM = Выберите команду
+TS_ENTER_GAME = Войти в игру
+TS_CHANGE_TEAM = Сменить команду
+TS_TEAM_T = Террористы
+TS_TEAM_CT = Контр-Террористы
+TS_SPECTATOR = Наблюдатели
+TS_CLOSE = Закрыть
+
+[ua]
+TS_MODE_DESC = Режим меню. 0 - Нормальне, 1 - Випадкова команда
+TS_SPEC_DESC = Режим наглядача. 0 - Завжди, 1 - Тільки после входу
+TS_APPEARANCE_DESC = Вибор класу. 1 - Вкл., 0 - Викл.
+TS_UNLIMITED_DESC = Безлімітний вибір команди. 1 - Вкл, 0 - Викл.
+TS_TIME_LIMIT_DESC = Обмежити вибір команди по часу. 0.0 - Викл.
+TS_AUTOJOIN_DESC = Автовхід. 1 - On, 0 - Off
+TS_FLAGS_DESC = Флаги адміна для режиму наглядача. "" - Викл.
+TS_AUTOJOIN_IMMUNITY_DESC = Флаги імунітету автовходу. "" - Выкл.
+TS_SELECT_TEAM = Виберіть команду
+TS_ENTER_GAME = Увійти в гру
+TS_CHANGE_TEAM = Змінити команду
+TS_TEAM_T = Терористи
+TS_TEAM_CT = Контр-Терористи
+TS_SPECTATOR = Спостерігачі
+TS_CLOSE = Закрити
+
+[de]
+TS_MODE_DESC = Auswahlmodus. 0 - Normal, 1 - Zufälliges Team
+TS_SPEC_DESC = Spectatormodus. 0 - Immer, 1 - Erst nach Beitritt
+TS_APPEARANCE_DESC = Design wählen. 1 - An, 0 - Aus
+TS_UNLIMITED_DESC = Unbegrenzte Auswahl. 1 - An, 0 - Aus
+TS_TIME_LIMIT_DESC = Teamauswahl nach Zeit begrenzen. 0.0 - Aus
+TS_AUTOJOIN_DESC = Team automatisch beitreten. 1 - On, 0 - Aus
+TS_FLAGS_DESC = Admin-Flags für Spectatormodus. "" - Aus
+TS_AUTOJOIN_IMMUNITY_DESC = Mit Immunitäts-Flags automatisch beitreten. "" - Aus
+TS_SELECT_TEAM = Team wählen
+TS_ENTER_GAME = Spiel beitreten
+TS_CHANGE_TEAM = Team wechseln
+TS_TEAM_T = Terrorist
+TS_TEAM_CT = Counter-Terrorist
+TS_SPECTATOR = Spectator
+TS_CLOSE = Schließen

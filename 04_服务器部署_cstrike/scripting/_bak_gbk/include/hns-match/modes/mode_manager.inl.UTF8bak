@@ -1,0 +1,199 @@
+new Float:flWaitPlayersTime;
+
+public mode_init() {
+	set_task(30.0, "Task_CheckTime", 120, .flags = "b");
+
+	set_task(0.5, "delayed_mode");
+}
+
+public delayed_mode() {
+	PDS_GetCell("match_mode", g_iCurrentMode);
+	PDS_GetCell("match_gameplay", g_iCurrentGameplay);
+	PDS_GetCell("match_status", g_iMatchStatus);
+	PDS_GetCell("match_rules", g_iCurrentRules);
+
+	// ★ v5.6 FIX: AI 系统换图后自动启动比赛
+	// AI 系统在换图前写入 hns_ai_match_start.cfg，但 delayed_mode 从 PDS 读到旧状态
+	// 导致直接进训练模式，比赛永远不启动
+	new szAICfg[256];
+	get_configsdir(szAICfg, charsmax(szAICfg));
+	add(szAICfg, charsmax(szAICfg), "/hns_ai_match_start.cfg");
+	if (file_exists(szAICfg)) {
+		// 解析 AI 配置获取模式
+		new iAIMode = -1;
+		new f = fopen(szAICfg, "r");
+		if (f) {
+			new szLine[128], szKey[32], szVal[32];
+			while (!feof(f) && fgets(f, szLine, charsmax(szLine))) {
+				trim(szLine);
+				parse(szLine, szKey, charsmax(szKey), szVal, charsmax(szVal));
+				if (equal(szKey, "hns_match_mode")) iAIMode = str_to_num(szVal);
+			}
+			fclose(f);
+		}
+
+		// 加载玩家列表
+		PDS_GetString("playerslist", g_szBuffer, charsmax(g_szBuffer));
+		if (g_szBuffer[0]) {
+			loadPlayers();
+		}
+
+		// 根据 AI 模式设置比赛规则
+		// AI mode: 0=MR 1=Timer 2=Duel 3=PointScap 4=Vampire 5=Rounds
+		switch (iAIMode) {
+			case 0: g_iCurrentRules = RULES_MR;
+			case 1: g_iCurrentRules = RULES_TIMER;
+			case 2: g_iCurrentRules = RULES_DUEL;
+			case 3: g_iCurrentRules = RULES_POINTSCAP;
+			case 4: g_iCurrentRules = RULES_VAMP;
+			case 5: g_iCurrentMode = MODE_ROUNDS;
+			default: g_iCurrentRules = RULES_MR;
+		}
+		g_iMatchStatus = MATCH_MAPPICK;
+		g_iCurrentMode = MODE_TRAINING;
+		g_iCurrentGameplay = GAMEPLAY_HNS;
+
+		server_print("[HNS] AI match start detected, mode=%d, players=%d", iAIMode, g_szBuffer[0] ? ArraySize(g_aPlayersLoadData) : 0);
+
+		// 删除配置文件避免重复触发
+		delete_file(szAICfg);
+	}
+
+	if (hns_is_knife_map()) {
+		// ★ v5.6: 搬運 v2.1.0 邏輯 — 拼刀圖只進訓練模式，不自動啟動拼刀
+		// 管理員通過菜單 /kniferound 手動啟動拼刀輪
+		g_iMatchStatus = MATCH_NONE;
+		training_start();
+	} else if (g_iMatchStatus == MATCH_MAPPICK || g_iMatchStatus == MATCH_WAITCONNECT) {
+		g_iMatchStatus = MATCH_WAITCONNECT;
+		training_start();
+		if (g_aPlayersLoadData) {
+			if (hns_cup_enabled()) {
+				flWaitPlayersTime = 245.0;
+				set_task(1.0, "wait_players_cup", .id = TASK_WAIT_CUP, .flags = "b");
+			} else {
+				flWaitPlayersTime = 180.0;
+				set_task(1.0, "wait_players", .id = TASK_WAIT, .flags = "b");
+			}
+		}
+	} else if (g_iCurrentGameplay == GAMEPLAY_HNS && g_iCurrentMode == MODE_PUB) {
+		pub_start();
+	} else if (g_iCurrentGameplay == GAMEPLAY_HNS && g_iCurrentMode == MODE_DM) {
+		dm_start();
+	} else if (g_iCurrentGameplay == GAMEPLAY_HNS && g_iCurrentMode == MODE_VAMP) {
+		vamp_start();
+	} else if (g_iCurrentGameplay == GAMEPLAY_HNS && g_iCurrentMode == MODE_ROUNDS) {
+		// rounds_start() 在 mode_rounds.inl 中定义，编译时需单独包含
+	} else {
+		// Fix: if saved state is knife mode but current map is not a knife map, reset
+		if (g_iCurrentMode == MODE_KNIFE || g_iCurrentGameplay == GAMEPLAY_KNIFE) {
+			g_iCurrentMode = MODE_TRAINING;
+			g_iCurrentGameplay = GAMEPLAY_HNS;
+			g_iMatchStatus = MATCH_NONE;
+			g_bPlayersListLoaded = false;
+			if (g_aPlayersLoadData) {
+				ArrayClear(g_aPlayersLoadData);
+			}
+			set_pcvar_string(pCvar[GAMENAME], "Hide'n'Seek");
+			update_hostname_prefix("");
+		}
+		if (!g_iSettings[RULES]) {
+			g_iCurrentRules = RULES_MR;
+		} else {
+			g_iCurrentRules = RULES_TIMER;
+		}
+		g_iMatchStatus = MATCH_NONE;
+		training_start();
+	}
+}
+
+public wait_players() {
+	if (g_iMatchStatus == MATCH_STARTED) {
+		if(task_exists(TASK_WAIT)) {
+			remove_task(TASK_WAIT);
+		}
+		return PLUGIN_HANDLED;
+	}
+
+	if (task_exists(TASK_STARTED)) {
+		setTaskHud(0, 0.0, 1, 255, 255, 255, 1.0, "最后一回合!");
+	} else {
+		new iNum = get_num_players_in_match();
+
+		if (g_aPlayersLoadData == Invalid_Array) return PLUGIN_HANDLED;
+
+		if (iNum >= ArraySize(g_aPlayersLoadData)) {
+			set_task(15.0, "mix_start", TASK_STARTED);
+			return PLUGIN_HANDLED;
+		}
+
+		flWaitPlayersTime -= 1.0;
+
+		new sTime[24];
+		fnConvertTime(flWaitPlayersTime, sTime, charsmax(sTime));
+		setTaskHud(0, 0.0, 1, 255, 255, 255, 1.0, "等待玩家加入... (%s) (还差 %d 人)", sTime, ArraySize(g_aPlayersLoadData) - iNum);
+
+		if (flWaitPlayersTime <= 0.0) {
+			if(task_exists(TASK_WAIT)) {
+				remove_task(TASK_WAIT);
+			}
+			// Auto-start match when wait time expires
+			mix_start();
+		}
+	}
+
+	return PLUGIN_HANDLED;
+}
+
+public wait_players_cup() {
+	if (g_iMatchStatus == MATCH_STARTED) {
+		if(task_exists(TASK_WAIT_CUP)) {
+			remove_task(TASK_WAIT_CUP);
+		}
+		return PLUGIN_HANDLED;
+	}
+
+	if (flWaitPlayersTime <= 0.0) {
+		mix_start();
+
+		if(task_exists(TASK_WAIT)) {
+			remove_task(TASK_WAIT);
+		}
+
+		return PLUGIN_HANDLED;
+	}
+
+	flWaitPlayersTime -= 1.0;
+
+	new sTime[24];
+	fnConvertTime(flWaitPlayersTime, sTime, charsmax(sTime), false);
+	
+	set_dhudmessage(255, 255, 255, -1.0, 0.2, 0, 0.0, 0.9, 0.1, 0.1);
+	show_dhudmessage(0, "%s^n热身中，准备开始游戏。", sTime);
+
+	return PLUGIN_HANDLED;
+}
+
+public Task_CheckTime() {
+	if(g_iCurrentMode == MODE_MIX) {
+		return PLUGIN_HANDLED;
+	}
+
+	if((g_iCurrentMode == MODE_PUB || g_iCurrentMode == MODE_DM || g_iCurrentMode == MODE_ZM) && g_iCurrentGameplay == GAMEPLAY_HNS) {
+		return PLUGIN_HANDLED;
+	}
+
+	// ★ 训练模式/拼刀地图不自动切换死斗
+	if (g_iCurrentMode == MODE_TRAINING || hns_is_knife_map()) {
+		return PLUGIN_HANDLED;
+	}
+
+	new iPlayers[MAX_PLAYERS], iNum;
+	get_players(iPlayers, iNum, "ch");
+
+	if (iNum == 0) {
+		dm_start();
+	}
+
+	return PLUGIN_CONTINUE;
+}

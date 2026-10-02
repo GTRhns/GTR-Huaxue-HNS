@@ -1,0 +1,211 @@
+[en]
+FB_E_UNKNOWN = Sorry, some crap has happened.
+FB_CNF_NAME = Name [!g%s!n]
+FB_CNF_NAME_TIME = !nName [!g%s!n] for [!g%s!n]
+FB_E_TIME_PLOST = !n TIME is [!g%s!n] !gPLAYER NOT FOUND.
+FB_CNF_REASON = !nreason [!g%s!n]
+FB_CNF_DEFTIME = !nTime is set for default value for reason.
+FB_CNF_ALL = !nPlayer [!g%s!n] will be banned for [!g%s!n] on [!g%s!n]
+FB_E_CP_TIMELIMIT = You can't ban for so long-long time. And I'll set it to %d min.
+FB_E_PLA_IN_BAN = Player already banned, sorry.
+FB_E_IMMUNITY = [!gBAN ERROR!n] Sorry, but You can't ban player with !ga!n flag.
+FB_I_S_DISCONNECTED = Sorry player was disconnected.
+FB_I_S_DISCON_UNKNOWN = Sorry player was disconnected or some crap was happen.
+FB_I_S_TIME_REAS = !nSorry I can't get !gtime and reason!n from your command.
+FB_I_S_REAS = !nSorry I can't get !greason!n from your command.
+FB_I_S_PLA_TIME_REAS = !nSorry I can't get a !gPlayer, time and reason!n from your command.
+FB_I_S_PLA = !nSorry I can't get a !gPlayer!n from your command.
+FB_I_S_PLA_REAS = !nSorry I can't get a !gPlayer and reason!n from your command.
+FB_I_REAS = !nreason [!g%s!n]
+FB_E_CUSTOMREAS = !nYou can't use custom !greason!n!
+FB_I_NV_EXPIRED_CNT = [!g%d!n] expired bans will be unbanned.
+FB_I_NOT_FOUND = Nothing found.
+FB_I_BL_EMPTY = Sorry Banlist is empty.
+FB_E_FOPEN = ERROR Can't open file, sorry.
+FB_I_NV_UB_NAME = !nNAME  [!g%s!n]
+FB_I_UB_REAS_ADM = !nReason [!g%s!n] Admin [!g%s!n]
+FB_I_UB_CREA_LEN = !nCreated [!g%s!n] Lenght [!g%s!n]
+FB_I_UB_NV_SUCCESS = Player [!g%s!n] is sucessfully unabanned.
+FB_E_UB_NOT_FOUND = [UNBAN ERROR] Nothing found.
+FB_E_UB_NOT_FOUND_S = !nSorry [!gI can't find this ban for you :(!n]
+FB_I_UB_NAME_IP_ST = !nNAME  !g[!n%s!g]!n IP   !g[!n%s!g]!n STEAM !g[!n%s!g]!n
+FB_I_UB_CP_SUCCESS = Player succesfully unbanned.
+FB_I_CP_NAME_LOCK = Nick changing is temporarily locked.
+FB_BAN_KICK_MSG = You are banned. Check Your console.
+FB_I_C_BANNED_BEFORE = !nPlayer [!g%s!n] was banned [!g%d!n] times before.
+FB_I_C_BANNED_BEFORE_R = !nPlayer [!g%s!n] was banned [!g%d!n] times, last [!g%s!n]
+FBM_PLAYERS_FOR_BAN = Players for ban
+FBM_SELECT_TIME = Select time
+FBM_EXIT = Exit
+FBM_SELECT_REASON = Select reason
+FBMI_UNIC_REASON = Own reason
+FBM_PLEASE_CONFIRM = Please confirm
+FBMI_TIME_FOREVER = Permanent
+FBMI_PLAYER_BB = Player \y %s \r[bb %d]
+FBMI_PLAYER = Player \y %s
+FBMI_TIME = Time \y %s
+FBMI_REASON = %sReason \y %s
+FBMI_YES = \rYes
+FBMI_NO = \rNo
+FB_TIME_FOREVER = Permanent
+FB_NEVER_EXPRED = Never
+FB_TIME_LEFT_FOREVER = Forever
+FBM_UNBAN = Unban
+FBM_CANCEL = Cancel
+FBM_BACK = Back
+FBM_NEXT = Next
+FBMI_UNBAN = Unban
+FBM_BB_MENU = History Bans
+FBM_OFFBAN_MENU = Offline Bans
+FBM_PLAYERS_FOR_UNBAN = Menu Unbans
+FBM_EXIT = Exit
+FB_I_BAN_CANCELED = Ban canceled
+FB_PRINT_CONSOLE1 = [FB]-------------------------------------[FB]
+FB_PRINT_CONSOLE2 = ||| You are banned
+FB_PRINT_CONSOLE3 = ||| Nick: \player\
+FB_PRINT_CONSOLE4 = ||| IP: \player_ip\
+FB_PRINT_CONSOLE5 = ||| SteamID: \player_steam\
+FB_PRINT_CONSOLE6 = ||| By admin: \admin\
+FB_PRINT_CONSOLE7 = ||| Reason: \reason\
+FB_PRINT_CONSOLE8 = ||| Ban created: \created_time\
+FB_PRINT_CONSOLE9 = ||| For length: \lenght\
+FB_PRINT_CONSOLE10 = ||| On: \where\
+FB_PRINT_CONSOLE11 = ||| Time left: \left_time\
+FB_PRINT_CONSOLE12 = ||| Will expire: \expired_time\
+FB_PRINT_CONSOLE13 = ||| Обжаловать бан можно здесь: 
+FB_PRINT_CONSOLE14 = [FB]-------------------------------------[FB]
+
+
+FBM_MENU_PLAYER_STRING = \admin\\name\\oldbans\ \R\steam\\bot\\hltv\\team\
+
+FBM_MENU_PTEAM_CT = [CT]
+FBM_MENU_PTEAM_TT = [TT]
+FBM_MENU_PTEAM_SP = [SP]
+FBM_MENU_PTEAM_UN = [SP]
+
+FBM_MENU_PLAYER_OLDBANS = (\r%d\w)
+FBM_MENU_PLAYER_NOBANS =
+
+FBM_MENU_PLAYER_ADMIN = \r*\w
+FBM_MENU_PLAYER_NOTADMIN =
+
+FBM_MENU_PLAYER_BOT = [BOT]
+FBM_MENU_PLAYER_NOTBOT =
+
+FBM_MENU_PLAYER_STEAM = [S]
+FBM_MENU_PLAYER_NOTSTEAM =
+
+FBM_MENU_PLAYER_HLTV = [HLTV]
+FBM_MENU_PLAYER_NOTHLTV =
+
+FBM_MENU_PLAYER_IMMUN =
+FBM_MENU_PLAYER_NOTIMMUN =
+
+FBM_MENU_PLAYER_GSCLIENT = [GS]
+FBM_MENU_PLAYER_NOTSCLIENT =
+
+
+[ru]
+FB_E_UNKNOWN = Произошла ошибка.
+FB_CNF_NAME = Имя [!g%s!n]
+FB_CNF_NAME_TIME = !nИмя [!g%s!n] время [!g%s!n]
+FB_E_TIME_PLOST = !n Время [!g%s!n] !gигрок не найден.
+FB_CNF_REASON = !nПричина [!g%s!n]
+FB_CNF_DEFTIME = !nВремя [!gпо умолчанию!n]
+FB_CNF_ALL = !nИгрок [!g%s!n] причина [!g%s!n] время [!g%s!n]
+FB_E_CP_TIMELIMIT = Вы не можете банить на столь длительный срок. Бан будет на %d минут.
+FB_E_PLA_IN_BAN = Данный игрок уже забанен.
+FB_E_IMMUNITY = [!gОшибка!n] : !nВы не можете банить человека с флагом !ga
+FB_I_S_DISCONNECTED = Игрок отсоединился.
+FB_I_S_DISCON_UNKNOWN = Игрок отсоединился либо произошла ошибка.
+FB_I_S_TIME_REAS = [!gОшибка!n] : Вы не указали !gвремя и причину.
+FB_I_S_REAS = [!gОшибка!n] : Вы не указали !gпричину 
+FB_I_S_PLA_TIME_REAS = [!gОшибка!n] : Вы не указали !gигрока, время и причину.
+FB_I_S_PLA = [!gОшибка!n] : Вы не указали !gигрока
+FB_I_S_PLA_REAS = [!gОшибка!n] : Вы не указали !gигрока и причину.
+FB_I_REAS = !nпричина [!g%s!n]
+FB_E_CUSTOMREAS = [!gОшибка!n] : Вы не можете использовать свою причину бана.
+FB_I_NV_EXPIRED_CNT = [!g%d!n] Игроки с истёкшими сроками банов будут разбанены.
+FB_I_NOT_FOUND = Ничего не найдено.
+FB_I_BL_EMPTY = Банлист пуст.
+FB_E_FOPEN = [!gОшибка!n] : не могу открыть файл.
+FB_I_NV_UB_NAME = !nИмя [!g%s!n]
+FB_I_UB_REAS_ADM = !nПричина [!g%s!n] Админ [!g%s!n]
+FB_I_UB_CREA_LEN = !nСоздан [!g%s!n] Длительность [!g%s!n]
+FB_I_UB_NV_SUCCESS = Игрок [!g%s!n] успешно разбанен.
+FB_E_UB_NOT_FOUND = [!gОшибка!n] : ничего не найдено.
+FB_E_UB_NOT_FOUND_S = [!gОшибка!n] : Бан не найден.
+FB_I_UB_NAME_IP_ST = !nИМЯ !g[!n%s!g]!n IP !g[!n%s!g]!n STEAM !g[!n%s!g]!n
+FB_I_UB_CP_SUCCESS = Игрок успешно разбанен.
+FB_I_CP_NAME_LOCK = Смена ника временно заблокирована.
+FB_BAN_KICK_MSG = Вы забанены. Подробная информация в вашей консоли.
+FB_I_C_BANNED_BEFORE = !nИгрок [!g%s!n] был в бане [!g%d!n] раз(а).
+FB_I_C_BANNED_BEFORE_R = !nИгрок [!g%s!n] был в бане [!g%d!n] раз(а), с причиной [!g%s!n]
+FBM_PLAYERS_FOR_BAN = Игроки для бана
+FBM_SELECT_TIME = Выбор времени
+FBM_EXIT = Выход
+FBM_SELECT_REASON = Выбор причины
+FBMI_UNIC_REASON = Своя причина
+FBM_PLEASE_CONFIRM = Пожалуйста подтвердите
+FBMI_TIME_FOREVER = Навсегда
+FBMI_PLAYER_BB = Игрок \y %s \r[bb %d]
+FBMI_PLAYER = Игрок \y %s
+FBMI_TIME = Время \y %s
+FBMI_REASON = %sПричина \y %s
+FBMI_YES = \rДа
+FBMI_NO = \rНет
+FB_TIME_FOREVER = Навсегда
+FB_NEVER_EXPRED = До скончания веков
+FB_TIME_LEFT_FOREVER = Никогда
+FBM_UNBAN = Разбан
+FBM_CANCEL = Отмена
+FBM_BACK = Назад
+FBM_NEXT = Вперед
+FBMI_UNBAN = Разбанить
+FBM_BB_MENU = История банов
+FBM_OFFBAN_MENU = Оффлайн баны
+FBM_PLAYERS_FOR_UNBAN = Меню разбана
+FBM_EXIT = Выход
+FB_I_BAN_CANCELED = Бан отменён
+FB_PRINT_CONSOLE1 = [FB]-------------------------------------[FB]
+FB_PRINT_CONSOLE2 = ||| Вы были забанены
+FB_PRINT_CONSOLE3 = ||| Ник: \player\
+FB_PRINT_CONSOLE4 = ||| IP: \player_ip\
+FB_PRINT_CONSOLE5 = ||| Стим: \player_steam\
+FB_PRINT_CONSOLE6 = ||| Забанен админом: \admin\
+FB_PRINT_CONSOLE7 = ||| Причина: \reason\
+FB_PRINT_CONSOLE8 = ||| Бан выдан: \created_time\
+FB_PRINT_CONSOLE9 = ||| Забанен на: \lenght\
+FB_PRINT_CONSOLE10 = ||| Карта: \map\
+FB_PRINT_CONSOLE11 = ||| Еще осталось: \left_time\
+FB_PRINT_CONSOLE12 = ||| Бан истекает: \expired_time\
+FB_PRINT_CONSOLE13 = ||| Обжаловать бан можно здесь: 
+FB_PRINT_CONSOLE14 = [FB]-------------------------------------[FB]
+
+FBM_MENU_PLAYER_STRING = \admin\\name\\oldbans\ \R\steam\\bot\\hltv\\team\
+
+FBM_MENU_PTEAM_CT = [CT]
+FBM_MENU_PTEAM_TT = [TT]
+FBM_MENU_PTEAM_SP = [SP]
+FBM_MENU_PTEAM_UN = [SP]
+
+FBM_MENU_PLAYER_OLDBANS = (\r%d\w)
+FBM_MENU_PLAYER_NOBANS =
+
+FBM_MENU_PLAYER_ADMIN = \r*\w
+FBM_MENU_PLAYER_NOTADMIN =
+
+FBM_MENU_PLAYER_BOT = [BOT]
+FBM_MENU_PLAYER_NOTBOT =
+
+FBM_MENU_PLAYER_STEAM = [S]
+FBM_MENU_PLAYER_NOTSTEAM =
+
+FBM_MENU_PLAYER_HLTV = [HLTV]
+FBM_MENU_PLAYER_NOTHLTV =
+
+FBM_MENU_PLAYER_IMMUN =
+FBM_MENU_PLAYER_NOTIMMUN =
+
+FBM_MENU_PLAYER_GSCLIENT = [GS]
+FBM_MENU_PLAYER_NOTSCLIENT =

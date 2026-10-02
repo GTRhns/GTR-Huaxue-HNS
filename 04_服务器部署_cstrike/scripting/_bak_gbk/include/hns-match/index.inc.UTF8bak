@@ -1,0 +1,67 @@
+#if defined _index_included
+  #endinput
+#endif
+
+#define _index_included
+
+#include <amxmodx>
+#include <amxmisc>
+#include <hamsandwich>
+#include <fakemeta_util>
+#include <cstrike>
+#include <reapi>
+#include <json>
+#include <PersistentDataStorage>
+#include <msgstocks>
+
+#include <hns_matchsystem_filter.inc>
+#include <hns_matchsystem_dbmysql.inc>
+#include <hns_matchsystem_api.inc>
+#include <hns_matchsystem_bans.inc>
+#include <hns_matchsystem_maps.inc>
+#include <hns_matchsystem_cup.inc>
+#include <hns_matchsystem_pointscap.inc>
+
+#include <hns-match/globals>
+
+#include <hns-match/gameplay/gameplays.inc>
+#include <hns-match/modes/modes.inc>
+
+#include <hns-match/addition/cvars>
+#include <hns-match/utils>
+#include <hns-match/user>
+#include <hns-match/save>
+
+// ★ 必须在 natives / modes / hnsmenu / cmds 之前引入
+// 穿透由外部插件托管 (team-semiclip.sma / semiclip_option)，不再内部维护
+#include <hns-match/addition/deserter>
+#include <hns-match/addition/match_control>
+#include <hns-match/modes/mode_rounds.inl>
+
+#include <hns-match/natives>
+
+#include <hns-match/gameplay/gameplay_hns.inc>
+#include <hns-match/gameplay/gameplay_knife.inc>
+#include <hns-match/gameplay/gameplay_training.inc>
+
+#include <hns-match/modes/mode_training.inl>
+#include <hns-match/modes/mode_pub.inl>
+#include <hns-match/modes/mode_dm.inl>
+#include <hns-match/modes/mode_zombie.inl>
+#include <hns-match/modes/mode_mix.inl>
+#include <hns-match/modes/mode_mix_duel.inl>
+#include <hns-match/modes/mode_manager.inl>
+
+#include <hns-match/addition/hnsmenu>
+#include <hns-match/addition/cmds>
+#include <hns-match/addition/afk>
+#include <hns-match/addition/surrender>
+#include <hns-match/addition/captain>
+#include <hns-match/addition/pointscap_zones.inl>
+#include <hns-match/modes/mode_knife.inl>
+#include <hns-match/modes/mode_ascension.inl>
+#include <hns-match/modes/mode_vampire.inl>
+#include <hns-match/addition/pointscap_editor.inl>
+#include <hns-match/addition/admin_grant>
+#include <hns-match/addition/player_models>
+

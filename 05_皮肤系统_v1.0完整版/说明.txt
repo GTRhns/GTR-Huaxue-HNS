@@ -1,0 +1,14 @@
+05_皮肤系统_v1.0完整版 —— 目录说明
+==================================
+HNS 皮肤系统(MySQL)完整版安装包快照:
+
+- addons/amxmodx/configs/mixsystem/player_models.ini、skins.cfg
+- addons/amxmodx/configs/plugins.ini
+- addons/amxmodx/plugins/CustomPlayerModelsApi.amxx、HnsMatchSkin.amxx
+- addons/amxmodx/scripting/  HnsMatchSkin.sma、CustomPlayerModelsApi.sma + include
+- sql/hns_skins.sql          建表脚本(cpm_skins / cpm_player_skins / cpm_player_current)
+- 文档/安装说明.txt          完整安装/配置/验证说明(必读)
+
+功能要点: /skin 金币购买(30天租期可配置) / 升级永久 / /cpm 管理员菜单(ADMIN_RCON) /
+死亡音效 / 与 HnsMatchSql 共用 MySQL。
+版本: 1.0.0(作者 OpenHNS 系), 源码的对比版本见 02_各插件历史版本/HnsMatchSkin_皮肤。

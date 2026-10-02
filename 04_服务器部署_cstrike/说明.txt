@@ -1,0 +1,22 @@
+04_服务器部署_cstrike —— 目录说明
+=================================
+本目录是服务器部署结构(gtr/cstrike)的完整快照:
+
+- addons/amxmodx/            运行时部署目录(完整拷贝)
+    configs/   hns_language.txt(四语)、mixsystem/hns-maps.ini、skins.cfg、openhns-prefixes.ini
+    plugins/   已部署 .amxx 与 plugins.ini(加载顺序)
+    data/lang/ match_additons.txt、mixsystem.txt
+    lang/      HnsSkin.txt
+    scripting/ 运行侧源码与 include 副本(改 hnsmenu/cmds 等需与 include/ 同步)
+- 01_管理封禁类/ ... 05_语音通讯类/
+  从俄站 DREAM-X.RU 下载的第三方插件按功能分类(FreshBans、NewKickMenu、GM_Night_VIP、
+  FakeSteam_Blocker、HPP_Blocker、TeamSelect、Hud_Info、GeoIP、Oops、Vampire、
+  Colored_Flash、SemiClip、GM_Decor、Snow、ReVoice 等)
+- 比赛通用/   旧比赛插件源码(hnsru_match-3.7.sma、icemartes_hns.sma、match_system.sma)
+- scripting/  含 UPDATELOG.txt 与 _bak_gbk/_bak_root_orig 旧档备份、_test 测试片段
+- sound/      音效资源
+- 根目录 PugRegistration.amxx、_skin_dump.txt(皮肤数据导出, 已转存 10_交接与文档)
+
+注意:
+- cstrike/scripting/include/hns_matchsystem.inc 是旧 enum 版, 不要当编译源
+- 第三方程分类插件来自 dream-x.ru, 含 .URL 快捷方式与俄语说明(原始杂质未清理)

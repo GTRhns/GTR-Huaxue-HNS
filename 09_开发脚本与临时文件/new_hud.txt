@@ -1,0 +1,14 @@
+public taskSignupHud() {
+	if (g_eState == SIGNUP_CLOSE) {
+		new iPlayers[MAX_PLAYERS], iNum;
+		get_players(iPlayers, iNum, "ch");
+		for (new i = 0; i < iNum; i++) {
+			set_hudmessage(0, 255, 0, 0.02, 0.28, 0, 0.0, 1.1, 0.0, 0.0, -1);
+			if (g_bPendingMatchStart || g_iPlaceIndex > 0)
+				show_hudmessage(iPlayers[i], "换图后按分组上场 %d/%d ...", g_iPlaceIndex, g_iPlaceTotal);
+			else
+				show_hudmessage(iPlayers[i], "正在分配队伍, 请稍候...");
+		}
+		return;
+	}
+

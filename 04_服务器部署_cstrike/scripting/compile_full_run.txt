@@ -1,0 +1,281 @@
+//AMXXPC compile.exe
+// by the AMX Mod X Dev Team
+
+
+//// admin.sma
+// Already compiled.
+// ----------------------------------------
+
+//// adminchat.sma
+// Already compiled.
+// ----------------------------------------
+
+//// admincmd.sma
+// Already compiled.
+// ----------------------------------------
+
+//// adminhelp.sma
+// Already compiled.
+// ----------------------------------------
+
+//// adminslots.sma
+// Already compiled.
+// ----------------------------------------
+
+//// adminvote.sma
+// Already compiled.
+// ----------------------------------------
+
+//// antiflood.sma
+// Already compiled.
+// ----------------------------------------
+
+//// cmdmenu.sma
+// Already compiled.
+// ----------------------------------------
+
+//// csstats.sma
+// Already compiled.
+// ----------------------------------------
+
+//// HnsMatchPermSystem.sma
+// Already compiled.
+// ----------------------------------------
+
+//// HnsMatchSystem.sma
+// 
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/modes.inc(38) : error 017: undefined symbol "kniferound_init"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/modes.inc(44) : error 017: undefined symbol "ascension_init"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/modes.inc(45) : error 017: undefined symbol "vamp_init"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_rounds.inl(177) : error 017: undefined symbol "cmdShowTimers"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_rounds.inl(179) : error 017: undefined symbol "ResetAfkData"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_rounds.inl(287) : error 017: undefined symbol "ResetAfkData"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_rounds.inl(324) : error 017: undefined symbol "ResetAfkData"
+// C:\Users\Administrator\Desktop\da\include\hns-match/natives.inc(115) : error 017: undefined symbol "kniferound_start"
+// C:\Users\Administrator\Desktop\da\include\hns-match/natives.inc(130) : error 017: undefined symbol "ascension_start"
+// C:\Users\Administrator\Desktop\da\include\hns-match/natives.inc(133) : error 017: undefined symbol "vamp_start"
+// C:\Users\Administrator\Desktop\da\include\hns-match/natives.inc(275) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/natives.inc(280) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_training.inl(20) : error 017: undefined symbol "captain_stop"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_training.inl(62) : error 017: undefined symbol "pickMenu"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_mix.inl(58) : error 017: undefined symbol "ascension_start"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_mix.inl(61) : error 017: undefined symbol "vamp_start"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_mix.inl(129) : error 017: undefined symbol "ResetAfkData"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_mix.inl(175) : error 017: undefined symbol "ResetAfkData"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_mix.inl(183) : error 017: undefined symbol "ascension_stop"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_mix.inl(186) : error 017: undefined symbol "vamp_stop"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_mix.inl(218) : error 017: undefined symbol "cmdShowTimers"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_mix.inl(220) : error 017: undefined symbol "ResetAfkData"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_mix.inl(434) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_mix_duel.inl(158) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_mix_duel.inl(236) : error 017: undefined symbol "cmdShowTimers"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_manager.inl(84) : error 017: undefined symbol "vamp_start"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(451) : error 017: undefined symbol "cmdCaptain"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(453) : error 017: undefined symbol "cmdStopPause"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(455) : error 017: undefined symbol "cmdStop"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(460) : error 017: undefined symbol "cmdKnifePickBan"
+// 
+// Compilation aborted.
+// 26 Errors.
+// Could not locate output file compiled\HnsMatchSystem.amx (compile failed).
+//
+// Compilation Time: 2.66 sec
+// ----------------------------------------
+
+//// HnsMatchTraining.sma
+// Already compiled.
+// ----------------------------------------
+
+//// HnsSignup.sma
+// Already compiled.
+// ----------------------------------------
+
+//// icemartes_hns.sma
+// 
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(19) : error 021: symbol already defined: "set_dhudmessage"
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(24) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(34) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(37) : error 021: symbol already defined: "show_dhudmessage"
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(42) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(44) : warning 218: old style prototypes used with optional semicolumns
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(45) : error 054: unmatched closing brace
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(46) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(49) : warning 218: old style prototypes used with optional semicolumns
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(50) : error 054: unmatched closing brace
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(51) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(54) : error 021: symbol already defined: "get_players"
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(56) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(58) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(63) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(65) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(67) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(70) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(79) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(82) : warning 218: old style prototypes used with optional semicolumns
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(83) : error 054: unmatched closing brace
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(84) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(86) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(90) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(95) : error 021: symbol already defined: "vformat"
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(96) : warning 218: old style prototypes used with optional semicolumns
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(97) : error 054: unmatched closing brace
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(100) : error 021: symbol already defined: "ArrayDestroy"
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(103) : error 010: invalid function or declaration
+// C:\Users\Administrator\Desktop\da\include\dhudmessage.inc(106) : error 025: function heading differs from prototype
+// 
+// Compilation aborted.
+// 26 Errors.
+// Could not locate output file compiled\icemartes_hns.amx (compile failed).
+//
+// Compilation Time: 0.39 sec
+// ----------------------------------------
+
+//// imessage.sma
+// Already compiled.
+// ----------------------------------------
+
+//// mapchooser.sma
+// Already compiled.
+// ----------------------------------------
+
+//// mapsmenu.sma
+// Already compiled.
+// ----------------------------------------
+
+//// menufront.sma
+// Already compiled.
+// ----------------------------------------
+
+//// miscstats.sma
+// Already compiled.
+// ----------------------------------------
+
+//// multilingual.sma
+// Already compiled.
+// ----------------------------------------
+
+//// nextmap.sma
+// Already compiled.
+// ----------------------------------------
+
+//// pausecfg.sma
+// Already compiled.
+// ----------------------------------------
+
+//// plmenu.sma
+// Already compiled.
+// ----------------------------------------
+
+//// pluginmenu.sma
+// Already compiled.
+// ----------------------------------------
+
+//// restmenu.sma
+// Already compiled.
+// ----------------------------------------
+
+//// scrollmsg.sma
+// Already compiled.
+// ----------------------------------------
+
+//// statscfg.sma
+// Already compiled.
+// ----------------------------------------
+
+//// statsx.sma
+// Already compiled.
+// ----------------------------------------
+
+//// stats_logging.sma
+// Already compiled.
+// ----------------------------------------
+
+//// telemenu.sma
+// Already compiled.
+// ----------------------------------------
+
+//// timeleft.sma
+// Already compiled.
+// ----------------------------------------
+
+//// _test2.sma
+// 
+// Header size:            232 bytes
+// Code size:              172 bytes
+// Data size:              344 bytes
+// Stack/heap size:      16384 bytes
+// Total requirements:   17132 bytes
+// Done.
+//
+// Compilation Time: 0.08 sec
+// ----------------------------------------
+
+//// _test3.sma
+// 
+// Header size:            216 bytes
+// Code size:              136 bytes
+// Data size:              344 bytes
+// Stack/heap size:      16384 bytes
+// Total requirements:   17080 bytes
+// Done.
+//
+// Compilation Time: 0.08 sec
+// ----------------------------------------
+
+//// _test_forward.sma
+// 
+// Header size:            208 bytes
+// Code size:              136 bytes
+// Data size:              340 bytes
+// Stack/heap size:      16384 bytes
+// Total requirements:   17068 bytes
+// Done.
+//
+// Compilation Time: 0.08 sec
+// ----------------------------------------
+
+//// _t_cmds.sma
+// 
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(92) : error 017: undefined symbol "isUserWatcher"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(96) : error 017: undefined symbol "set_round_time"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(97) : error 017: undefined symbol "chat_print"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(105) : error 017: undefined symbol "isUserWatcher"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(108) : error 017: undefined symbol "g_iCurrentMode"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(109) : error 017: undefined symbol "chat_print"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(117) : error 017: undefined symbol "g_iSettings"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(117) : error 017: undefined symbol "MAXROUNDS"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(118) : error 017: undefined symbol "chat_print"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(126) : error 017: undefined symbol "isUserWatcher"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(129) : error 017: undefined symbol "g_iCurrentMode"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(130) : error 017: undefined symbol "chat_print"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(138) : error 017: undefined symbol "g_eMatchInfo"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(138) : error 017: undefined symbol "e_mWintime"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(139) : error 017: undefined symbol "cvar_update_wintime"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(139) : error 017: undefined symbol "e_mWintime"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(139) : error 029: invalid expression, assumed zero
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/cmds.inc(139) : fatal error 107: too many error messages on one line
+// 
+// Compilation aborted.
+// 18 Errors.
+// Could not locate output file compiled\_t_cmds.amx (compile failed).
+//
+// Compilation Time: 0.11 sec
+// ----------------------------------------
+
+//// _t_knife.sma
+// 
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_knife.inl(6) : error 017: undefined symbol "engfunc"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_knife.inl(6) : warning 204: symbol is assigned a value that is never used: "iEntity"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_knife.inl(13) : error 017: undefined symbol "g_ModFuncs"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_knife.inl(13) : error 017: undefined symbol "MODE_KNIFE"
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_knife.inl(13) : error 029: invalid expression, assumed zero
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_knife.inl(13) : fatal error 107: too many error messages on one line
+// 
+// Compilation aborted.
+// 5 Errors.
+// Could not locate output file compiled\_t_knife.amx (compile failed).
+//
+// Compilation Time: 0.09 sec
+// ----------------------------------------
+
+Press enter to exit ...

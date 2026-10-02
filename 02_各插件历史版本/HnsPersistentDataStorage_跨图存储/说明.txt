@@ -1,0 +1,9 @@
+HnsPersistentDataStorage.sma —— 跨图持久化存储 版本说明
+======================================================
+功能: 换图跨图存储 (PDS_GetCell/PDS_SetCell), AI 报名靠它保存 pending 状态
+依赖 include/PersistentDataStorage.inc
+
+2 份变体:
+- source版/ : 5043 字节, 2026-09-26 11:54 (当前部署)
+- scripting版/ : 4775 字节, 2026-09-25 17:26 (工作区旧版)
+注意: 必须在 plugins.ini 里排在 MatchSystem / AISignup 之前加载。

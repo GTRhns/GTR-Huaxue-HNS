@@ -1,0 +1,71 @@
+[ru]
+DECOR_TITLE         = \y[\wМеню Декораций\y]^n\wНаведите прицел на место
+DECOR_ADD           = \w[\r1\w] Создать
+DECOR_MOVE          = \w[\r2\w] Переместить [%l]
+DECOR_ROTATE        = \w[\r3\w] Повернуть
+DECOR_DELETE        = \w[\r4\w] \rУдалить
+DECOR_SAVE          = \w[\r5\w] \yСохранить
+DECOR_DELETE_ALL    = \w[\r6\w] \rУдалить всё
+DECOR_SELECT        = \w[\r7\w] Декорация: \y%s
+DECOR_SOLID         = \w[\r8\w] Твёрдость: %l
+DECOR_INFO          = \dВсего деокраций: %i^n%s из них: %i 
+DECOR_EXIT          = \w[\r0\w] \rВыйти
+DECOR_NOT_SELECTED  = \dНе выбрано\w
+DECOR_SELECTED      = \yВыбрано\w
+DECOR_SOLID_YES     = \yЕсть
+DECOR_SOLID_NO      = \rНет
+
+DECOR_ROTATE_TITLE  = \y[\wМеню поворота\y]\w
+DECOR_ROTATE_LEFT   = \w[\r%i\w] Повернуть налево на \y%i
+DECOR_ROTATE_RIGHT  = \w[\r%i\w] Повернуть направо на \y%i
+DECOR_ROTATE_180    = \w[\r7\w] Повернуть на \y180
+DECOR_ROTATE_INFO   = \dТекущий поворот: %i
+DECOR_BACK          = \w[\r0\w] \rНазад
+
+DECOR_NONE          = \dНе выбрана
+
+DECOR_DELETED_ALL   = ^4Вы ^1всё ^3удалили^1!
+DECOR_SAVED         = ^4Декорации ^3сохранены^1!
+
+DECOR_SPAWNED       = ^4Декорация ^3создана^1!
+DECOR_NOT_SPAWNED   = ^4Декорация ^3не создана^1!
+
+DECOR_NOT_FOUND     = ^4Декорация ^3не найдена^1!
+DECOR_MOVED         = ^4Декорация ^3перемещена^1!
+DECOR_MOVE_SELECTED = ^4Декорация ^3выбрана^1!
+
+[en]
+DECOR_TITLE         = \y[\wMenu Decor\y]^n\wAim the scope at the spot
+DECOR_ADD           = \w[\r1\w] Create
+DECOR_MOVE          = \w[\r2\w] Move [%l]
+DECOR_ROTATE        = \w[\r3\w] Rotate
+DECOR_DELETE        = \w[\r4\w] \rDelete
+DECOR_SAVE          = \w[\r5\w] \ySave
+DECOR_DELETE_ALL    = \w[\r6\w] \rDelete All
+DECOR_SELECT        = \w[\r7\w] Decor: \y%s
+DECOR_SOLID         = \w[\r8\w] Solid: %l
+DECOR_INFO          = \dTotal Decor: %i^n%s of these: %i 
+DECOR_EXIT          = \w[\r0\w] \rExit
+DECOR_NOT_SELECTED  = \dNot selected\w
+DECOR_SELECTED      = \ySelected\w
+DECOR_SOLID_YES     = \yHave
+DECOR_SOLID_NO      = \rNot
+
+DECOR_ROTATE_TITLE  = \y[\wRotate Menu\y]\w
+DECOR_ROTATE_LEFT   = \w[\r%i\w] Rotate left on\y%i
+DECOR_ROTATE_RIGHT  = \w[\r%i\w] Rotate right on \y%i
+DECOR_ROTATE_180    = \w[\r7\w] Rotate on \y180
+DECOR_ROTATE_INFO   = \dCurrent rotate: %i
+DECOR_BACK          = \w[\r0\w] \rBack
+
+DECOR_NONE          = \dNot selected
+
+DECOR_DELETED_ALL   = ^4All ^3removed^1!
+DECOR_SAVED         = ^4Decors ^3saving^1!
+
+DECOR_SPAWNED       = ^4Decor ^3create^1!
+DECOR_NOT_SPAWNED   = ^4Decor ^not create^1!
+
+DECOR_NOT_FOUND     = ^4Decor ^3not found^1!
+DECOR_MOVED         = ^4Decor ^3moved^1!
+DECOR_MOVE_SELECTED = ^4Decor ^3selected^1!

@@ -1,0 +1,26 @@
+//AMXXPC compile.exe
+// by the AMX Mod X Dev Team
+
+
+//// HnsMatchPermSystem.sma
+// 
+// C:\Users\Administrator\Desktop\da\HnsMatchPermSystem.sma(1220) : warning 203: symbol is never used: "id"
+// C:\Users\Administrator\Desktop\da\HnsMatchPermSystem.sma(1236) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\HnsMatchPermSystem.sma(1238) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\HnsMatchPermSystem.sma(1250) : warning 203: symbol is never used: "id"
+// C:\Users\Administrator\Desktop\da\HnsMatchPermSystem.sma(1265) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\HnsMatchPermSystem.sma(1267) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\HnsMatchPermSystem.sma(1256) : warning 203: symbol is never used: "id"
+// Header size:           1972 bytes
+// Code size:            50400 bytes
+// Data size:           500012 bytes
+// Stack/heap size:      16384 bytes
+// Total requirements:  568768 bytes
+// 
+// 7 Warnings.
+// Done.
+//
+// Compilation Time: 0.31 sec
+// ----------------------------------------
+
+Press enter to exit ...

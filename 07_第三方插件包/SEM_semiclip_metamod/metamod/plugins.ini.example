@@ -1,0 +1,6 @@
+; ============================================================
+;  addons/metamod/plugins.ini  —— 追加以下两行加载 semiclip 模块
+;  路径相对 cstrike/ 目录
+; ============================================================
+linux addons/semiclip/semiclip_mm_i386.so
+win32 addons/semiclip/semiclip.dll

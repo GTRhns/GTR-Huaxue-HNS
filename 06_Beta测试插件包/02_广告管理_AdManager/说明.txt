@@ -1,0 +1,29 @@
+============================================================
+  02_广告管理 Ad Manager
+============================================================
+【功能】
+  聊天栏滚动广告系统: 按设置好的频率在聊天框底部轮播广告文案。
+  支持颜色代码和自动变量(服务器IP、服主名等)。
+
+【文件】
+  ad_manager.amxx          编译好的插件(上传到 plugins/)
+  advertisements.ini       广告文案配置(上传到 configs/)
+
+【配置说明  advertisements.ini】
+  每个非空行是一条广告, 支持:
+    颜色代码:  !t=队伍色  !g=绿色  !y=黄色  !m=紫色 ...
+    变量:
+      @server   服务器地址     @ip      服务器IP
+      @owner    服主名字       @powered 赞助者
+      @head     服主           @fb      Facebook地址
+      @cs       下载CS的网站
+  示例:
+    !t欢迎来到本服!g 官网: !twww.xxx.com
+    @server~!g服务器IP: !t
+
+【安装】
+  1. ad_manager.amxx  ->  addons/amxmodx/plugins/
+  2. advertisements.ini -> addons/amxmodx/configs/
+     (若插件实际读取别的路径, 以插件原说明为准)
+  3. plugins.ini 加一行:  ad_manager.amxx
+============================================================

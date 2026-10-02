@@ -1,0 +1,276 @@
+new Float:g_flKnifeRoundStart;
+new bool:g_bKnifeRoundLive;
+
+stock CountSpawnPoints(const szClassname[]) {
+	new iEntity = -1, iCount = 0;
+	while ((iEntity = engfunc(EngFunc_FindEntityByString, iEntity, "classname", szClassname))) {
+		iCount++;
+	}
+	return iCount;
+}
+
+public kniferound_init() {
+	g_ModFuncs[MODE_KNIFE][MODEFUNC_START]			= CreateOneForward(g_PluginId, "kniferound_start");
+	g_ModFuncs[MODE_KNIFE][MODEFUNC_END]			= CreateOneForward(g_PluginId, "kniferound_stop");
+	g_ModFuncs[MODE_KNIFE][MODEFUNC_PAUSE]			= CreateOneForward(g_PluginId, "kniferound_pause");
+	g_ModFuncs[MODE_KNIFE][MODEFUNC_UNPAUSE]		= CreateOneForward(g_PluginId, "kniferound_unpause");
+	g_ModFuncs[MODE_KNIFE][MODEFUNC_ROUNDSTART]		= CreateOneForward(g_PluginId, "kniferound_roundstart");
+	g_ModFuncs[MODE_KNIFE][MODEFUNC_ROUNDEND]		= CreateOneForward(g_PluginId, "kniferound_roundend", FP_CELL);
+	g_ModFuncs[MODE_KNIFE][MODEFUNC_PLAYER_LEAVE]	= CreateOneForward(g_PluginId, "kniferound_player_leave", FP_CELL);
+	g_ModFuncs[MODE_KNIFE][MODEFUNC_PLAYER_JOIN]	= CreateOneForward(g_PluginId, "kniferound_player_join", FP_CELL);
+}
+
+public kniferound_start() {
+	g_iCurrentMode = MODE_KNIFE;
+	ChangeGameplay(GAMEPLAY_KNIFE);
+	set_cvars_mode(MODE_KNIFE);
+	g_eMatchState = STATE_PREPARE;
+	g_bKnifeRoundLive = false;
+
+	// ★ v5.6 FIX: CT 无出生点时不要 BalanceKnifeTeams
+	// 否则 CT 玩家开局瞬间死亡，回合直接判定 T 胜
+	new iSpawnsCT = CountSpawnPoints("info_player_start");
+	if (iSpawnsCT == 0) {
+		LogSendMessage("[KNIFE-START] CT has 0 spawns, keeping all players on T");
+		chat_print(0, "[HNS] 此地图无 CT 出生点，拼刀将在 T 方进行。");
+	} else {
+		BalanceKnifeTeams();
+	}
+
+	hns_restart_round(1.0);
+}
+
+public kniferound_stop() {
+	if(task_exists(HUD_PAUSE)) {
+		remove_task(HUD_PAUSE);
+	}
+	
+	g_iMatchStatus = MATCH_NONE;
+	training_start();
+	
+	// 将观战玩家自动分配到队伍（解决管理员结束拼刀后不能选阵营的问题）
+	new players[32], pnum, iTeam;
+	get_players(players, pnum, "eh", "SPECTATOR");
+	for (new i = 0; i < pnum; i++) {
+		iTeam = (i % 2 == 0) ? TEAM_TERRORIST : TEAM_CT;
+		rg_set_user_team(players[i], iTeam);
+		rg_round_respawn(players[i]);
+	}
+}
+
+public kniferound_pause() {
+	if (g_eMatchState == STATE_PAUSED) {
+		return;
+	}
+	g_eMatchState = STATE_PAUSED;
+
+	ChangeGameplay(GAMEPLAY_TRAINING);
+
+	set_pause_settings();
+}
+
+public kniferound_unpause() {
+	if (g_eMatchState != STATE_PAUSED) {
+		return;
+	}
+	g_eMatchState = STATE_PREPARE;
+
+	hns_restart_round(1.0);
+
+	ChangeGameplay(GAMEPLAY_KNIFE);
+
+	set_unpause_settings();
+}
+ 
+public kniferound_roundstart() {
+	if (g_iMatchStatus == MATCH_CAPTAINKNIFE) {
+		setTaskHud(0, 2.0, 1, 255, 255, 255, 3.0, "队长刀战!");
+		
+		chat_print(0, "刀战回合已开始!");
+
+		g_eMatchState = STATE_ENABLED;
+
+		ChangeGameplay(GAMEPLAY_KNIFE);
+	} else if (g_iMatchStatus == MATCH_TEAMKNIFE) {
+		setTaskHud(0, 2.0, 1, 255, 255, 255, 3.0, "刀战回合!");
+		
+		chat_print(0, "刀战回合已开始!");
+
+		g_eMatchState = STATE_ENABLED;
+		g_flKnifeRoundStart = get_gametime();
+		g_bKnifeRoundLive = true;
+
+		ChangeGameplay(GAMEPLAY_KNIFE);
+
+		if (g_bHnsBannedInit) {
+			if (checkUserBan()) {
+				return;
+			}
+		}
+
+		ResetAfkData();
+		set_task(2.0, "taskSaveAfk");
+		set_task(4.0, "taskCheckAfk");
+	} else if (g_iMatchStatus == MATCH_CUPKNIFE) {
+		setTaskHud(0, 2.0, 1, 255, 255, 255, 3.0, "刀战 Pick/Ban 已开始!");
+		
+		chat_print(0, "已开始 ^3刀战 Pick/Ban^1 回合!");
+
+		g_eMatchState = STATE_ENABLED;
+
+		ChangeGameplay(GAMEPLAY_KNIFE);
+
+		ResetAfkData();
+		set_task(2.0, "taskSaveAfk");
+		set_task(4.0, "taskCheckAfk");
+	} else {
+		ChangeGameplay(GAMEPLAY_TRAINING);
+	}
+}
+
+public BalanceKnifeTeams() {
+	new iT[MAX_PLAYERS], iNumT, iCT[MAX_PLAYERS], iNumCT;
+	// Use "ch" (connected+human) not "ach" because players may not be alive between rounds
+	get_players(iT, iNumT, "ch", "TERRORIST");
+	get_players(iCT, iNumCT, "ch", "CT");
+
+	LogSendMessage("[KNIFE-BALANCE] Connected players: T=%d CT=%d", iNumT, iNumCT);
+
+	// ★ FIX P2-11: 检查人数差而非仅检查是否有人
+	new iDiff = iNumT - iNumCT;
+	if (iDiff < 0) iDiff = -iDiff;
+	if (iDiff <= 1) return;
+
+	new iTotal = iNumT + iNumCT;
+	if (iTotal < 2) return;
+
+	// If one team is empty, move half of the populated team to the empty team
+	if (iNumCT == 0) {
+		new iMove = iNumT / 2;
+		if (iMove == 0) iMove = 1;
+		for (new i = 0; i < iMove; i++) {
+			rg_set_user_team(iT[i], TEAM_CT);
+			// Do NOT respawn here; hns_restart_round will respawn everyone
+		}
+		chat_print(0, "[HNS] 刀局自动平衡队伍: %d T -> %d CT", iNumT - iMove, iMove);
+	} else if (iNumT == 0) {
+		new iMove = iNumCT / 2;
+		if (iMove == 0) iMove = 1;
+		for (new i = 0; i < iMove; i++) {
+			rg_set_user_team(iCT[i], TEAM_TERRORIST);
+			// Do NOT respawn here; hns_restart_round will respawn everyone
+		}
+		chat_print(0, "[HNS] 刀局自动平衡队伍: %d CT -> %d T", iNumCT - iMove, iMove);
+	}
+}
+
+public kniferound_roundend(bool:win_ct) {
+	if (g_iMatchStatus == MATCH_CAPTAINKNIFE) {
+		g_iCaptainPick = win_ct ? hns_get_captain_role(ROLE_CAP_B) : hns_get_captain_role(ROLE_CAP_A);
+		get_user_authid(g_iCaptainPick, g_iCaptainPickSteam, charsmax(g_iCaptainPickSteam))
+
+		//setTaskHud(0, 2.0, 1, 255, 255, 255, 3.0, fmt("%L", LANG_SERVER, "HUD_CAPWIN", g_iCaptainPick));
+
+		training_start();
+
+		g_iMatchStatus = MATCH_TEAMPICK;
+
+		g_eMatchState = STATE_DISABLED;
+
+		LogSendMessage("[MATCH] Captain (%n) win kf, choose player.", g_iCaptainPick);
+
+		pickMenu(g_iCaptainPick, true);
+
+		if (g_iSettings[RANDOMPICK] == 1) {
+			set_task(1.0, "WaitPick");
+		}
+	} else if (g_iMatchStatus == MATCH_TEAMKNIFE) {
+		// ★ v5.6 FIX: kniferound_start() 里的 hns_restart_round 会触发 sv_restart
+		// sv_restart 又会触发 rgRoundEnd（win_ct 永远是 false，即 T 胜）
+		// 如果 g_eMatchState == STATE_PREPARE，说明拼刀还没真正开始，直接忽略
+		// sv_restart 会自动触发 kniferound_roundstart 来真正启动拼刀轮
+		if (g_eMatchState == STATE_PREPARE) {
+			return;
+		}
+
+		// Collect detailed state for debugging
+		new iPlayers[MAX_PLAYERS], iNum, iAliveT = 0, iAliveCT = 0, iConnT = 0, iConnCT = 0;
+		get_players(iPlayers, iNum, "ch");
+		for (new i = 0; i < iNum; i++) {
+			new iTeam = getUserTeam(iPlayers[i]);
+			if (iTeam == TEAM_TERRORIST) {
+				iConnT++;
+				if (is_user_alive(iPlayers[i])) iAliveT++;
+			} else if (iTeam == TEAM_CT) {
+				iConnCT++;
+				if (is_user_alive(iPlayers[i])) iAliveCT++;
+			}
+		}
+
+		new Float:flElapsed = g_bKnifeRoundLive ? (get_gametime() - g_flKnifeRoundStart) : 0.0;
+		LogSendMessage("[KNIFE-ROUNDEND] win_ct=%d state=%s elapsed=%.1f conn(T=%d,CT=%d) alive(T=%d,CT=%d)",
+			win_ct, g_bKnifeRoundLive ? "live" : "prepare", flElapsed, iConnT, iConnCT, iAliveT, iAliveCT);
+
+		// ★ Protect against premature round end during live round (e.g. spawn bugs)
+		// STATE_PREPARE case is already handled above
+		if (g_bKnifeRoundLive && flElapsed < 5.0) {
+			if (iConnT > 0 && iConnCT > 0 && (iAliveT > 0 || iAliveCT > 0)) {
+				LogSendMessage("[KNIFE] Premature roundend ignored, restarting (alive T=%d CT=%d)", iAliveT, iAliveCT);
+				g_bKnifeRoundLive = false;
+				hns_restart_round(1.0);
+				return;
+			}
+		}
+		g_bKnifeRoundLive = false;
+
+		if (win_ct) {
+			setTaskHud(0, 2.0, 1, 255, 255, 255, 3.0, "CT 赢得了刀战回合!");
+		} else {
+			setTaskHud(0, 2.0, 1, 255, 255, 255, 3.0, "TT 赢得了刀战回合!");
+		}
+
+		training_start();
+
+		g_iMatchStatus = MATCH_MAPPICK;
+
+		g_eMatchState = STATE_DISABLED;
+
+		Save_players(win_ct ? TEAM_CT : TEAM_TERRORIST);
+
+		if (!hns_cup_enabled()) {
+			StartVoteRules();
+		}
+	} else if (g_iMatchStatus == MATCH_CUPKNIFE) {
+		training_start();
+
+		g_iMatchStatus = MATCH_CUPPICK;
+
+		g_eMatchState = STATE_DISABLED;
+
+		LogSendMessage("[MATCH] hns_cup_set_veto %d", win_ct ? 2 : 1);
+
+		hns_cup_set_veto_turn_by_team(win_ct ? 2 : 1);
+	}
+	ChangeGameplay(GAMEPLAY_TRAINING);
+
+	// TODO: Кайф без state
+}
+
+public kniferound_player_leave(id) {
+	if (g_iMatchStatus == MATCH_CAPTAINKNIFE) {
+		if (hns_is_user_role(id, ROLE_CAP_A) || hns_is_user_role(id, ROLE_CAP_B)) {
+			LogSendMessage("[MATCH] Player captain (%n) leave! (MATCH_CAPTAINKNIFE)", id);
+			chat_print(0, "队长 ^3%n^1 已离开，停止队长刀战模式。", id);
+			captain_stop();
+			training_start();
+		}
+	}
+}
+
+public kniferound_player_join(id) {
+	// ★ AI报名恢复期间，跳过拉观战（让AI系统自行分配队伍）
+	if (g_bKnifeSkipSpec) {
+		return;
+	}
+	transferUserToSpec(id);
+}

@@ -1,0 +1,15 @@
+public beginPostGroupSetup() {
+	g_eState = SIGNUP_SETUP;
+	g_bPostGroupSetup = true;
+	g_szPickedMap[0] = EOS;
+	g_iSetupMenuTries = 0;
+
+	ai_print(0, "分组完成, 换图前不拉观战, 先选择比赛模式, 再选择地图");
+	ai_print(0, "如果没看到菜单, 聊天输入 /signup 重新打开");
+	showGroups(0);
+
+	showSetupToAdmins();
+	remove_task(TASK_SETUP_MENU);
+	set_task(0.15, "taskShowPostGroupMenus", TASK_SETUP_MENU);
+}
+

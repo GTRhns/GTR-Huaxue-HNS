@@ -1,0 +1,9 @@
+//AMXXPC compile.exe
+// by the AMX Mod X Dev Team
+
+
+//// HnsMatchSystem.sma
+// Already compiled.
+// ----------------------------------------
+
+Press enter to exit ...

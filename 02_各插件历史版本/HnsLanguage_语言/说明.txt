@@ -1,0 +1,20 @@
+HnsLanguage.sma —— HNS 多语言核心 版本说明
+==========================================
+功能: /lang 切换简体/繁体/英语/俄语, 提供 HnsLang_Get 等 native 给各插件取语言键
+
+2 份变体:
+1. v1.3.0_source/
+   - 原文件: source/HnsLanguage.sma
+   - 10692 字节, 2026-09-27 17:02
+   - 当前部署版(register_plugin "HNS Language Core" 1.3.0)
+   - AI 报名菜单通过 HnsLang_Get 读取语言键, 与 /lang 联动
+
+2. scripting旧版/
+   - 原文件: scripting/HnsLanguage.sma (8880 字节, 2026-09-11 21:35)
+   - 附带 scripting/HnsLanguage.sma.fixed (7372 字节, 09-11 18:55 修复版)
+   - 旧版工作区文件, 无 AI_* 语言键
+
+语言文件: cstrike/addons/amxmodx/configs/hns_language.txt([cn][tw][en][ru] 四段)
+注意:
+- 语言文件是插件 plugin_init 时加载, 改完 txt 需重载 HnsLanguage 或换图
+- 加键只追加到各语言段末尾, 不要插到已有键中间(曾把 REG_SIGNUP 插坏)

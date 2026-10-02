@@ -1,0 +1,18 @@
+03_开发工作区_scripting —— 目录说明
+===================================
+本目录是本地开发工作区(gtr/scripting)的完整快照, 包含:
+
+- Hns*.sma / CustomPlayerModelsApi.sma / PugRegistration*.sma
+  HNS 系最新开发源码(其中 HnsAISignup.sma 是 v1.17+ 最新开发版,
+  与 01 部署版有差异, 详见 02_各插件历史版本/HnsAISignup_AI报名)
+- admin.sma / admincmd.sma / statsx.sma 等
+  官方 AMXX 1.10 基插件源码(可不动)
+- amxxpc.exe / amxxpc32.dll / compile.exe
+  AMXX 1.10 编译器工具(Windows 环境使用)
+- include/   工作区 include(内含 hnsic、hns-match 等)
+- compiled/  工作区编译产物(HnsAISignup.amxx / HnsMatchSystem.amxx / PugRegistration_mysql.amx)
+- testsuite/ 测试套件
+
+说明:
+- 这里与 01(部署交付)是两条并行工作区, 部分文件比 01 新, 部分比 01 旧
+- 具体差异以 00_总说明_README.md 版本对照表为准

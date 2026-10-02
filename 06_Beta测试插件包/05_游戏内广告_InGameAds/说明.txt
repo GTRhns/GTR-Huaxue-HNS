@@ -1,0 +1,25 @@
+============================================================
+  05_游戏内广告 In-Game Ads  v2.0 (iceeedR 修改版)
+  注: 原压缩包只有编译好的 .amxx 和配置文件, 没有源码
+============================================================
+【功能】
+  游戏内3D广告牌系统: 在指定位置生成广告牌(模型/贴图), 管理员
+  可通过菜单创建/管理广告牌, 用于服内宣传。
+
+【文件】
+  in_game_ads.amxx    编译好的插件(上传到 plugins/)
+  precache_list.cfg   预加载清单(广告牌用到的模型/贴图文件列表)
+
+【配置说明  precache_list.cfg】
+  一行写一个广告牌会用到的文件路径(相对 cstrike 目录):
+    models/xxx.mdl
+    sprites/xxx.spr
+  以 // 开头的行是注释, 会被忽略。
+  把广告牌用到的模型/贴图都写进去, 服务器启动时自动预加载。
+
+【安装】
+  1. in_game_ads.amxx  ->  addons/amxmodx/plugins/
+  2. precache_list.cfg ->  addons/amxmodx/configs/In-Game Ads/
+  3. plugins.ini 加一行:  in_game_ads.amxx
+  4. 广告牌用到的模型/贴图文件放到 cstrike/models、cstrike/sprites 对应目录
+============================================================

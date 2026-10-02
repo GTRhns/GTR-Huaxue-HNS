@@ -1,0 +1,6 @@
+wRulesMenu(id);
+	return PLUGIN_HANDLED;
+}换图前不拉
+
+
+public beginPostGroupSetup() {

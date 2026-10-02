@@ -1,0 +1,3 @@
+; ---- 复制下面这一行到 addons/amxmodx/plugins/plugins.ini (建议在 HnsMatchSystem 之前加载) ----
+SemiclipSystem.amxx
+; --------------------------------------------------------------------------------------------

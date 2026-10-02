@@ -1,0 +1,10 @@
+HnsMatchMaps.sma —— 地图系统 版本说明
+====================================
+功能: 地图管理 (register_plugin "Match: Maps" 4.0.4)
+
+2 份变体:
+- 当前版/ : 21749 字节, 2026-09-30 01:09 (source/scripting/addons 四处 md5 一致)
+- current旧版/ : 原文件 scripting/HnsMatchMaps.sma.current, 20543 字节, 2026-07-13 05:37
+  (.current 后缀 = 较早的当前版快照, 供对比)
+
+AI 报名插件读地图池: cstrike/addons/amxmodx/configs/mixsystem/hns-maps.ini 的 [skill] 段。

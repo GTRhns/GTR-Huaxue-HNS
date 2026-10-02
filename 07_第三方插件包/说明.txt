@@ -1,0 +1,15 @@
+07_第三方插件包 —— 目录说明
+============================
+来源均为 gtr/ 下的第三方包, 非 GTR 自研 HNS 系统:
+
+- SEM_semiclip_metamod/
+    semiclip 半透明穿人 metamod 模块(semiclip_mm_i386.so / semiclip.dll / config.ini)
+    + metamod plugins.ini 示例 + amxmodx/plugins/hns_semiclip.sma(AMXX 侧半穿插件)
+- semiclip_package/
+    SemiclipSystem v1.0.0 独立插件(由 HNSRU 内嵌 Semiclip 逻辑剥离)
+    含 README.txt、SemiclipSystem.sma、semiclip_system.inc、SemiclipSystem.txt(多语言)、
+    install_plugins_ini.txt。独立 .amxx 方案, 建议在 HnsMatchSystem 之前加载。
+- rtv_rus/
+    RTV(地图投票)俄站插件包(dream-x.ru 来源), 含俄语说明 Опция.txt
+
+注: rtv_rus 与 SEM 均为第三方, 版权归原作者。

@@ -1,0 +1,73 @@
+//AMXXPC compile.exe
+// by the AMX Mod X Dev Team
+
+
+//// HnsMatchSystem.sma
+// 
+// C:\Users\Administrator\Desktop\da\include\hns-match/natives.inc(274) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/natives.inc(279) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_mix.inl(434) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_mix_duel.inl(158) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(463) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(836) : warning 226: a variable is assigned to itself (symbol "g_iSettings")
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(919) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(923) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(927) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(937) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(1067) : warning 229: index tag mismatch (symbol "iVoteRules")
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(1125) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(1126) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(1135) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(1136) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(1139) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(1177) : warning 229: index tag mismatch (symbol "iVoteRules")
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(1635) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(1838) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(1841) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(1843) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(2503) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/hnsmenu.inc(2522) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/pointscap_zones.inl(122) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/pointscap_zones.inl(154) : warning 204: symbol is assigned a value that is never used: "iSavedLabel"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/pointscap_zones.inl(131) : warning 203: symbol is never used: "szMapName"
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/pointscap_zones.inl(612) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\include\hns-match/addition/pointscap_zones.inl(616) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_knife.inl(55) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_knife.inl(200) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_knife.inl(201) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_knife.inl(204) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_ascension.inl(248) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_ascension.inl(249) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\include\hns-match/modes/mode_ascension.inl(265) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(147) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(148) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(189) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(194) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(497) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(500) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(522) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(523) : warning 217: loose indentation
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(1025) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(1030) : warning 213: tag mismatch
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(316) : warning 203: symbol is never used: "_pointscap_auto_generate"
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(48) : warning 204: symbol is assigned a value that is never used: "g_bHideKnifeModel"
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(281) : warning 203: symbol is never used: "g_bPointScapSpectatorJoin"
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(11) : warning 203: symbol is never used: "g_iLeaveRequestTarget"
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(1315) : warning 204: symbol is assigned a value that is never used: "g_iSponsorPlayer"
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(309) : warning 204: symbol is assigned a value that is never used: "g_iVampTotalPlayers"
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(30) : warning 203: symbol is never used: "g_szPointTypeNames"
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(466) : warning 203: symbol is never used: "parse_coords"
+// C:\Users\Administrator\Desktop\da\HnsMatchSystem.sma(1856) : warning 203: symbol is never used: "showPermMenu"
+// Header size:          16488 bytes
+// Code size:           423080 bytes
+// Data size:           221828 bytes
+// Stack/heap size:      16384 bytes
+// Total requirements:  677780 bytes
+// 
+// 54 Warnings.
+// Done.
+//
+// Compilation Time: 3.55 sec
+// ----------------------------------------
+
+Press enter to exit ...

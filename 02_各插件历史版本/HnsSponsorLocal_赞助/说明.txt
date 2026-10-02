@@ -1,0 +1,7 @@
+HnsSponsorLocal.sma —— 本地赞助(ICGB金币) 版本说明
+================================================
+功能: 比赛赞助者/ICGB 金币接口 (register_plugin "Match: Sponsor Local (ICGB)" 1.0)
+
+2 份变体:
+- source版/ : 1719 字节, 2026-09-26 11:54 (当前部署)
+- scripting版/ : 1665 字节, 2026-09-25 17:26 (工作区旧版)

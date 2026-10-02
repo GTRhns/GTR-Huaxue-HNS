@@ -1,0 +1,31 @@
+public taskPlacePlayer() {
+	if (g_eState != SIGNUP_CLOSE) {
+		remove_task(TASK_PLACE);
+		return;
+	}
+
+	if (g_iPlaceIndex >= g_iPlaceTotal) {
+		remove_task(TASK_PLACE);
+		if (g_bPendingMatchStart) {
+			g_bPendingMatchStart = false;
+			startMatch();
+		} else {
+			beginPostGroupSetup();
+		}
+		return;
+	}
+
+	new idx = g_iPlaceIndex;
+	g_iPlaceIndex++;
+
+	new id = g_iPlaceOrder[idx];
+	if (is_user_connected(id)) {
+		if (g_iPlaceTeam[idx] == TEAM_T)
+			moveToTeam(id, TEAM_TERRORIST);
+		else
+			moveToTeam(id, TeamName:TEAM_CT);
+	}
+	// 掉线的直接跳过, 继续下一个
+}
+
+// 人数合适 -> 绿色聊天提示 -> 比赛开始

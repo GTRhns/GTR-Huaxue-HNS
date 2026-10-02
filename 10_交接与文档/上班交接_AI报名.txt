@@ -1,0 +1,135 @@
+HNS AI 报名系统 - 上班交接
+日期: 2026-09-27
+项目: c:\Users\Administrator\Desktop\delivery
+状态: 已编译部署到 plugins, 未实际进服验证。进服前必须 changelevel 或重启。
+
+==================================================
+一、你下班前刚改的两件事
+==================================================
+
+1. 普通换图不再自动开 AI 报名, 也不自动开赛
+   - 以前: 换图后进入 2 分钟冷静期, 人够就自动收团开赛
+   - 现在: 普通换图 / 地图投票换图 / 管理员换图 -> 报名清空, 状态回到 IDLE
+   - 例外: 只有 AI 自己选好地图后换图 (PDS ai_pending_start=1) 才会换图后继续开赛
+   - 代码: source\HnsAISignup.sma  onMapChange()
+
+2. 取消 UI 的 012345678910 数字条
+   - HUD 只剩: 报名: n/12
+   - 聊天只剩: 已报名 n 人 | 服务器在线 n 人
+   - 已删除 buildSignupBar()
+
+==================================================
+二、当前完整流程 (上班后按这个测)
+==================================================
+
+报名中(5分钟) -> 收团分组 -> 1秒1人上场
+  -> VIP/管理员优先选比赛模式, 否则全员投票
+     投票长这样: 1. hns [100%]   百分比红色
+  -> 再选地图: 随机 / 指定 /maps / 当前地图
+  -> 赞助局还要输入赞助者名字 (30秒, /取消跳过)
+  -> 开赛
+
+AI 菜单第3项: HNS比赛选择 = 娱乐局 / 赞助局
+强制开赛(hnsai / 强制开启): 1人可测, 不再卡观战, 仍走模式+地图选择
+mix 菜单: 第7项永远 ICGB(非赞助局灰色), 第8项管理员菜单
+
+==================================================
+三、命令 / 入口
+==================================================
+
+say /signup  或  报     打开 AI 报名菜单
+say /cancel  或  退     取消报名
+say /aistart 或  开赛   VIP/管理员强制收团
+say /aitype  或  赛制   VIP/管理员设娱乐/赞助
+say /aiabort 或  停赛   VIP/管理员取消整个报名
+say /aivote  或  投     打开当前投票菜单
+say /lang               切语言 (AI 菜单跟这个走)
+
+==================================================
+四、编译部署 (上班后如果又改了代码)
+==================================================
+
+工作目录: c:\Users\Administrator\Desktop\delivery
+
+编译:
+  cstrike\scripting\amxxpc.exe -ic:\Users\Administrator\Desktop\delivery\include source\HnsMatchSystem.sma -ocompiled\HnsMatchSystem.amxx
+  cstrike\scripting\amxxpc.exe -ic:\Users\Administrator\Desktop\delivery\include source\HnsAISignup.sma -ocompiled\HnsAISignup.amxx
+
+注意: amxxpc 的 -i 和 -o 必须跟路径连在一起, 不能空格分开。
+PowerShell 不要用 here-string, 不要对同一 SMA 重叠 patch (会把文件截断)。
+
+拷贝:
+  Copy-Item compiled\HnsAISignup.amxx cstrike\addons\amxmodx\plugins\HnsAISignup.amxx -Force
+  Copy-Item compiled\HnsMatchSystem.amxx cstrike\addons\amxmodx\plugins\HnsMatchSystem.amxx -Force
+
+plugins.ini 加载顺序 (已对):
+  HnsLanguage.amxx
+  HnsPersistentDataStorage.amxx
+  HnsSponsorLocal.amxx
+  HnsMatchSystem.amxx
+  ...
+  HnsAISignup.amxx
+
+语言文件:
+  cstrike\addons\amxmodx\configs\hns_language.txt
+  /lang 改英文后要重新打开 AI 菜单才变。
+  语言文件是 HnsLanguage 启动时加载, 改完语言文件要重载 HnsLanguage 或换图。
+
+==================================================
+五、关键文件
+==================================================
+
+source\HnsAISignup.sma                          AI 报名主插件
+source\HnsMatchSystem.sma                       mix 系统 (natives)
+include\hns_matchsystem.inc                     natives 声明
+include\hns-match\addition\hnsmenu.inc          mix 主菜单 7/8 项
+include\hns-match\addition\cmds.inc             blockCmd, LOBBY 放行 jointeam
+cstrike\addons\amxmodx\configs\hns_language.txt  四语 AI_* 键
+cstrike\addons\amxmodx\configs\mixsystem\hns-maps.ini  [skill] 地图列表
+
+两套 include:
+  include\                 编译用 (-i include)
+  cstrike\addons\amxmodx\scripting\include\  运行侧副本, 改 hnsmenu/cmds 要两边同步
+  不要用 cstrike\scripting\include\hns_matchsystem.inc (旧 enum)
+
+==================================================
+六、已知坑 (别再踩)
+==================================================
+
+1. 上场必须 rg_set_user_team, 不要 rg_internal_cmd("jointeam")
+   原因: blockCmd 会拦 jointeam, 强制开赛会卡观战。
+   现在 TRAINING 和 LOBBY 都放行 jointeam 了, 但上场仍用 ReAPI。
+
+2. 换图会重载插件, 全局变量全丢。
+   跨图只能靠 PDS (PersistentDataStorage):
+     ai_pending_start / ai_picked_map / ai_match_rules / ai_sponsor_match / ai_sponsor_name
+   换图后用当前在线玩家重建名单, 原报名名单会丢。这是刻意的最小修复。
+
+3. native_begin_external_match 会先把当前 T/CT 标成 PLAYER_MATCH 再 mix_start
+   否则 forceUnmatchedToSpec 会把人再踢回观战。
+
+4. 赞助者输入是 AI 自己捕获 say (g_bSponsorNameInput), 再 native 写进 System。
+   cmds.inc 里也有同名数组, 互不覆盖, 别混。
+
+5. VIP 没有独立 isUserVip, 用 isUserWatcher / isUserAdmin / is_user_admin。
+   代码里是 isUserVipOrAdmin()。
+
+6. 重叠 patch 会把 SMA 截断。出过错:
+   onMapChange 变成 }eState
+   loadSkillMaps 被 buildSignupBar 截断
+   语言文件 en/ru 插进 REG_SIGNUP 中间
+   修法: 读整段再一次性替换, 禁止对同一区域连续重叠 patch。
+
+==================================================
+七、上班后建议测试顺序
+==================================================
+
+1. changelevel 加载新插件
+2. 打开 AI 菜单报名, 看 HUD 只有 "报名: n/12", 没有 012345678910
+3. 管理员换一张图, 确认不会自动开报名、不会 2 分钟后自动收团
+4. 再报名 -> 强制开赛(1人) -> 应上场, 弹出模式选择, 再地图选择, 不要卡观战
+5. 选指定地图换图, 换图后应继续开赛 (这是 pending 例外)
+6. /lang 切英文, 重新打开 AI 菜单应是英文
+7. mix 菜单: 第7项 ICGB, 第8项管理员; 非赞助局第7项点不了
+
+未实际进服验证。上面 1-7 是上班后第一件事。

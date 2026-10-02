@@ -1,0 +1,10 @@
+08_资源文件_asd —— 目录说明
+============================
+来源: gtr/asd, buffclass 皮肤素材(第三方资源):
+- models/player/   模型文件
+- gfx/vgui/、gfx/tattoo/  贴图/纹身
+- resource/hud/portrait/  头像资源
+- sound/radio/、sound/player/、sound/vox/  音效
+
+用途: 皮肤模型的模型/音效/贴图文件, 供皮肤系统(CustomPlayerModelsApi / HnsMatchSkin)使用。
+版权: 未注明, 商用前请自行确认。

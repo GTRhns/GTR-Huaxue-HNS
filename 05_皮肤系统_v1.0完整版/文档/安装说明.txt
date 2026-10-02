@@ -1,0 +1,153 @@
+============================================================
+  CS1.6 HNS 皮肤系统(MySQL)  完整版 安装说明
+  插件作者: OpenHNS  版本 1.0.0
+============================================================
+
+【功能】
+  - 玩家输入 /skin 打开皮肤菜单, 用 ICGB 金币购买 / 选用皮肤
+  - 购买 = 租期 (默认30天, 到期自动失效, 可重新购买)
+  - /skin 菜单里可花"升级永久价格"(默认2000金币)把已购限时皮肤升级为永久
+  - 管理员 /cpm 发放皮肤 = 直接永久
+  - 管理员输入 /cpm 打开管理菜单, 可查看皮肤池、查看玩家拥有、
+    给玩家发放 / 移除皮肤 (需要 ADMIN_RCON 权限)
+  - 皮肤上架 = 在 MySQL 的 cpm_skins 表加一行, 无限添加(无数量上限)
+  - 皮肤与玩家拥有信息存 MySQL, 可在 phpMyAdmin 里分页查询查看
+  - 与 HnsMatchSql 共用同一个数据库连接, 分表(前缀 cpm_)存储
+  - 租期天数 / 升级永久价格 可在 skins.cfg 顶部 [SETTINGS] 区块自行设置
+
+------------------------------------------------------------
+一、数据库
+------------------------------------------------------------
+1. 用 phpMyAdmin / HeidiSQL 登录你的 HNS 比赛库。
+2. 打开并执行  sql/hns_skins.sql  (会自动创建 3 张表):
+     cpm_skins          -> 皮肤池 (上架在这里加行)
+     cpm_player_skins   -> 玩家拥有皮肤 (★ 你要查询玩家皮肤的表)
+     cpm_player_current -> 玩家当前选用
+   ★ 若你的库已经建过 cpm_player_skins (老版本), 需补一列到期时间:
+     ALTER TABLE cpm_player_skins ADD COLUMN expire_at INT NOT NULL DEFAULT 0;
+     (expire_at: 0=永久, >0=租期到期时间戳; 插件启动也会自动补这列,
+      手动执行可保证数据库先行一致)
+3. 上架皮肤 / 无限添加皮肤:
+   最简单的方式是编辑 configs/mixsystem/skins.cfg (两行式, 见第五节),
+   启动时自动导入 cpm_skins 表。想加皮肤就复制两行改一下, 想多少加多少。
+   也可以直接在 MySQL 手动插入 (示例: 上架名为 vip_fire 的 T 款):
+     INSERT INTO cpm_skins
+       (model_key, team, model, body, skin, price, flags, death_sound)
+     VALUES
+       ('vip_fire', 'T', 'player/vip_fire.mdl', 0, 0, 500, '', 'misc/vip_fire.wav');
+   说明:
+     model_key   皮肤唯一名字(菜单显示/识别用, 全服唯一, 绝不能重复)
+     team        'T'=恐怖分子款  'C'=反恐精英款 (每款只有一个阵营)
+     model       模型路径(相对 models/ 目录)
+     price       价格(ICGB金币), 0 = 免费
+     flags       权限要求, 留空 = 所有人可买(如填 "b" = 需 ADMIN_IMMUNITY)
+     death_sound 死亡音效(相对 sound/), 可多个款复用同一个; 空 = 不播
+     active     1=上架(可选用)  0=下架
+   改完换图/重启即可刷新皮肤池(会自动重新导入 skins.cfg)。
+   ★ 推荐: 平时就用 skins.cfg 加皮肤, 不用手工改数据库。
+
+------------------------------------------------------------
+二、上传文件 (对照服务器 cstrike/addons/amxmodx/ 目录)
+------------------------------------------------------------
+把 addons/ 整个目录的内容覆盖到服务器对应位置:
+  addons/amxmodx/scripting/
+      HnsMatchSkin.sma
+      CustomPlayerModelsApi.sma
+      include/custom_player_models.inc
+      include/hns_gc.inc
+      include/hns_optional_sql.inc
+  (若你服务器 scripting/include 里已有 hns_gc.inc / hns_optional_sql.inc,
+   可不覆盖, 用你现有的即可)
+
+------------------------------------------------------------
+三、编译成 .amxx
+------------------------------------------------------------
+1. 上传到你服务器 cstrike/addons/amxmodx/scripting/ 目录。
+2. 打开 configs/plugins.ini, 确认:
+     CustomPlayerModelsApi.amxx     ← 必须排在前
+     HnsMatchSkin.amxx
+   保底配置(也可以直接用脚本自动写这两行, 见下)。
+   compile.sh 会自动编译 scripting 下所有 .sma 并生成 plugins/*.amxx,
+   编译完成后把两个 .amxx 移到 plugins/ 并启用即可。
+   (本机 32 位编译器无法在 64 位环境运行, 请在你服务器上编译; 若你仅有
+    64 位环境, 直接把编译好的 .amxx 放到 plugins/ 也可以用)
+
+------------------------------------------------------------
+四、数据库连接配置
+------------------------------------------------------------
+插件自动读取 configs/mixsystem/hnsmatch-sql.cfg (与 HnsMatchSql 共用):
+  mixsystem/hnsmatch-sql.cfg 内容示例:
+    hns_host  127.0.0.1
+    hns_user  root
+    hns_pass  root
+    hns_db    hns
+  若你比赛库的配置文件名不同, 需打开 HnsMatchSkin.sma 修改:
+    #define DB_CFG_FILE  "mixsystem/hnsmatch-sql.cfg"
+  改为你的路径即可。
+
+------------------------------------------------------------
+五、角色死亡音效 + 皮肤配置(TT/CT 分区块, 无限添加)
+------------------------------------------------------------
+可为皮肤配死亡音效: 玩家选用该款皮肤死亡时, 全场广播播放。
+音效直接写在 configs/mixsystem/skins.cfg 里, 一款可写多条, 死亡时随机一条; 也可多款复用。
+
+配置分两大区块, 各自下面的行归对应阵营 (configs/mixsystem/skins.cfg):
+  [TT]  下面的每一款都是 恐怖分子(T) 款
+  [CT]  下面的每一款都是 反恐精英(CT) 款
+
+文件最前面还有一个全局设置区块(不写就用默认值):
+  [SETTINGS]
+  rent_days  30       ; 金币购买获得的租期天数, 0 = 直接永久
+  upgrade_price 2000  ; 把已购限时皮肤升级为永久的价格 (ICGB金币)
+
+每款皮肤: 第一行名字/模型/价格, 后面可跟 0~多行 wav:
+  第一行:  名字  模型路径  价格
+  后续行:  wav 音效路径            (可选, 属于上一款; 多条则死亡随机)
+
+示例:
+  [TT]
+  ; 李娜: T 款, 300 金币, 死亡时从 3 条音效里随机
+  李娜  models/ddsct/ddsct.mdl  300
+        wav misc/ddsct.wav
+        wav misc/ddsct2.wav
+        wav misc/ddsct3.wav
+  ; 小美: T 款, 免费, 无死亡音效(不写 wav 行)
+  小美  models/xiaomei/xiaomei.mdl  0
+
+  [CT]
+  ; 阿明: CT 款, 死亡音效可复用同一个
+  阿明  models/ddsct/ddsct.mdl  300
+        wav misc/ddsct.wav
+
+字段说明:
+  名字     皮肤唯一标识, 菜单里显示的就是它, 全服唯一(绝不能重复!)
+  模型     相对 models/ 的路径
+  价格     ICGB 金币, 0 = 免费
+  wav      该款死亡音效(相对 sound/), 多个款可填同一个; 不写 = 无音效
+
+注意:
+- 音效跟着每款走, 想两款一样的就填同一个路径, 不区分 TT/CT。
+- 把音频文件放到服务器 cstrike/sound/ 对应目录(CSTRIKE/SOUND)也兼容 wav/mp3。
+- 每个涉及的音效启动时会 precache; 文件不存在会报错但不影响服务器。
+- 想加皮肤就在对应区块下复制两行改一下名字/模型/价格/音效, 无限添加。
+- 名字不能重复, 一旦定下别改, 否则玩家已购买的记录会丢失。
+- 修改 skins.cfg 后 换图/重启 生效(会重新导入 MySQL)。
+
+------------------------------------------------------------
+六、验证
+------------------------------------------------------------
+- 管理员: 输入 /cpm -> 查看皮肤池 / 查看玩家已拥有皮肤 / 发放(永久) / 移除
+- 玩家:   输入 /skin -> 用金币购买(30天租期)并选用
+- 升级永久: /skin -> 点"升级已购皮肤为永久" -> 扣 upgrade_price 金币变永久
+- 管理员发放 = 永久; 到期后皮肤自动失效, 玩家可重新购买
+- 死亡音效: 玩家选用已配音效的皮肤, 死亡时全场应能听到音效
+- 数据库: SELECT * FROM cpm_player_skins;  -- 看哪个玩家拥有哪皮肤
+  SELECT * FROM cpm_player_skins WHERE expire_at=0;  -- 永久皮肤
+  SELECT * FROM cpm_player_skins WHERE expire_at>0;  -- 租期皮肤
+
+============================================================
+常用管理命令速查
+============================================================
+/skin  玩家皮肤菜单(所有玩家)
+/cpm   管理员菜单(需 ADMIN_RCON)
+============================================================

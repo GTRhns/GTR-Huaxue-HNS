@@ -1,0 +1,8 @@
+10_交接与文档 —— 目录说明
+=========================
+- 插件修改记录.txt           2026-09-27 详细改动记录(12 节, 含踩坑/事故记录)★必读
+- 上班交接_AI报名.txt         上班交接短版(当前完整流程+测试顺序)★必读
+- cstrike_scripting_UPDATELOG.txt  回合制规则/自动切刀/无人训练模式更新日志
+- 源地址.txt                 插件参考来源 https://cs-bg.info/game-cs/mods/amxmodx/plugins/534
+- _skin_dump.txt             皮肤数据导出(原 cstrike/ 根目录)
+- hns_agent/hns.agent.md     GTR HNS Developer AI 智能体定义(工作原则/CS-AMXX 专项规则)

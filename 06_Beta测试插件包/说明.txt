@@ -1,0 +1,12 @@
+06_Beta测试插件包 —— 目录说明
+=============================
+来源: gtr/amxx plugins bata(2026-09-28 整理), 共 5 个独立小插件:
+
+  01_观察者列表_SpecList/    显示"谁在观察你"的 HUD 列表(含 .sma 源码)
+  02_广告管理_AdManager/     聊天栏滚动广告, 含颜色代码/变量(advertisements.ini)
+  03_解封菜单_UnbanMenu/     管理员解封菜单(仅 .amxx, 无源码)
+  04_团队比分HUD_TeamScore/  屏幕上方 CT vs T 比分和回合数(含 .sma + 效果图)
+  05_游戏内广告_InGameAds/   游戏内 3D 广告牌系统(仅 .amxx + cfg, 无源码)
+
+部署: *.amxx 上传 plugins/, 配置文件上传 configs/, 在 plugins.ini 末尾启用
+(详见 00_总说明.txt 原文件)。

@@ -1,0 +1,517 @@
+HNS 插件修改记录 (详细版)
+日期: 2026-09-27
+项目: c:\Users\Administrator\Desktop\delivery
+编译器: AMXX 1.10.0.5479  (cstrike\scripting\amxxpc.exe)
+状态: 已编译并拷到 cstrike\addons\amxmodx\plugins\
+      未实际进服验证, 进服前必须 changelevel 或重启服务器。
+
+本文只写这次会话里实际改过的地方, 以及为什么改。
+不要把 cstrike\scripting\include\hns_matchsystem.inc 当编译源, 那是旧 enum。
+
+
+============================================================
+0. 这次会话要解决的用户问题 (按时间)
+============================================================
+
+A. mix 菜单第7项 HNS 模式一直点不下去
+B. hnsai 强制开启把人拉到观战就没了, 不选地图/模式
+C. 报名结束要先分组, 再让 VIP/管理员选模式和地图, 没有 VIP 就投票
+   投票长这样: 1.hns [100%]  百分比红色
+   先选比赛模式, 后选地图 (随机 / 指定 /maps / 当前地图)
+D. AI 报名菜单新增「HNS比赛选择」: 娱乐局 / 赞助局
+E. 赞助局分组后要管理员/VIP 输入赞助者是谁
+F. 报名人数 012345678910 显示不见了 / 后来又要求取消这个数字条
+G. /lang 改英文后 AI 菜单还是中文
+H. 切换地图不要自动开 AI 报名/开赛
+
+另外更早已经做过、这次继续沿用的:
+  关赛回练习、0人停计时、清 hostname [MIX]、聊天按玩家语言、
+  删 mix 第7项原来的 HNS 模式、手动开赛能打、强制1人测试、报名菜单点完不关。
+
+
+============================================================
+1. 改了哪些文件 (清单)
+============================================================
+
+【主插件源码】
+  source\HnsAISignup.sma
+      改动最大。报名流程、投票、地图、赞助者、HUD、换图 PDS、语言化、上场。
+  source\HnsMatchSystem.sma
+      注册 3 个 native: 进大厅 / 写赞助者 / 外部开赛时先标记参赛者。
+
+【接口声明】
+  include\hns_matchsystem.inc
+  cstrike\addons\amxmodx\scripting\include\hns_matchsystem.inc
+      增加 MODE_LOBBY, hns_ai_enter_lobby, hns_external_set_sponsor_name,
+      hns_begin_external_match。两边必须一致。
+
+【mix 菜单 / 指令拦截】
+  include\hns-match\addition\hnsmenu.inc
+  cstrike\addons\amxmodx\scripting\include\hns-match\addition\hnsmenu.inc
+      mix 主菜单第7项永远 ICGB, 第8项永远管理员菜单。
+  include\hns-match\addition\cmds.inc
+  cstrike\addons\amxmodx\scripting\include\hns-match\addition\cmds.inc
+      blockCmd: TRAINING 和 LOBBY 都放行 jointeam。
+
+【语言】
+  cstrike\addons\amxmodx\configs\hns_language.txt
+      [cn][tw][en][ru] 四段末尾加 AI_* 键。
+  source\HnsLanguage.sma
+      这次没改逻辑。AI 菜单走 HnsLang_Get, /lang 本来就会改 cl_language。
+
+【编译产物 / 部署】
+  compiled\HnsAISignup.amxx
+  compiled\HnsMatchSystem.amxx
+  cstrike\addons\amxmodx\plugins\HnsAISignup.amxx
+  cstrike\addons\amxmodx\plugins\HnsMatchSystem.amxx
+
+【没改、但运行依赖】
+  source\HnsPersistentDataStorage.sma     换图跨图存 pending
+  include\PersistentDataStorage.inc
+  cstrike\addons\amxmodx\configs\mixsystem\hns-maps.ini   AI 读 [skill] 段当地图池
+  cstrike\addons\amxmodx\plugins\plugins.ini              加载顺序已对
+
+【交接文件】
+  上班交接_AI报名.txt     短版, 上班后怎么测
+  插件修改记录.txt        本文件, 详细改了啥
+
+
+============================================================
+2. source\HnsAISignup.sma  (改动核心)
+============================================================
+
+版本: PLUGIN_VERSION "1.2"
+
+依赖 include:
+  amxmodx, amxmisc, fakemeta, reapi, sqlx, nvault,
+  hns_matchsystem, hns_matchsystem_sql, hns_optional_sql,
+  hns_language, PersistentDataStorage
+
+状态机 SIGNUP_STATE:
+  SIGNUP_IDLE         待命, 没人报名
+  SIGNUP_OPEN         报名中
+  SIGNUP_CLOSE        收团: 全员观战 + 1秒1人上场
+  SIGNUP_SETUP        分组完成, 选模式/地图/赞助者
+  MATCH_RUNNING       比赛中
+
+新增/关键全局:
+  g_eVoteKind                 VOTE_NONE / VOTE_RULES / VOTE_MAP
+  g_bPostGroupSetup           收团后进入选择流程
+  g_bWaitingSponsor           等赞助者名字
+  g_iSponsorAskId             被要求输入的那个 VIP/管理员
+  g_szSponsorName             赞助者名字
+  g_bSponsorNameInput[]       AI 自己的 say 捕获开关 (和 cmds.inc 同名数组互不覆盖)
+  g_szMapList / g_iMapCount   从 hns-maps.ini [skill] 读
+  g_szPickedMap               选定地图
+  g_iMapVoteTally[]           地图票数
+  g_bPendingMatchStart        换图后继续开赛
+  g_bForceStart               强制开赛, 允许 1 人测试
+  g_bSponsorMatch             true=赞助局 / false=娱乐局
+  TASK_SIGNUP_HUD  92005
+  TASK_SPONSOR_WAIT 92006
+
+
+---------- 2.1 plugin_init / plugin_cfg ----------
+
+做了啥:
+  plugin_init:
+    注册 say/say_team: signup/报, cancel/退, aistart/开赛, aitype/赛制,
+                       aiabort/停赛, aivote/投
+    register_clcmd say / say_team -> aiSayHandle  (抓赞助者输入)
+    loadSkillMaps()
+    1秒循环 taskSignupHud
+  plugin_cfg:
+    换图会重载整个插件, 内存全丢。
+    所以读 PDS_GetCell("ai_pending_start"), 有值才调 onMapChange()。
+    SQL 没就绪则 Local_GuestInit() (stock, 曾经漏写 stock 关键字导致编译失败)。
+
+为什么:
+  换图 = 插件重载。不用 PDS 的话, 选好地图 changelevel 后报名状态全没。
+
+
+---------- 2.2 菜单: showMainMenu / showTypeMenu ----------
+
+做了啥:
+  主菜单全部走 ai_lang() -> HnsLang_Get(id, key), 不再硬编码中文。
+  第3项 AI_MENU_TYPE = 「HNS比赛选择」, 点开 showTypeMenu:
+    娱乐局 / 赞助局
+  点完不关菜单, 回到 showMainMenu。
+  盗版玩家 (isGuestPlayer) 禁止选赞助局。
+
+为什么:
+  用户要 AI 菜单跟 /lang。
+  用户要新增娱乐局/赞助局选择。
+  用户要菜单点完不关。
+
+
+---------- 2.3 权限: isUserVipOrAdmin ----------
+
+做了啥:
+  项目里没有独立 isUserVip。
+  用 isUserWatcher / isUserAdmin / is_user_admin 合成 isUserVipOrAdmin()。
+  强制开赛、改类型、改人数、取消报名、选模式、选地图、填赞助者都走这个。
+
+为什么:
+  用户说 VIP 或管理员优先选模式/地图/赞助者。
+
+
+---------- 2.4 收团上场: closeSignup / taskPlacePlayer / moveToTeam ----------
+
+做了啥:
+  closeSignup:
+    过滤掉线 -> 人数不够且非强制则继续报名
+    否则 SIGNUP_CLOSE, 全员 moveToSpec, 1秒1人 taskPlacePlayer
+  taskPlacePlayer:
+    上场完:
+      如果 g_bPendingMatchStart (换图回来) -> 直接 startMatch
+      否则 beginPostGroupSetup (先选模式再选地图)
+  moveToSpec / moveToTeam:
+    用 rg_set_user_team, 不用 rg_internal_cmd("jointeam")
+
+为什么:
+  以前强制开赛: closeSignup 把人拉观战, 再用 jointeam 上场。
+  LOBBY 下 blockCmd 拦截 jointeam, 人就卡在观战, 也不选模式地图。
+  这是用户说「强制开启为啥给我拉到观战去了就没了」的根因。
+
+
+---------- 2.5 分组后选择: beginPostGroupSetup / 投票 / 地图 ----------
+
+流程:
+  beginPostGroupSetup
+    有 VIP/管理员 -> showRulesMenu (MR/计时/决斗)
+    没有 -> startRulesVote
+  VIP 选完模式 -> beginMapSelect
+  beginMapSelect
+    有 VIP -> showMapChoiceMenu: 随机 / 指定 /maps / 当前地图
+    没有 -> startMapVote (skill 地图列表)
+  afterMapChosen
+    赞助局 -> beginSponsorInput
+    娱乐局 -> startMatch
+
+投票显示:
+  formatex(szItem, ..., "%s \r[%d%%]", 名字, 百分比)
+  效果: 1. hns [100%]   百分比红色
+  先模式后地图。cmdAiVote 按 g_eVoteKind 打开对应投票菜单。
+
+为什么:
+  用户原话: 报名结束之后先分组然后让玩家投票或者优先vip管理员选当前打什么模式
+  比赛和随机地图还是指定地图/maps还是当前地图, 投票长这样 1.hns [100%]
+  百分比是红色的, 先选比赛模式后选地图。
+
+
+---------- 2.6 赞助者输入: beginSponsorInput / aiSayHandle ----------
+
+做了啥:
+  地图选定后如果是赞助局:
+    找第一个在线 VIP/管理员
+    messagemode 打开聊天输入
+    g_bSponsorNameInput[id]=true, AI 自己的 say 钩子吃掉这句话
+    30秒超时 taskSponsorTimeout, /取消 跳过
+    名字 trim, 去掉 %, 调 hns_external_set_sponsor_name
+    然后 startMatch
+
+为什么:
+  用户要赞助局开启、报名结束分配队伍后, 管理员或 VIP 输入比赛赞助者是谁。
+  不能用 cmds.inc 里的 g_bSponsorNameInput, 那是 System 自己的, 互不覆盖。
+
+
+---------- 2.7 startMatch / 换图 PDS ----------
+
+做了啥:
+  非当前图:
+    PDS_SetCell("ai_pending_start", 1)
+    同时存: ai_picked_map, ai_match_rules, ai_sponsor_match,
+            ai_sponsor_name, ai_force_start, ai_team_size
+    server_cmd("changelevel %s", g_szPickedMap)
+    return
+  当前图:
+    hns_external_set_team_size
+    hns_external_set_match_mode
+    赞助局且有名字则 hns_external_set_sponsor_name
+    hns_begin_external_match
+    清 g_bForceStart / g_bPostGroupSetup / g_bWaitingSponsor / g_bPendingMatchStart
+    PDS_SetCell("ai_pending_start", 0)
+    g_eState = MATCH_RUNNING
+
+onMapChange (下班前刚改):
+  如果 PDS pending=1:
+    恢复规则/赞助/地图, 5秒后 taskPendingResume
+    rebuildSignupFromOnline (用当前在线玩家重建名单, 原名单换图会丢)
+    closeSignup 再上场, 然后因为 pending 直接 startMatch
+  如果不是 pending (普通换图 / 管理员换图 / 地图投票换图):
+    以前: SIGNUP_OPEN + 2分钟冷静期, 人够自动收团开赛
+    现在: 报名清空, g_eState=SIGNUP_IDLE, 不自动报名, 不开赛
+
+abortSignup 也会清 ai_pending_start=0, 避免下次换图误触发。
+
+为什么:
+  用户最后说: 切换地图不开启比赛ai报名。
+  pending 例外必须留: 否则 AI 选指定地图后 changelevel, 比赛永远开不起来。
+
+
+---------- 2.8 HUD / 报名人数显示 ----------
+
+以前:
+  HUD: 报名: n/12
+       012345[6]78910     (当前人数用 [] 标出)
+  聊天: 已报名 n 人 | 服务器在线 n 人 | 012345[6]78910
+  函数 buildSignupBar()
+
+现在 (下班前按用户要求取消数字条):
+  HUD 只在 SIGNUP_OPEN 显示: 报名: n/12
+  聊天: 已报名 n 人 | 服务器在线 n 人
+  buildSignupBar() 已删除
+
+为什么:
+  用户先抱怨「聊天框的X人数不见了012345678910」, 当时加了明文数字条。
+  后来又说「把ui的那个12345678910取消掉」, 所以删掉。
+  颜色码以前可能导致聊天显示成空格, 所以现在不用颜色码拼数字条。
+
+
+---------- 2.9 语言化 ----------
+
+做了啥:
+  stock ai_lang(id, key, out, len) -> HnsLang_Get
+  stock ai_ruleName 用 AI_RULE_MR / AI_RULE_TIMER / AI_RULE_DUEL
+  菜单标题、按钮、投票标题、地图选项、HUD 都走语言键。
+  部分聊天提示仍是中文硬编码 (ai_print), 没全部语言化。
+
+为什么:
+  用户: 我把 /lang 改成英文了为啥ai菜单还是中文。
+  原因就是菜单以前写死中文。
+  /lang 会改 HnsLang 内部语言 + cl_language。
+  语言文件是 HnsLanguage plugin_init 时 LoadLanguageFile, 改 txt 要重载插件或换图。
+  改 /lang 后要重新打开 AI 菜单才会刷新。
+
+
+---------- 2.10 强制开赛 cmdForceStart ----------
+
+做了啥:
+  VIP/管理员, 至少 1 人已报名
+  g_bForceStart=true
+  closeSignup() -> 上场 -> beginPostGroupSetup (仍选模式和地图)
+  人数检查: 强制时跳过 SIGNUP_MIN=6 和 3v3
+
+为什么:
+  用户要 1 人能测, 但不要跳过模式/地图选择, 也不要卡观战。
+
+
+============================================================
+3. source\HnsMatchSystem.sma
+============================================================
+
+plugin_init 新增 register_native:
+  hns_ai_enter_lobby            -> native_ai_enter_lobby
+  hns_external_set_sponsor_name -> native_external_set_sponsor_name
+  hns_begin_external_match      -> native_begin_external_match
+  (hns_external_set_team_size / hns_external_set_match_mode 本来就有)
+
+native_ai_enter_lobby:
+  仅当前是 MODE_TRAINING 才 lobby_start(), 返回 1/0
+  native_set_mode 故意不加 MODE_LOBBY, 大厅只能由比赛流程激活
+
+native_external_set_sponsor_name:
+  读字符串, trim, 去掉 %
+  写 g_szSponsorName
+  在线玩家名字匹配则设 g_iSponsorPlayer, g_iSponsorGC=clamp(hns_gc_get_player,5,20)
+  g_bPersistentSponsor=true
+
+native_begin_external_match:
+  设 MATCH_TYPE_SPONSOR 或 MATCH_TYPE_CASUAL
+  开赛前把当前所有 T/CT 标 g_ePlayerInfo[id][PLAYER_MATCH]=true
+  并写 PLAYER_TEAM
+  然后 mix_start()
+
+为什么:
+  mix_start 里 forceUnmatchedToSpec 会把没标参赛的人踢观战。
+  AI 上场后如果不先标记, 开赛瞬间全员又回观战。
+  这是强制开赛「拉观战就没了」的第二层原因。
+
+
+============================================================
+4. include\hns_matchsystem.inc
+   以及 cstrike\addons\amxmodx\scripting\include\hns_matchsystem.inc
+============================================================
+
+做了啥:
+  enum HNS_MODES 增加 MODE_LOBBY (TRAINING 后面)
+  声明:
+    native hns_ai_enter_lobby();
+    native hns_external_set_team_size(iSize, iSizeTT);
+    native hns_external_set_match_mode(iMode);
+    native hns_external_set_sponsor_name(const szName[]);
+    native hns_begin_external_match(bool:bSponsor, iStarter);
+
+为什么:
+  AI 插件编译需要这些 native。
+  两套 include 不同步会编译过、运行 native 对不上。
+  不要用 cstrike\scripting\include\hns_matchsystem.inc, 那是旧版不同 enum。
+
+
+============================================================
+5. include\hns-match\addition\hnsmenu.inc
+   以及 cstrike 副本 (必须两边一起改)
+============================================================
+
+文件: mix 主菜单
+
+以前问题:
+  非赞助局时第7项直接变成管理员菜单, 赞助局才有 ICGB。
+  语言串没有 ^n, 视觉上第7项像「下不去」。
+  用户: mix 那个 7hns 一直下不去。
+
+现在:
+  第7项永远占位 ICGB:
+    赞助局: "ICGB金币数量: %d" 可点, callback 启用
+    非赞助局: "\dICGB金币数量" 灰色, icgbItemCallback 返回 ITEM_DISABLED
+  第8项永远管理员菜单:
+    管理员显示正常, 非管理员 \d 灰色
+  handler:
+    case 7: 赞助局 gcAdjustMenu, 否则重回主菜单
+    case 8: 管理员 amxmodmenu, 否则重回主菜单
+
+为什么:
+  用户要删掉 mix 第7项原来的 HNS 模式, 并且第7项要能「下去」看到第8项。
+  编号固定, 不再根据赞助局动态挤项。
+
+
+============================================================
+6. include\hns-match\addition\cmds.inc
+   以及 cstrike 副本
+============================================================
+
+函数: blockCmd (拦截 jointeam 等)
+
+以前:
+  非 TRAINING 就拦。LOBBY 下 jointeam 被拦死。
+
+现在:
+  if (g_iCurrentMode == MODE_TRAINING || g_iCurrentMode == MODE_LOBBY)
+      return PLUGIN_CONTINUE;
+
+为什么:
+  AI 第一个人报名会 hns_ai_enter_lobby() 进 LOBBY。
+  之后 jointeam 被拦, 强制开赛卡观战。
+  即使现在上场改用 rg_set_user_team, LOBBY 放行仍保留, 避免其他插件/玩家手动加队失败。
+
+
+============================================================
+7. cstrike\addons\amxmodx\configs\hns_language.txt
+============================================================
+
+四段 [cn] [tw] [en] [ru] 末尾都加了 AI_* 键:
+
+  AI_MENU_TITLE / GROUP / SIGNUP / CANCEL / RESHUFFLE / FORCE
+  AI_MENU_RULES / SIZE / TYPE / EXIT / BACK
+  AI_TYPE_TITLE / CASUAL / SPONSOR
+  AI_RULE_MR = hns
+  AI_RULE_TIMER = timer
+  AI_RULE_DUEL = duel
+  AI_VOTE_RULES_TITLE / AI_VOTE_MAP_TITLE / AI_VOTE_SKIP
+  AI_MAP_TITLE / RANDOM / PICK / CURRENT / LIST_TITLE
+  AI_HUD_COUNT = 报名: %d/%d   (英文 Signup: %d/%d)
+
+踩过的坑:
+  往 [en][ru] 中间插入时曾经插进 REG_SIGNUP 字符串中间, 语言文件损坏。
+  已整段修好, REG_SIGNUP 原文恢复。
+  以后加键只追加到各语言段末尾, 不要插到已有键中间。
+
+HnsLanguage.sma 本身这次没改。
+  /lang 会 HnsLang 内部切换 + client_cmd cl_language, mix 菜单 %L 也会跟。
+  AI 菜单必须自己调 HnsLang_Get 才会跟。
+
+
+============================================================
+8. 编译 / 部署 / 加载顺序
+============================================================
+
+工作目录必须是:
+  c:\Users\Administrator\Desktop\delivery
+
+编译命令 ( -i 和 -o 必须跟路径连在一起, 空格会变成 include.p 读失败 ):
+
+  cstrike\scripting\amxxpc.exe -ic:\Users\Administrator\Desktop\delivery\include source\HnsMatchSystem.sma -ocompiled\HnsMatchSystem.amxx
+  cstrike\scripting\amxxpc.exe -ic:\Users\Administrator\Desktop\delivery\include source\HnsAISignup.sma -ocompiled\HnsAISignup.amxx
+
+拷贝:
+  Copy-Item compiled\HnsAISignup.amxx cstrike\addons\amxmodx\plugins\HnsAISignup.amxx -Force
+  Copy-Item compiled\HnsMatchSystem.amxx cstrike\addons\amxmodx\plugins\HnsMatchSystem.amxx -Force
+
+plugins.ini 关键顺序:
+  HnsLanguage.amxx
+  HnsPersistentDataStorage.amxx     ; 必须在 MatchSystem / AI 之前
+  HnsSponsorLocal.amxx
+  HnsMatchSystem.amxx
+  ...
+  HnsAISignup.amxx                  ; 必须在 MatchSystem 之后
+
+HnsMatchSql.amxx 当前注释掉了, AI 用 hns_optional_sql, SQL 没有也能跑 (盗版走 nvault)。
+
+
+============================================================
+9. 代码损坏事故 (必须写进记录, 避免再犯)
+============================================================
+
+对同一个 SMA 做重叠 patch (连续 replace 同一区域) 会把文件截断。发生过:
+
+  1. onMapChange 变成 }eState  函数头被吃掉
+  2. rebuildSignupFromOnline 尾巴混入冷静期代码
+  3. loadSkillMaps 被 buildSignupBar 截断, fclose 丢失
+  4. 语言文件 en/ru 插进 REG_SIGNUP 中间
+  5. Local_GuestInit 缺 stock 关键字
+
+修法:
+  读整段, 一次性替换, 禁止对同一区域连续重叠 patch。
+  PowerShell 不要用 here-string 写 SMA。
+  改完读函数头尾确认括号配对, 再编译。
+
+
+============================================================
+10. 下班前最后两笔改动 (2026-09-27 晚)
+============================================================
+
+A. 普通换图不再自动开 AI 报名/开赛
+   文件: source\HnsAISignup.sma  onMapChange()
+   以前: 换图 -> SIGNUP_OPEN + 2分钟冷静期 -> 人够 closeSignup
+   现在: 非 pending 则清空报名, SIGNUP_IDLE
+   pending (AI 自己选图后的 changelevel) 仍 5 秒后继续开赛
+
+B. 取消 UI 012345678910
+   删 buildSignupBar()
+   taskSignupHud 只显示 报名: n/12, 且仅 SIGNUP_OPEN 时显示
+   broadcastStatus 不再拼数字条
+
+已编译:
+  compiled\HnsAISignup.amxx  约 30691 字节 (2026-09-27 6:51)
+  已拷 plugins\
+
+
+============================================================
+11. 上班后建议测试 (未进服验证)
+============================================================
+
+1. changelevel 加载新 amxx
+2. 打开 AI 菜单报名, HUD 只有「报名: n/12」, 没有 012345678910
+3. 管理员随便换一张图, 确认不会自动开报名, 不会 2 分钟后自动收团
+4. 再报名 -> 强制开赛(1人) -> 应上场, 弹出模式选择, 再地图选择, 不要卡观战
+5. 选指定地图换图, 换图后应继续开赛 (pending 例外)
+6. /lang 切英文, 重新打开 AI 菜单应是英文
+7. mix 菜单: 第7项 ICGB, 第8项管理员; 非赞助局第7项点不了
+8. 赞助局: 选完地图后 VIP 聊天输入赞助者, 30秒或 /取消 可跳过
+
+未实际进服验证。上面 1-8 是上班后第一件事。
+
+
+============================================================
+12. 刻意没改的东西
+============================================================
+
+- 没有整体重写 HnsAISignup
+- 没有改 SQL / PTS 表结构
+- 没有给 Maps 插件加新 native, AI 自己读 hns-maps.ini [skill]
+- 没有独立 VIP 系统
+- 换图后原报名名单会丢, 只用当前在线玩家重建 (最小修复)
+- 部分聊天提示仍中文硬编码
+- HnsLanguage.sma 逻辑没动
+- 不要改无关模块
+)

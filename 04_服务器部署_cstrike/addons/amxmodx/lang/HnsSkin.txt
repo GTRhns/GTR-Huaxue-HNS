@@ -1,0 +1,243 @@
+[zh]
+MENU_TITLE = 皮 肤 商 城
+MENU_PERSON = 人物皮肤
+MENU_T_PERSON = T人物皮肤
+MENU_CT_PERSON = CT人物皮肤
+MENU_KNIFE = 小刀皮肤
+MENU_SMOKE = 烟雾弹皮肤
+MENU_FLASH = 闪光弹皮肤
+MENU_USP = USP皮肤
+MENU_GIVE = 发放管理 (管理员)
+MENU_MYSQL = MySQL终端管理 (云端存档)
+MENU_IC = IC积分兑换/查看
+MENU_HELP = 帮助说明
+MENU_LANGUAGE = 语言设置
+MENU_EXIT = 退出
+
+LANG_TITLE = 语言设置
+MENU_PAGE = 第 %d/%d 页
+MENU_NEXT = 下一页
+MENU_PREV = 上一页
+SKIN_SYS_TITLE = 皮肤系统
+SKIN_UNLOCKED = 已解锁
+SKIN_NOTOWNED = 未获得
+SKINSYS_NOSKIN = 暂无可用皮肤
+SKINSYS_LOCKED = 该皮肤尚未解锁, 请联系管理员获取或在 /skin 中兑换
+SKINSYS_LASTPAGE = 已经是最后一页了
+SKINSYS_CHANGED = 语言已切换
+HELP_TITLE = 使用帮助
+HELP_L1 = /skin — 打开皮肤商城
+HELP_L2 = /skin_knife — 直接选刀皮肤
+HELP_L3 = /ic — 查看并兑换IC积分
+
+TYPE_T = T
+TYPE_CT = CT
+TYPE_KNIFE = 刀
+TYPE_USP = USP
+TYPE_SMOKE = 烟雾弹
+TYPE_FLASH = 闪光弹
+
+SKIN_ARCTIC = 北极战士
+SKIN_GUERILLA = 中东游击
+SKIN_LEET = 精英部队
+SKIN_TERROR = 凤凰战士
+SKIN_GSG9 = 德国GSG9
+SKIN_GIGN = 法国GIGN
+SKIN_SAS = 英国SAS
+SKIN_URBAN = 美国城市特警
+SKIN_DEF_KNIFE = 默认刀
+SKIN_DEF_USP = 默认USP
+SKIN_DEF_SMOKE = 默认烟雾弹
+SKIN_DEF_FLASH = 默认闪光弹
+
+EXPORT_HEADER = HnsSkin 皮肤存档清单
+EXPORT_PIRATE = 盗版
+EXPORT_STEAM = steam版
+EXPORT_STEAMID = SteamID
+EXPORT_IP = IP
+EXPORT_OWNED = 持有皮肤
+EXPORT_NONE = (无)
+EXPORT_TOTAL = 共 %d 名玩家
+
+[zh-TW]
+MENU_TITLE = 皮 膚 商 城
+MENU_PERSON = 人物皮膚
+MENU_T_PERSON = T人物皮膚
+MENU_CT_PERSON = CT人物皮膚
+MENU_KNIFE = 小刀皮膚
+MENU_SMOKE = 煙霧彈皮膚
+MENU_FLASH = 閃光彈皮膚
+MENU_USP = USP皮膚
+MENU_GIVE = 發放管理 (管理員)
+MENU_MYSQL = MySQL終端管理 (雲端存檔)
+MENU_IC = IC積分兌換/查看
+MENU_HELP = 幫助說明
+MENU_LANGUAGE = 語言設置
+MENU_EXIT = 退出
+
+LANG_TITLE = 語言設置
+MENU_PAGE = 第 %d/%d 頁
+MENU_NEXT = 下一頁
+MENU_PREV = 上一頁
+SKIN_SYS_TITLE = 皮膚系統
+SKIN_UNLOCKED = 已解鎖
+SKIN_NOTOWNED = 未獲得
+SKINSYS_NOSKIN = 暫無可用皮膚
+SKINSYS_LOCKED = 該皮膚尚未解鎖, 請聯繫管理員獲取或在 /skin 中兌換
+SKINSYS_LASTPAGE = 已經是最後一頁了
+SKINSYS_CHANGED = 語言已切換
+HELP_TITLE = 使用幫助
+HELP_L1 = /skin — 打開皮膚商城
+HELP_L2 = /skin_knife — 直接選刀皮膚
+HELP_L3 = /ic — 查看並兌換IC積分
+
+TYPE_T = T
+TYPE_CT = CT
+TYPE_KNIFE = 刀
+TYPE_USP = USP
+TYPE_SMOKE = 煙霧彈
+TYPE_FLASH = 閃光彈
+
+SKIN_ARCTIC = 北極戰士
+SKIN_GUERILLA = 中東游擊
+SKIN_LEET = 精英部隊
+SKIN_TERROR = 鳳凰戰士
+SKIN_GSG9 = 德國GSG9
+SKIN_GIGN = 法國GIGN
+SKIN_SAS = 英國SAS
+SKIN_URBAN = 美國城市特警
+SKIN_DEF_KNIFE = 默認刀
+SKIN_DEF_USP = 默認USP
+SKIN_DEF_SMOKE = 默認煙霧彈
+SKIN_DEF_FLASH = 默認閃光彈
+
+EXPORT_HEADER = HnsSkin 皮膚存檔清單
+EXPORT_PIRATE = 盜版
+EXPORT_STEAM = steam版
+EXPORT_STEAMID = SteamID
+EXPORT_IP = IP
+EXPORT_OWNED = 持有皮膚
+EXPORT_NONE = (無)
+EXPORT_TOTAL = 共 %d 名玩家
+
+[en]
+MENU_TITLE = Skin Shop
+MENU_PERSON = Player Skins
+MENU_T_PERSON = T Player Skins
+MENU_CT_PERSON = CT Player Skins
+MENU_KNIFE = Knife Skins
+MENU_SMOKE = Smoke Skins
+MENU_FLASH = Flashbang Skins
+MENU_USP = USP Skins
+MENU_GIVE = Give Management (Admin)
+MENU_MYSQL = MySQL Terminal (Cloud Save)
+MENU_IC = IC Points Redeem/View
+MENU_HELP = Help
+MENU_LANGUAGE = Language
+MENU_EXIT = Exit
+
+LANG_TITLE = Language Settings
+MENU_PAGE = Page %d/%d
+MENU_NEXT = Next Page
+MENU_PREV = Previous Page
+SKIN_SYS_TITLE = Skin System
+SKIN_UNLOCKED = Unlocked
+SKIN_NOTOWNED = Not owned
+SKINSYS_NOSKIN = No skins available
+SKINSYS_LOCKED = This skin is not unlocked yet. Ask an admin or redeem it in /skin
+SKINSYS_LASTPAGE = This is already the last page
+SKINSYS_CHANGED = Language switched
+HELP_TITLE = Help
+HELP_L1 = /skin — open the skin shop
+HELP_L2 = /skin_knife — choose a knife skin
+HELP_L3 = /ic — view and redeem IC points
+
+TYPE_T = T
+TYPE_CT = CT
+TYPE_KNIFE = Knife
+TYPE_USP = USP
+TYPE_SMOKE = Smoke
+TYPE_FLASH = Flashbang
+
+SKIN_ARCTIC = Arctic Avenger
+SKIN_GUERILLA = Guerilla
+SKIN_LEET = Elite Crew
+SKIN_TERROR = Phoenix Connexion
+SKIN_GSG9 = GSG-9
+SKIN_GIGN = GIGN
+SKIN_SAS = SAS
+SKIN_URBAN = Urban Tactical
+SKIN_DEF_KNIFE = Default Knife
+SKIN_DEF_USP = Default USP
+SKIN_DEF_SMOKE = Default Smoke
+SKIN_DEF_FLASH = Default Flashbang
+
+EXPORT_HEADER = HnsSkin Skin Save List
+EXPORT_PIRATE = Pirate
+EXPORT_STEAM = Steam
+EXPORT_STEAMID = SteamID
+EXPORT_IP = IP
+EXPORT_OWNED = Owned Skins
+EXPORT_NONE = (none)
+EXPORT_TOTAL = Total %d players
+
+[ru]
+MENU_TITLE = Магазин скинов
+MENU_PERSON = Скины игрока
+MENU_T_PERSON = Скины Т
+MENU_CT_PERSON = Скины CT
+MENU_KNIFE = Скины ножа
+MENU_SMOKE = Скины дыма
+MENU_FLASH = Скины вспышки
+MENU_USP = Скины USP
+MENU_GIVE = Выдача (Админ)
+MENU_MYSQL = Терминал MySQL (Облако)
+MENU_IC = IC очки / Обмен
+MENU_HELP = Помощь
+MENU_LANGUAGE = Язык
+MENU_EXIT = Выход
+
+LANG_TITLE = Настройка языка
+MENU_PAGE = Стр. %d/%d
+MENU_NEXT = Далее
+MENU_PREV = Назад
+SKIN_SYS_TITLE = Система скинов
+SKIN_UNLOCKED = Открыто
+SKIN_NOTOWNED = Нет
+SKINSYS_NOSKIN = Скины недоступны
+SKINSYS_LOCKED = Скин ещё не открыт. Обратитесь к админу или обменяйте в /skin
+SKINSYS_LASTPAGE = Это уже последняя страница
+SKINSYS_CHANGED = Язык изменён
+HELP_TITLE = Помощь
+HELP_L1 = /skin — открыть магазин скинов
+HELP_L2 = /skin_knife — выбрать скин ножа
+HELP_L3 = /ic — смотреть и обменивать IC очки
+
+TYPE_T = Т
+TYPE_CT = CT
+TYPE_KNIFE = Нож
+TYPE_USP = USP
+TYPE_SMOKE = Дым
+TYPE_FLASH = Вспышка
+
+SKIN_ARCTIC = Арктика
+SKIN_GUERILLA = Герилья
+SKIN_LEET = Элита
+SKIN_TERROR = Феникс
+SKIN_GSG9 = GSG-9
+SKIN_GIGN = GIGN
+SKIN_SAS = SAS
+SKIN_URBAN = Городской
+SKIN_DEF_KNIFE = Стандартный нож
+SKIN_DEF_USP = Стандартный USP
+SKIN_DEF_SMOKE = Стандартный дым
+SKIN_DEF_FLASH = Стандартная вспышка
+
+EXPORT_HEADER = HnsSkin список скинов
+EXPORT_PIRATE = Пират
+EXPORT_STEAM = Steam
+EXPORT_STEAMID = SteamID
+EXPORT_IP = IP
+EXPORT_OWNED = Скины
+EXPORT_NONE = (нет)
+EXPORT_TOTAL = Всего %d игроков

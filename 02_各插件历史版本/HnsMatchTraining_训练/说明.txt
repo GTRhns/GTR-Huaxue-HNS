@@ -1,0 +1,8 @@
+HnsMatchTraining.sma —— 训练模式 版本说明
+========================================
+功能: 训练模式 (register_plugin "Match: Training" 1.0)
+
+2 份变体:
+- source版/ : 12268 字节, 2026-09-29 19:01 (当前部署, 新版)
+- scripting版/ : 11103 字节, 2025-03-16 (工作区旧版)
+注意: 交接文档提过 cstrike/scripting/_bak_gbk 下还有 HnsMatchTraining.sma.UTF8bak(GBK 旧档)。

@@ -1,0 +1,799 @@
+[cn]
+STATUS_NOPLAY   = ^3%n^1 当前状态为 ^3不参赛^1。[ ^3不参赛^1 ]
+STATUS_PLAY     = ^3%n^1 当前状态为 ^3参赛^1。[ ^3参赛^1 ]
+
+SET_ROUNDTIME   = ^3%n^1 将回合时间设置为 ^3%.1f^1 分钟。
+SET_ROUNDTIME_MENU = ^3%n^1 将回合时间调整为 ^3%.1f^1 分钟。
+SET_MAXROUNDS   = ^3%n^1 将回合制目标分数设置为 ^3%d^1（最多 ^3%d^1 回合）。
+SET_MAXROUNDS_MENU = ^3%n^1 将最大回合数调整为 ^3%d^1。
+SET_FREEZETIME  = ^3%n^1 将冻结时间调整为 ^3%d^1 秒。
+SET_ROUNDS      = ^3%n^1 将回合制目标分数调整为 ^3%d^1。
+SET_WINTIME     = ^3%n^1 将胜利时间设置为 ^3%d^1 分钟。
+SET_WINTIME_MENU = ^3%n^1 将胜利时间调整为 ^3%.0f^1 分钟。
+
+KILL_HIMSELF    = ^3%n^1 自杀了。
+KILL_NOT        = 死亡竞赛模式不能自杀。
+KILL_NOT_MIX    = 你需要先比赛 ^31.5^1 分钟才能自杀。
+KILL_WATER      = %s ^3%n^1 掉进了水里。
+
+SUR_WAIT        = 请等待 ^3%s^1 后才能发起投降！
+SUR_PLAYER      = 玩家 ^3%n^1（^3%s^1）发起了投降投票！
+SUR_NEED        = 需要 ^3%d/%d^1 票才能投降！
+SUR_END         = ^3%s^1 队已投降！
+
+AFK_PAUSE       = 有 ^3%d^1 名玩家挂机，比赛已暂停。
+AFK_UNPAUSE     = 所有玩家已到位，比赛继续。
+
+BAN_PAUSE       = ^3%n^1 已被禁止参加比赛。
+
+NEED_PAUSE      = 比赛已暂停，还需要 ^3%d^1 名玩家。
+
+DM_TRANSF       = ^3%n^1 已转移到 ^3恐怖分子^1 队。
+
+MODE_ALREADY    = 此模式已经启动！
+MODE_NOT_MIX    = 比赛进行中不能使用此命令！
+MODE_NOT_SET_DUEL = 开始决斗需要每队各有 1 名玩家。
+MODE_SET_MR     = ^3%n^1 将模式改为 ^3最大回合制^1！
+MODE_SET_WT     = ^3%n^1 将模式改为 ^3计时制^1！
+MODE_SET_DUEL   = ^3%n^1 将模式改为 ^3决斗模式^1！
+MODE_SET_ROUNDS = ^3%n^1 将模式改为 ^3回合制^1！
+
+GAME_NOTSTARTED = 比赛尚未开始或已经暂停（使用 /unpause）。
+GAME_PAUSED     = ^3%n^1 暂停了比赛！
+GAME_UNPAUSED   = ^3%n^1 继续了比赛！
+GAME_SWAP       = ^3%n^1 交换了阵营！
+GAME_RESTART    = ^3%n^1 重启了回合！
+
+PUB_ACTIVATED   = ^3%n^1 启用了 ^3公共^1 模式。
+PUB_ALREADY     = 公共模式已经启动。
+PUB_CANC        = 请先关闭其他模式再启动公共模式。
+
+DM_ACTIVATED    = ^3%n^1 启用了 ^3死亡竞赛^1 模式。
+DM_ALREADY      = 死亡竞赛模式已经启动。
+DM_CANC         = 请先关闭其他模式再启动死亡竞赛模式。
+
+ZM_ACTIVATED    = ^3%n^1 启用了 ^3僵尸^1 模式。
+ZM_ALREADY      = 僵尸模式已经启动。
+ZM_CANC         = 请先关闭其他模式再启动僵尸模式。
+
+SET_ZOMBIE      = ^3%n^1 已变成僵尸！
+
+BLEND_TEAMS     = ^3%n^1 重新分配了队伍。
+
+TRANSF_SPEC     = ^3%n^1 将所有玩家转为 ^3观战者^1！
+TRANSF_TT       = ^3%n^1 将所有玩家转为 ^3恐怖分子^1！
+TRANSF_CT       = ^3%n^1 将所有玩家转为 ^3反恐精英^1！
+
+TYPE_SKILL      = ^3%n^1 启用了 ^3技巧^1 模式。
+TYPE_BOOST      = ^3%n^1 启用了 ^3跳跃^1 模式。
+
+AA_10           = ^3%n^1 将 ^3空中加速^1 设置为 ^310^1。
+AA_100          = ^3%n^1 将 ^3空中加速^1 设置为 ^3100^1。
+
+NOT_START_MIX   = 请先关闭其他模式再开始比赛。
+NOT_START_KNIFE = 请先关闭其他模式再开始拼刀。
+
+KNIFE_ALREADY   = 拼刀已经开始。
+
+NOT_CAPTAIN     = 只有在拼刀地图上才能使用。
+
+START_MIX       = ^3%n^1 开始了 ^3比赛^1。
+START_KNIFE     = 已开始 ^3拼刀^1！
+START_KNIFE_1   = ^3%n^1 开始了 ^3拼刀^1！
+
+STOP_MIX        = ^3%n^1 停止了 ^3比赛^1。
+STOP_KNIFE      = ^3%n^1 停止了 ^3拼刀^1。
+STOP_PUB        = ^3%n^1 停止了 ^3公共^1 模式。
+STOP_CAP        = ^3%n^1 停止了 ^3队长^1 模式。
+STOP_DM         = ^3%n^1 停止了 ^3死亡竞赛^1 模式。
+STOP_ZM         = ^3%n^1 停止了 ^3僵尸^1 模式。
+
+SCORE_TIME      = TT [^3%s^1] %d 对 %d [^3%s^1] CT（第 ^3%d^1/^3%d^1 回合）（差值 ^3%s^1）
+SCORE_TIME_WT   = TT [^3%s^1] 对 [^3%s^1] CT（差值 ^3%s^1）
+SCORE_DUEL      = 比分：^3%n^1 - ^3%d^1 对 ^3%d^1 - ^3%n^1
+SCORE_DUEL_DEF  = 比分：TT - ^3%d^1 对 ^3%d^1 - CT
+SCORE_ROUNDS    = CT : ^4%d^1 | TT : ^4%d^1
+ROUNDS_WIN      = ^3%s^1 赢得回合制比赛！最终比分 CT : ^4%d^1 | TT : ^4%d^1
+
+HUD_ROUNDS_START = 回合制 第 %d 回合^nCT : %d | TT : %d
+HUD_ROUNDS_END   = 回合制比赛结束^n%s 获胜
+
+SAME_TIMER      = 时间相同！进入加时赛，增加 2 个回合。
+
+TT_WIN          = TT 赢得比赛！（差值 ^3%s^1）
+MR_WIN          = %s 赢得比赛！（差值 ^3%s^1）
+DUEL_WIN        = 玩家 ^3%n^1（^3TT^1）赢得决斗！
+
+CAP_CHOOSE      = ^3%n^1 正在选择队长……
+CAP_FIRST       = 第一名队长：^3%n^1。
+CAP_SECOND      = 第二名队长：^3%n^1。
+CAP_FIRST_PTS   = 第一名队长：^3%n^1（^3%d^1 [^3%s^1]）。
+CAP_SECOND_PTS  = 第二名队长：^3%n^1（^3%d^1 [^3%s^1]）。
+CAP_HAS_LEFT    = 一名队长离开，队长模式已关闭！
+TEAM_FULL       = 队伍已满！
+
+PLAYER_CHOOSE       = 队长 ^3%n^1 选择了 ^3%n^1。
+PLAYER_CHOOSE_PTS   = 队长 ^3%n^1 选择了 ^3%n^1（^3%d^1 [^3%s^1]）。
+PLAYER_CHOOSE_RANDOM = 队长 ^3%n^1 随机选择了 ^3%n^1！
+
+
+HUD_TIMETOWIN   = 最后一回合！^n TT 还需要 %s 才能获胜！
+HUD_CAPWIN      = 队长 %n 获胜！
+HUD_KF_WIN_TT   = TT 队赢得拼刀！
+HUD_KF_WIN_CT   = CT 队赢得拼刀！
+HUD_START_WAIT  = %s^n等待 %d 名玩家。
+HUD_START_LAST  = 比赛即将开始。
+HUD_GAMEOVER    = 比赛结束
+HUD_WIN_CT      = CT 获胜！^n TT 还差 %s 才能获胜！^n（超过回合时间）
+HUD_WIN_TT      = TT 获胜！^n TT 的计时领先对手！
+HUD_STARTMIX1   = 3 秒后比赛开始！
+HUD_STARTMIX2   = 比赛开始！^n祝你好运，玩得开心！
+HUD_STARTKNIFE  = 拼刀回合开始。
+HUD_UNPAUSE     = 比赛继续^n开始！开始！开始！
+HUD_PAUSE       = 比赛暂停
+HUD_START_CAPKF = 队长拼刀回合开始。
+HUD_WAITPICK    = %n 正在选择玩家，剩余 %.f 秒。
+
+MENU_MIX_TITLE       = \r捉迷藏比赛系统
+MENU_MAIN_CAP        = 开始队长模式
+MENU_MAIN_NOTCAP     = \d开始队长模式
+MENU_MAIN_STOPCAP    = \r停止队长模式
+MENU_MAIN_STOPCUSTOM = \r停止自定义模式
+MENU_MAIN_MIX        = 开始比赛
+MENU_MAIN_STOPMIX    = \r停止比赛
+MENU_MAIN_NOSTOPMIX  = \d停止比赛
+MENU_MAIN_STOPKF     = \r停止拼刀^n
+MENU_MAIN_NOTSTARTKF = \d开始拼刀^n
+MENU_MAIN_STARTKF    = 开始拼刀^n
+MENU_MAIN_UNPAUSEKF  = 继续拼刀
+MENU_MAIN_CUSTOM     = 开始自定义模式^n
+MENU_MAIN_BLEND      = 重新分配队伍^n
+MENU_MAIN_PAUSE      = 暂停比赛^n
+MENU_MAIN_UNPAUSE    = 继续比赛^n
+MENU_MAIN_SETTINGS   = 比赛设置^n
+MENU_MAIN_RESTART    = 重启回合
+MENU_MAIN_SWAP       = 交换阵营^n
+MENU_MAIN_WTRMENU    = 观察员菜单
+MENU_MAIN_ADMMENU    = 管理员菜单
+
+MENU_CUSTOM_PUB     = 公共模式
+MENU_CUSTOM_DM      = 死亡竞赛
+MENU_CUSTOM_ZM      = 僵尸模式
+
+MENU_STNGS_ROUNDTIME_TRNG   = 回合时间：\d[训练模式]
+MENU_STNGS_ROUNDTIME        = 回合时间：\y%.1f
+MENU_STNGS_FREEZETIME       = 冻结时间：\y%d
+MENU_STNGS_MAXROUND         = 最大回合数：\y%d \d（%d 回合）^n
+MENU_STNGS_WINTIME          = 胜利时间：\y%.0f^n
+MENU_STNGS_DUEL             = 决斗回合数：\y%d^n
+MENU_STNGS_ROUNDS           = 回合制目标分数：\y%d^n
+MENU_STNGS_ONEHP_ON         = 1 点生命模式（技巧）：\y关闭^n
+MENU_STNGS_ONEHP_OFF        = 1 点生命模式（技巧）：\y开启^n
+MENU_STNGS_FLASH            = 闪光弹：\y%d
+MENU_STNGS_SMOKE            = 烟雾弹：\y%d^n
+MENU_STNGS_AA               = 空中加速：\y%d^n
+
+MENU_MODE_TITLE     = \r选择比赛模式
+MENU_MODE_MR        = 最大回合制
+MENU_MODE_WINTIME   = 计时制
+MENU_MODE_DUEL      = 决斗模式
+MENU_MODE_ROUNDS    = 回合制
+
+VOTE_MR     = ^3%n^1 投票选择了 ^3最大回合制^1！
+VOTE_WT     = ^3%n^1 投票选择了 ^3计时制^1！
+VOTE_ROUNDS = ^3%n^1 投票选择了 ^3回合制^1！
+VOTE_WIN    = ^3%s^1 模式赢得了投票！
+
+MENU_VERIF_TITLE = \r确认菜单^n^n\d确定要停止当前模式吗：
+
+MENU_PLAY_TITLE = \r你参加比赛吗？
+
+MENU_CAP_CHOSE = \r选择队长：
+MENU_CAP_PICK = \r选择玩家：
+
+MENU_SUR_TITLE = \r投降？^n\d发起人：%n
+
+MENU_NADES_TITLE = 你需要手雷吗？
+
+MENU_YES = 是
+MENU_NO = 否
+
+[tw]
+STATUS_NOPLAY   = ^3%n^1 當前狀態為 ^3不參賽^1。[ ^3不參賽^1 ]
+STATUS_PLAY     = ^3%n^1 當前狀態為 ^3參賽^1。[ ^3參賽^1 ]
+
+SET_ROUNDTIME   = ^3%n^1 將回合時間設定為 ^3%.1f^1 分鐘。
+SET_ROUNDTIME_MENU = ^3%n^1 將回合時間調整為 ^3%.1f^1 分鐘。
+SET_MAXROUNDS   = ^3%n^1 將回合制目標分數設定為 ^3%d^1（最多 ^3%d^1 回合）。
+SET_MAXROUNDS_MENU = ^3%n^1 將最大回合數調整為 ^3%d^1。
+SET_FREEZETIME  = ^3%n^1 將凍結時間調整為 ^3%d^1 秒。
+SET_ROUNDS      = ^3%n^1 將回合制目標分數調整為 ^3%d^1。
+SET_WINTIME     = ^3%n^1 將勝利時間設定為 ^3%d^1 分鐘。
+SET_WINTIME_MENU = ^3%n^1 將勝利時間調整為 ^3%.0f^1 分鐘。
+
+KILL_HIMSELF    = ^3%n^1 自殺了。
+KILL_NOT        = 死亡競賽模式不能自殺。
+KILL_NOT_MIX    = 你需要先比賽 ^31.5^1 分鐘才能自殺。
+KILL_WATER      = %s ^3%n^1 掉進了水裡。
+
+SUR_WAIT        = 請等待 ^3%s^1 後才能發起投降！
+SUR_PLAYER      = 玩家 ^3%n^1（^3%s^1）發起了投降投票！
+SUR_NEED        = 需要 ^3%d/%d^1 票才能投降！
+SUR_END         = ^3%s^1 隊已投降！
+
+AFK_PAUSE       = 有 ^3%d^1 名玩家掛機，比賽已暫停。
+AFK_UNPAUSE     = 所有玩家已到位，比賽繼續。
+
+BAN_PAUSE       = ^3%n^1 已被禁止參加比賽。
+
+NEED_PAUSE      = 比賽已暫停，還需要 ^3%d^1 名玩家。
+
+DM_TRANSF       = ^3%n^1 已轉移到 ^3恐怖分子^1 隊。
+
+MODE_ALREADY    = 此模式已經啟動！
+MODE_NOT_MIX    = 比賽進行中不能使用此指令！
+MODE_NOT_SET_DUEL = 開始決鬥需要每隊各有 1 名玩家。
+MODE_SET_MR     = ^3%n^1 將模式改為 ^3最大回合制^1！
+MODE_SET_WT     = ^3%n^1 將模式改為 ^3計時制^1！
+MODE_SET_DUEL   = ^3%n^1 將模式改為 ^3決鬥模式^1！
+MODE_SET_ROUNDS = ^3%n^1 將模式改為 ^3回合制^1！
+
+GAME_NOTSTARTED = 比賽尚未開始或已經暫停（使用 /unpause）。
+GAME_PAUSED     = ^3%n^1 暫停了比賽！
+GAME_UNPAUSED   = ^3%n^1 繼續了比賽！
+GAME_SWAP       = ^3%n^1 交換了陣營！
+GAME_RESTART    = ^3%n^1 重啟了回合！
+
+PUB_ACTIVATED   = ^3%n^1 啟用了 ^3公共^1 模式。
+PUB_ALREADY     = 公共模式已經啟動。
+PUB_CANC        = 請先關閉其他模式再啟動公共模式。
+
+DM_ACTIVATED    = ^3%n^1 啟用了 ^3死亡競賽^1 模式。
+DM_ALREADY      = 死亡競賽模式已經啟動。
+DM_CANC         = 請先關閉其他模式再啟動死亡競賽模式。
+
+ZM_ACTIVATED    = ^3%n^1 啟用了 ^3殭屍^1 模式。
+ZM_ALREADY      = 殭屍模式已經啟動。
+ZM_CANC         = 請先關閉其他模式再啟動殭屍模式。
+
+SET_ZOMBIE      = ^3%n^1 已變成殭屍！
+
+BLEND_TEAMS     = ^3%n^1 重新分配了隊伍。
+
+TRANSF_SPEC     = ^3%n^1 將所有玩家轉為 ^3觀戰者^1！
+TRANSF_TT       = ^3%n^1 將所有玩家轉為 ^3恐怖分子^1！
+TRANSF_CT       = ^3%n^1 將所有玩家轉為 ^3反恐精英^1！
+
+TYPE_SKILL      = ^3%n^1 啟用了 ^3技巧^1 模式。
+TYPE_BOOST      = ^3%n^1 啟用了 ^3跳躍^1 模式。
+
+AA_10           = ^3%n^1 將 ^3空中加速^1 設定為 ^310^1。
+AA_100          = ^3%n^1 將 ^3空中加速^1 設定為 ^3100^1。
+
+NOT_START_MIX   = 請先關閉其他模式再開始比賽。
+NOT_START_KNIFE = 請先關閉其他模式再開始拼刀。
+
+KNIFE_ALREADY   = 拼刀已經開始。
+
+NOT_CAPTAIN     = 只有在拼刀地圖上才能使用。
+
+START_MIX       = ^3%n^1 開始了 ^3比賽^1。
+START_KNIFE     = 已開始 ^3拼刀^1！
+START_KNIFE_1   = ^3%n^1 開始了 ^3拼刀^1！
+
+STOP_MIX        = ^3%n^1 停止了 ^3比賽^1。
+STOP_KNIFE      = ^3%n^1 停止了 ^3拼刀^1。
+STOP_PUB        = ^3%n^1 停止了 ^3公共^1 模式。
+STOP_CAP        = ^3%n^1 停止了 ^3隊長^1 模式。
+STOP_DM         = ^3%n^1 停止了 ^3死亡競賽^1 模式。
+STOP_ZM         = ^3%n^1 停止了 ^3殭屍^1 模式。
+
+SCORE_TIME      = TT [^3%s^1] %d 對 %d [^3%s^1] CT（第 ^3%d^1/^3%d^1 回合）（差值 ^3%s^1）
+SCORE_TIME_WT   = TT [^3%s^1] 對 [^3%s^1] CT（差值 ^3%s^1）
+SCORE_DUEL      = 比分：^3%n^1 - ^3%d^1 對 ^3%d^1 - ^3%n^1
+SCORE_DUEL_DEF  = 比分：TT - ^3%d^1 對 ^3%d^1 - CT
+SCORE_ROUNDS    = CT : ^4%d^1 | TT : ^4%d^1
+ROUNDS_WIN      = ^3%s^1 贏得回合制比賽！最終比分 CT : ^4%d^1 | TT : ^4%d^1
+
+HUD_ROUNDS_START = 回合制 第 %d 回合^nCT : %d | TT : %d
+HUD_ROUNDS_END   = 回合制比賽結束^n%s 獲勝
+
+SAME_TIMER      = 時間相同！進入加時賽，增加 2 個回合。
+
+TT_WIN          = TT 贏得比賽！（差值 ^3%s^1）
+MR_WIN          = %s 贏得比賽！（差值 ^3%s^1）
+DUEL_WIN        = 玩家 ^3%n^1（^3TT^1）贏得決鬥！
+
+CAP_CHOOSE      = ^3%n^1 正在選擇隊長……
+CAP_FIRST       = 第一名隊長：^3%n^1。
+CAP_SECOND      = 第二名隊長：^3%n^1。
+CAP_FIRST_PTS   = 第一名隊長：^3%n^1（^3%d^1 [^3%s^1]）。
+CAP_SECOND_PTS  = 第二名隊長：^3%n^1（^3%d^1 [^3%s^1]）。
+CAP_HAS_LEFT    = 一名隊長離開，隊長模式已關閉！
+TEAM_FULL       = 隊伍已滿！
+
+PLAYER_CHOOSE       = 隊長 ^3%n^1 選擇了 ^3%n^1。
+PLAYER_CHOOSE_PTS   = 隊長 ^3%n^1 選擇了 ^3%n^1（^3%d^1 [^3%s^1]）。
+PLAYER_CHOOSE_RANDOM = 隊長 ^3%n^1 隨機選擇了 ^3%n^1！
+
+
+HUD_TIMETOWIN   = 最後一回合！^n TT 還需要 %s 才能獲勝！
+HUD_CAPWIN      = 隊長 %n 獲勝！
+HUD_KF_WIN_TT   = TT 隊贏得拼刀！
+HUD_KF_WIN_CT   = CT 隊贏得拼刀！
+HUD_START_WAIT  = %s^n等待 %d 名玩家。
+HUD_START_LAST  = 比賽即將開始。
+HUD_GAMEOVER    = 比賽結束
+HUD_WIN_CT      = CT 獲勝！^n TT 還差 %s 才能獲勝！^n（超過回合時間）
+HUD_WIN_TT      = TT 獲勝！^n TT 的計時領先對手！
+HUD_STARTMIX1   = 3 秒後比賽開始！
+HUD_STARTMIX2   = 比賽開始！^n祝你好運，玩得開心！
+HUD_STARTKNIFE  = 拼刀回合開始。
+HUD_UNPAUSE     = 比賽繼續^n開始！開始！開始！
+HUD_PAUSE       = 比賽暫停
+HUD_START_CAPKF = 隊長拼刀回合開始。
+HUD_WAITPICK    = %n 正在選擇玩家，剩餘 %.f 秒。
+
+MENU_MIX_TITLE       = \r捉迷藏比賽系統
+MENU_MAIN_CAP        = 開始隊長模式
+MENU_MAIN_NOTCAP     = \d開始隊長模式
+MENU_MAIN_STOPCAP    = \r停止隊長模式
+MENU_MAIN_STOPCUSTOM = \r停止自訂模式
+MENU_MAIN_MIX        = 開始比賽
+MENU_MAIN_STOPMIX    = \r停止比賽
+MENU_MAIN_NOSTOPMIX  = \d停止比賽
+MENU_MAIN_STOPKF     = \r停止拼刀^n
+MENU_MAIN_NOTSTARTKF = \d開始拼刀^n
+MENU_MAIN_STARTKF    = 開始拼刀^n
+MENU_MAIN_UNPAUSEKF  = 繼續拼刀
+MENU_MAIN_CUSTOM     = 開始自訂模式^n
+MENU_MAIN_BLEND      = 重新分配隊伍^n
+MENU_MAIN_PAUSE      = 暫停比賽^n
+MENU_MAIN_UNPAUSE    = 繼續比賽^n
+MENU_MAIN_SETTINGS   = 比賽設定^n
+MENU_MAIN_RESTART    = 重啟回合
+MENU_MAIN_SWAP       = 交換陣營^n
+MENU_MAIN_WTRMENU    = 觀察員選單
+MENU_MAIN_ADMMENU    = 管理員選單
+
+MENU_CUSTOM_PUB     = 公共模式
+MENU_CUSTOM_DM      = 死亡競賽
+MENU_CUSTOM_ZM      = 殭屍模式
+
+MENU_STNGS_ROUNDTIME_TRNG   = 回合時間：\d[訓練模式]
+MENU_STNGS_ROUNDTIME        = 回合時間：\y%.1f
+MENU_STNGS_FREEZETIME       = 凍結時間：\y%d
+MENU_STNGS_MAXROUND         = 最大回合數：\y%d \d（%d 回合）^n
+MENU_STNGS_WINTIME          = 勝利時間：\y%.0f^n
+MENU_STNGS_DUEL             = 決鬥回合數：\y%d^n
+MENU_STNGS_ROUNDS           = 回合制目標分數：\y%d^n
+MENU_STNGS_ONEHP_ON         = 1 點生命模式（技巧）：\y關閉^n
+MENU_STNGS_ONEHP_OFF        = 1 點生命模式（技巧）：\y開啟^n
+MENU_STNGS_FLASH            = 閃光彈：\y%d
+MENU_STNGS_SMOKE            = 煙霧彈：\y%d^n
+MENU_STNGS_AA               = 空中加速：\y%d^n
+
+MENU_MODE_TITLE     = \r選擇比賽模式
+MENU_MODE_MR        = 最大回合制
+MENU_MODE_WINTIME   = 計時制
+MENU_MODE_DUEL      = 決鬥模式
+MENU_MODE_ROUNDS    = 回合制
+
+VOTE_MR     = ^3%n^1 投票選擇了 ^3最大回合制^1！
+VOTE_WT     = ^3%n^1 投票選擇了 ^3計時制^1！
+VOTE_ROUNDS = ^3%n^1 投票選擇了 ^3回合制^1！
+VOTE_WIN    = ^3%s^1 模式贏得了投票！
+
+MENU_VERIF_TITLE = \r確認選單^n^n\d確定要停止目前模式嗎：
+
+MENU_PLAY_TITLE = \r你參加比賽嗎？
+
+MENU_CAP_CHOSE = \r選擇隊長：
+MENU_CAP_PICK = \r選擇玩家：
+
+MENU_SUR_TITLE = \r投降？^n\d發起人：%n
+
+MENU_NADES_TITLE = 你需要手雷嗎？
+
+MENU_YES = 是
+MENU_NO = 否
+[en]
+
+STATUS_NOPLAY   = ^3%n^1 status set to ^3Not Playing^1. [ ^3NOPLAY^1 ]
+STATUS_PLAY     = ^3%n^1 status set to ^3Playing^1. [ ^3PLAY^1 ]
+
+SET_ROUNDTIME   = ^3%n^1 set ^3roundtime^1 to ^3%.1f^1 minutes.
+SET_ROUNDTIME_MENU = ^3%n^1 adjusted ^3roundtime^1 to ^3%.1f^1 minutes.
+SET_MAXROUNDS   = ^3%n^1 set ^3maxrounds^1 to ^3%d^1 (^3%d^1 rounds).
+SET_MAXROUNDS_MENU = ^3%n^1 adjusted ^3maxrounds^1 to ^3%d^1.
+SET_FREEZETIME  = ^3%n^1 set ^3freezetime^1 to ^3%d^1 seconds.
+SET_ROUNDS      = ^3%n^1 set ^3round target^1 to ^3%d^1.
+SET_WINTIME     = ^3%n^1 set ^3wintime^1 to ^3%d^1 minutes.
+SET_WINTIME_MENU = ^3%n^1 adjusted ^3wintime^1 to ^3%.0f^1 minutes.
+
+KILL_HIMSELF    = ^3%n^1 killed himself.
+KILL_NOT        = Not available in Deathmatch mode.
+KILL_NOT_MIX    = You must play ^31.5^1 minutes before you can kill yourself.
+KILL_WATER      = %s ^3%n^1 fell into the water.
+
+SUR_WAIT        = Wait ^3%s^1 before surrendering!
+SUR_PLAYER      = Player ^3%n^1 (^3%s^1) wants to surrender!
+SUR_NEED        = Need ^3%d/%d^1 votes to surrender!
+SUR_END         = Team ^3%s^1 surrendered!
+
+AFK_PAUSE       = ^3%d^1 players AFK, game paused.
+AFK_UNPAUSE     = Start! All players present! Game resumed.
+
+BAN_PAUSE       = ^3%n^1 is banned from matches.
+
+NEED_PAUSE      = Match paused, need ^3%d^1 players.
+
+DM_TRANSF       = ^3%n^1 moved to ^3Terrorists^1.
+
+MODE_ALREADY    = This mode is already running!
+MODE_NOT_MIX    = This command is unavailable during a match!
+MODE_NOT_SET_DUEL = To start a duel, each team needs exactly 1 player.
+MODE_SET_MR     = ^3%n^1 changed mode to ^3Max Rounds^1!
+MODE_SET_WT     = ^3%n^1 changed mode to ^3Win Time^1!
+MODE_SET_DUEL   = ^3%n^1 changed mode to ^3Duel^1!
+MODE_SET_ROUNDS = ^3%n^1 changed mode to ^3Rounds^1!
+
+GAME_NOTSTARTED = Game not started or already paused (use /unpause).
+GAME_PAUSED     = ^3%n^1 paused the game!
+GAME_UNPAUSED   = ^3%n^1 resumed the game!
+GAME_SWAP       = ^3%n^1 swapped the teams!
+GAME_RESTART    = ^3%n^1 restarted the round!
+
+PUB_ACTIVATED   = ^3%n^1 activated ^3Public^1 mode.
+PUB_ALREADY     = Public mode is already running.
+PUB_CANC        = Please disable another mode before starting Public.
+
+DM_ACTIVATED    = ^3%n^1 activated ^3Deathmatch^1 mode.
+DM_ALREADY      = Deathmatch mode is already running.
+DM_CANC         = Please disable another mode before starting Deathmatch.
+
+ZM_ACTIVATED    = ^3%n^1 activated ^3Zombie^1 mode.
+ZM_ALREADY      = Zombie mode is already running.
+ZM_CANC         = Please disable another mode before starting Zombie.
+
+SET_ZOMBIE      = ^3%n^1 is a zombie!
+
+BLEND_TEAMS     = ^3%n^1 blended the teams.
+
+TRANSF_SPEC     = ^3%n^1 transferred all players to ^3Spectators^1!
+TRANSF_TT       = ^3%n^1 transferred all players to ^3Terrorists^1!
+TRANSF_CT       = ^3%n^1 transferred all players to ^3Counter-Terrorists^1!
+
+TYPE_SKILL      = ^3%n^1 activated ^3Skill^1 mode.
+TYPE_BOOST      = ^3%n^1 activated ^3Boost^1 mode.
+
+AA_10           = ^3%n^1 set ^3airaccelerate^1 to ^310^1.
+AA_100          = ^3%n^1 set ^3airaccelerate^1 to ^3100^1.
+
+NOT_START_MIX   = Please disable another mode before starting a match.
+NOT_START_KNIFE = Please disable another mode before starting a knife round.
+
+KNIFE_ALREADY   = Knife round is already running.
+
+NOT_CAPTAIN     = Only available on a knife map.
+
+START_MIX       = ^3%n^1 started the ^3match^1!
+START_KNIFE     = ^3Knife^1 round started!
+START_KNIFE_1   = ^3%n^1 started the ^3knife^1 round!
+
+STOP_MIX        = ^3%n^1 stopped the ^3match^1.
+STOP_KNIFE      = ^3%n^1 stopped the ^3knife round^1.
+STOP_PUB        = ^3%n^1 stopped the ^3public^1 mode.
+STOP_CAP        = ^3%n^1 stopped ^3captain^1 mode.
+STOP_DM         = ^3%n^1 stopped ^3Deathmatch^1 mode.
+STOP_ZM         = ^3%n^1 stopped ^3Zombie^1 mode.
+
+SCORE_TIME      = TT [^3%s^1] %d vs %d [^3%s^1] CT (round ^3%d^1/^3%d^1) (^3%s^1 gap)
+SCORE_TIME_WT   = TT [^3%s^1] vs [^3%s^1] CT (^3%s^1 gap)
+SCORE_DUEL      = Score: ^3%n^1 - ^3%d^1 vs ^3%d^1 - ^3%n^1
+SCORE_DUEL_DEF  = Score: TT - ^3%d^1 vs ^3%d^1 - CT
+SCORE_ROUNDS    = CT : ^4%d^1 | TT : ^4%d^1
+ROUNDS_WIN      = ^3%s^1 won the rounds match! Final score CT : ^4%d^1 | TT : ^4%d^1
+
+HUD_ROUNDS_START = Rounds round %d^nCT : %d | TT : %d
+HUD_ROUNDS_END   = Rounds match over^n%s won
+
+SAME_TIMER      = Time is equal! OVERTIME! Starting extra time (+2 rounds).
+
+TT_WIN          = TT won the game! (^3%s^1 gap)
+MR_WIN          = %s won the game! (^3%s^1 gap)
+DUEL_WIN        = Player ^3%n^1 (^3TT^1) won the duel!
+
+CAP_CHOOSE      = ^3%n^1 is choosing captains...
+CAP_FIRST       = First captain: ^3%n^1.
+CAP_SECOND      = Second captain: ^3%n^1.
+CAP_FIRST_PTS   = First captain: ^3%n^1 (^3%d^1 [^3%s^1]).
+CAP_SECOND_PTS  = Second captain: ^3%n^1 (^3%d^1 [^3%s^1]).
+CAP_HAS_LEFT    = One of the captains left, captain mode disabled!
+TEAM_FULL       = Teams are full!
+
+PLAYER_CHOOSE       = Captain ^3%n^1 chose ^3%n^1.
+PLAYER_CHOOSE_PTS   = Captain ^3%n^1 chose ^3%n^1 (^3%d^1 [^3%s^1]).
+PLAYER_CHOOSE_RANDOM = Captain ^3%n^1 randomly chose ^3%n^1!
+
+
+HUD_TIMETOWIN   = Last round!^n TT needs %s to win!
+HUD_CAPWIN      = Captain %n won!
+HUD_KF_WIN_TT   = TT team won the knife round!
+HUD_KF_WIN_CT   = CT team won the knife round!
+HUD_START_WAIT  = %s^nWaiting for %d players.
+HUD_START_LAST  = MATCH IS ABOUT TO START.
+HUD_GAMEOVER    = Game over.
+HUD_WIN_CT      = CT won!^n TT was %s short of winning!^n(more than roundtime)
+HUD_WIN_TT      = TT won!^n TT timer is ahead of the opponent!
+HUD_STARTMIX1   = Game starts in 3 seconds!
+HUD_STARTMIX2   = Game started!^nGood luck and have fun!
+HUD_STARTKNIFE  = Knife round for team choice has started!
+HUD_UNPAUSE     = Game resumed^nStart! Start! Start!
+HUD_PAUSE       = GAME PAUSED
+HUD_START_CAPKF = Knife round for player choice has started!
+HUD_WAITPICK    = %n is choosing a player, %.f sec left.
+
+MENU_MIX_TITLE       = \rHide'n'Seek Match System
+MENU_MAIN_CAP        = Start captain mode
+MENU_MAIN_NOTCAP     = \dStart captain mode
+MENU_MAIN_STOPCAP    = \rStop captain mode
+MENU_MAIN_STOPCUSTOM = \rStop custom mode
+MENU_MAIN_MIX        = Start match
+MENU_MAIN_STOPMIX    = \rStop match
+MENU_MAIN_NOSTOPMIX  = \dStop match
+MENU_MAIN_STOPKF     = \rStop knife round^n
+MENU_MAIN_NOTSTARTKF = \dStart knife round^n
+MENU_MAIN_STARTKF    = Start knife round^n
+MENU_MAIN_UNPAUSEKF  = Resume knife^n
+MENU_MAIN_CUSTOM     = Start custom mode^n
+MENU_MAIN_BLEND      = Blend teams^n
+MENU_MAIN_PAUSE      = Pause match^n
+MENU_MAIN_UNPAUSE    = Resume match^n
+MENU_MAIN_SETTINGS   = Match settings^n
+MENU_MAIN_RESTART    = Restart round
+MENU_MAIN_SWAP       = Swap teams^n
+MENU_MAIN_WTRMENU    = Watcher menu
+MENU_MAIN_ADMMENU    = Admin menu
+
+MENU_CUSTOM_PUB     = Public
+MENU_CUSTOM_DM      = Deathmatch
+MENU_CUSTOM_ZM      = Zombie
+
+MENU_STNGS_ROUNDTIME_TRNG   = Round time: \d[Training mode]
+MENU_STNGS_ROUNDTIME        = Round time: \y%.1f
+MENU_STNGS_FREEZETIME       = Freeze time: \y%d
+MENU_STNGS_MAXROUND         = Maxrounds: \y%d \d(%d rounds)^n
+MENU_STNGS_WINTIME          = Win time: \y%.0f^n
+MENU_STNGS_DUEL             = Duel rounds: \y%d^n
+MENU_STNGS_ROUNDS           = Rounds target score: \y%d^n
+MENU_STNGS_ONEHP_ON         = 1 HP mode (skill): \yOff^n
+MENU_STNGS_ONEHP_OFF        = 1 HP mode (skill): \yOn^n
+MENU_STNGS_FLASH            = Flashbangs: \y%d
+MENU_STNGS_SMOKE            = Smokes: \y%d^n
+MENU_STNGS_AA               = Airaccelerate: \y%d^n
+
+MENU_MODE_TITLE     = \rSelect match mode
+MENU_MODE_MR        = Max Rounds
+MENU_MODE_WINTIME   = Win Time
+MENU_MODE_DUEL      = Duel
+MENU_MODE_ROUNDS    = Rounds
+
+VOTE_MR     = ^3%n^1 voted for ^3Max Rounds^1!
+VOTE_WT     = ^3%n^1 voted for ^3Win Time^1!
+VOTE_ROUNDS = ^3%n^1 voted for ^3Rounds^1!
+VOTE_WIN    = ^3%s^1 mode won the vote!
+
+MENU_VERIF_TITLE = \rConfirm menu^n^n\dAre you sure you want to stop the current mode:
+
+MENU_PLAY_TITLE = \rWill you play the match?
+
+MENU_CAP_CHOSE = \rChoose captain:
+MENU_CAP_PICK = \rChoose player:
+
+MENU_SUR_TITLE = \rSurrender?^n\dStarted by: %n
+
+MENU_NADES_TITLE = Do you need grenades?
+
+MENU_YES = Yes
+MENU_NO = No
+[ru]
+
+STATUS_NOPLAY   = ^3%n^1 выставил статус ^1не играю^1. [^3NOPLAY^1]
+STATUS_PLAY     = ^3%n^1 выставил статус ^1играю^1. [^3PLAY^1]
+
+SET_ROUNDTIME   = ^3%n^1 установил ^3roundtime^1 на ^3%.2f^1 минут.
+SET_ROUNDTIME_MENU = ^3%n^1 изменил ^3roundtime^1 на ^3%.2f^1 минут.
+SET_MAXROUNDS   = ^3%n^1 установил ^3maxrounds^1 на ^3%d^1 (^3%d^1 раундов).
+SET_MAXROUNDS_MENU = ^3%n^1 изменил ^3maxrounds^1 на ^3%d^1.
+SET_FREEZETIME  = ^3%n^1 установил ^3freezetime^1 на ^3%d^1 секунд.
+SET_ROUNDS      = ^3%n^1 установил ^3цель раундов^1 на ^3%d^1.
+SET_WINTIME     = ^3%n^1 установил ^3wintime^1 на ^3%d^1 минут.
+SET_WINTIME_MENU = ^3%n^1 изменил ^3wintime^1 на ^3%.0f^1 минут.
+
+KILL_HIMSELF    = ^3%n^1 убил сам себя.
+KILL_NOT        = Не доступно для режима ДМ.
+KILL_NOT_MIX    = Вам необходимо отыграть ^31.5^1 минуты, чтобы убить самого себя.
+KILL_WATER      = %s ^3%n^1 упал в воду.
+
+SUR_WAIT        = Подождите ^3%s^1 чтобы сдаться!
+SUR_PLAYER      = Игрок ^3%n^1 (^3%s^1) захотел сдаться!
+SUR_NEED        = Нужно ^3%d/%d^1 голосов чтобы сдаться!
+SUR_END         = Команда ^3%s^1 сдалась!
+
+AFK_PAUSE       = ^3%d^1 игроков АФК, игра приостановлена.
+AFK_UNPAUSE     = Старт! Все игроки на месте! Игра возоблена.
+
+BAN_PAUSE       = ^3%n^1 забанен на матчах.
+
+NEED_PAUSE      = Матч приостановлен, требуется ^3%d^1 игроков.
+
+DM_TRANSF       = ^3%n^1 перенесен за ^3Террористов^1.
+
+MODE_ALREADY    = Этот режим уже запущен!
+MODE_NOT_MIX    = Эта команда недоступна во время матча!
+MODE_NOT_SET_DUEL = Чтобы начать дуэль, в каждой команде должно быть по 1 игроку.
+MODE_SET_MR     = ^3%n^1 изменил режим на ^3MR^1!
+MODE_SET_WT     = ^3%n^1 изменил режим на ^3Wintime^1!
+MODE_SET_DUEL   = ^3%n^1 изменил режим на ^3Duel^1!
+MODE_SET_ROUNDS = ^3%n^1 изменил режим на ^3Rounds^1!
+
+GAME_NOTSTARTED = Игра приостановлена, используйте (^1say /unpause^1).
+GAME_PAUSED     = ^3%n^1 приостановил игру!
+GAME_UNPAUSED   = ^3%n^1 возобновил игру!
+GAME_SWAP       = ^3%n^1 поменял команды местами!
+GAME_RESTART    = ^3%n^1 перезапустил раунд!
+
+PUB_ACTIVATED   = ^3%n^1 активировал ^3паблик^1 режим.
+PUB_ALREADY     = Паблик режим уже запущен.
+PUB_CANC        = Пожалуйста, отключите другой режим чтобы запустить паблик.
+
+DM_ACTIVATED    = ^3%n^1 активировал ^3ДМ^1 режим.
+DM_ALREADY      = ДМ режим уже запущен.
+DM_CANC         = Пожалуйста, отключите другой режим чтобы запустить ДМ.
+
+ZM_ACTIVATED    = ^3%n^1 активировал ^3зомби^1 режим.
+ZM_ALREADY      = Зомби режим уже запущен.
+ZM_CANC         = Пожалуйста, отключите другой режим чтобы запустить Зомби.
+
+SET_ZOMBIE      = ^3%n^1 зомби!
+
+BLEND_TEAMS     = ^3%n^1 смешал команды.
+
+TRANSF_SPEC     = ^3%n^1 перевел всех игроков за ^3наблюдателей^1!
+TRANSF_TT       = ^3%n^1 перевел всех игроков за ^3террористов^1!
+TRANSF_CT       = ^3%n^1 перевел всех игроков за ^3контр-террористов^1!
+
+TYPE_SKILL      = ^3%n^1 активировал ^3скилл^1 режим.
+TYPE_BOOST      = ^3%n^1 активировал ^3буст^1 режим.
+
+AA_10           = ^3%n^1 установил ^3airaccelerate^1 на ^310^1.
+AA_100          = ^3%n^1 установил ^3airaccelerate^1 на ^3100^1.
+
+NOT_START_MIX   = Пожалуйста, отключите другой режим перед запуском матча.
+NOT_START_KNIFE = Пожалуйста, отключите другой режим перед запуском ножевого раунда.
+
+KNIFE_ALREADY   = Ножевой раунд уже запущен.
+
+NOT_CAPTAIN     = Доступно только на ножевой карте.
+
+START_MIX       = ^3%n^1 запустил ^3микс^1!
+START_KNIFE     = Запущен ^3ножевой^1 раунд!
+START_KNIFE_1   = ^3%n^1 запустил ^3ножевой^1 раунд!
+
+STOP_MIX        = ^3%n^1 остановил ^3микс^1.
+STOP_KNIFE      = ^3%n^1 остановил ^3ножевой раунд^1.
+STOP_PUB        = ^3%n^1 остановил ^3паблик^1 режим.
+STOP_CAP        = ^3%n^1 остановил режим ^3капитанов^1.
+STOP_DM         = ^3%n^1 остановил ^3ДМ^1 режим.
+STOP_ZM         = ^3%n^1 остановил ^3зомби^1 режим.
+
+SCORE_TIME      = TT [^3%s^1] %d vs %d [^3%s^1] CT (^3%d^1/^3%d^1 раундов) (^3%s^1 разрыв)
+SCORE_TIME_WT   = TT [^3%s^1] vs [^3%s^1] CT (^3%s^1 разрыв)
+SCORE_DUEL      = Счет: ^3%n^1 - ^3%d^1 vs ^3%d^1 - ^3%n^1
+SCORE_DUEL_DEF  = Счет: TT - ^3%d^1 vs ^3%d^1 - CT
+SCORE_ROUNDS    = CT : ^4%d^1 | TT : ^4%d^1
+ROUNDS_WIN      = ^3%s^1 выиграл раунды! Финальный счет CT : ^4%d^1 | TT : ^4%d^1
+
+HUD_ROUNDS_START = Раунды раунд %d^nCT : %d | TT : %d
+HUD_ROUNDS_END   = Раунды окончены^n%s победили
+
+SAME_TIMER      = Время равное! ОВЕРТАЙМ! Начало доп. игры (+2 раунда).
+
+TT_WIN          = ТТ Выиграли игру! (^3%s^1 разрыв)
+MR_WIN          = %s Выиграли игру! (^3%s^1 разрыв)
+DUEL_WIN        = Игрок ^3%n^1 (^3TT^1) выиграл дуэль!
+
+CAP_CHOOSE      = ^3%n^1 выбирает капитанов...
+CAP_FIRST       = Первый капитан: ^3%n^1.
+CAP_SECOND      = Второй капитан: ^3%n^1.
+CAP_FIRST_PTS   = Первый капитан: ^3%n^1 (^3%d^1 [^3%s^1]).
+CAP_SECOND_PTS  = Второй капитан: ^3%n^1 (^3%d^1 [^3%s^1]).
+CAP_HAS_LEFT    = Один из капитанов ушел, режим капитана отключен!
+TEAM_FULL       = Команды полны!
+
+PLAYER_CHOOSE       = Капитан ^3%n^1 выбрал ^3%n^1.
+PLAYER_CHOOSE_PTS   = Капитан ^3%n^1 выбрал ^3%n^1 (^3%d^1 [^3%s^1]).
+PLAYER_CHOOSE_RANDOM = Капитан ^3%n^1 выбрал ^3%n^1 случайно!
+
+
+HUD_TIMETOWIN   = Последний раунд!^n ТТ Нужно %s чтобы победить!
+HUD_CAPWIN      = Капитан %n победил!
+HUD_KF_WIN_TT   = Команда ТТ победила в ножевом раунде!
+HUD_KF_WIN_CT   = Команда КТ победила в ножевом раунде!
+HUD_START_WAIT  = %s^nВ ожидании %d игроков.
+HUD_START_LAST  = ПОСЛЕДНИЕ СЕКУНДЫ ПЕРЕД СТАРТОМ.
+HUD_GAMEOVER    = Игра закончена.
+HUD_WIN_CT      = КТ Победили!^n ТТ не хватило %s что-бы победить! ^n(Больше, чем roundtime)
+HUD_WIN_TT      = ТТ Победили!^n КТ таймер меньше, чем у команды ТТ!
+HUD_STARTMIX1   = Начало игры через 3 секунды!
+HUD_STARTMIX2   = Игра началась!^nУдачи и веселой игры!
+HUD_STARTKNIFE  = Начался ножевой раунд за выбор команды!
+HUD_UNPAUSE     = Игра возоблена^nНачало игры!
+HUD_PAUSE       = ИГРА ПРИОСТАНОВЛЕНА
+HUD_START_CAPKF = Начался ножевой раунд за выбор игроков!
+HUD_WAITPICK    = %n выбирает игрока, осталось %.f сек.
+
+MENU_MIX_TITLE       = \rСистема матчей Hide'n'Seek
+MENU_MAIN_CAP        = Запустить режим капитана
+MENU_MAIN_NOTCAP     = \dЗапустить режим капитана
+MENU_MAIN_STOPCAP    = \rОстановить режим капитана
+MENU_MAIN_STOPCUSTOM = \rОстановить пользовательский режим
+MENU_MAIN_MIX        = Запустить матч
+MENU_MAIN_STOPMIX    = \rОстановить матч
+MENU_MAIN_NOSTOPMIX  = \dОстановить матч
+MENU_MAIN_STOPKF     = \rОстановить ножевой раунд^n
+MENU_MAIN_NOTSTARTKF = \dЗапустить ножевой раунд^n
+MENU_MAIN_STARTKF    = Запустить ножевой раунд^n
+MENU_MAIN_UNPAUSEKF  = Возобновить ножевой^n
+MENU_MAIN_CUSTOM     = Запустить пользовательский режим^n
+MENU_MAIN_BLEND      = Смешать команды^n
+MENU_MAIN_PAUSE      = Приостановить матч^n
+MENU_MAIN_UNPAUSE    = Возобновить матч^n
+MENU_MAIN_SETTINGS   = Настройки матча^n
+MENU_MAIN_RESTART    = Перезапустить раунд
+MENU_MAIN_SWAP       = Поменять команды местами^n
+MENU_MAIN_WTRMENU    = Меню наблюдателя
+MENU_MAIN_ADMMENU    = Меню админа
+
+MENU_CUSTOM_PUB     = Паблик
+MENU_CUSTOM_DM      = ДМ
+MENU_CUSTOM_ZM      = Зомби
+
+MENU_STNGS_ROUNDTIME_TRNG   = Время раунда: \d[режим тренировки]
+MENU_STNGS_ROUNDTIME        = Время раунда: \y%.1f
+MENU_STNGS_FREEZETIME       = Время фриза: \y%d
+MENU_STNGS_MAXROUND         = Maxrounds: \y%d \d(%d раундов)^n
+MENU_STNGS_WINTIME          = Время победы: \y%.0f^n
+MENU_STNGS_DUEL             = Раунды дуэли: \y%d^n
+MENU_STNGS_ROUNDS           = Цель раундов: \y%d^n
+MENU_STNGS_ONEHP_ON         = Режим 1 HP (скилл): \yВыкл^n
+MENU_STNGS_ONEHP_OFF        = Режим 1 HP (скилл): \yВкл^n
+MENU_STNGS_FLASH            = Флешки: \y%d
+MENU_STNGS_SMOKE            = Дымы: \y%d^n
+MENU_STNGS_AA               = Airaccelerate: \y%d^n
+
+MENU_MODE_TITLE     = \rВыбор режима матча
+MENU_MODE_MR        = Max Rounds
+MENU_MODE_WINTIME   = Win Time
+MENU_MODE_DUEL      = Дуэль
+MENU_MODE_ROUNDS    = Раунды
+
+VOTE_MR     = ^3%n^1 проголосовал за ^3Max Rounds^1!
+VOTE_WT     = ^3%n^1 проголосовал за ^3Win Time^1!
+VOTE_ROUNDS = ^3%n^1 проголосовал за ^3Раунды^1!
+VOTE_WIN    = Режим ^3%s^1 победил в голосовании!
+
+MENU_VERIF_TITLE = \rМеню подтверждения^n^n\dВы уверены, что хотите остановить текущий режим:
+
+MENU_PLAY_TITLE = \rВы будете играть матч?
+
+MENU_CAP_CHOSE = \rВыбор капитана:
+MENU_CAP_PICK = \rВыбор игрока:
+
+MENU_SUR_TITLE = \rСдаться?^n\dНачал: %n
+
+MENU_NADES_TITLE = Вам нужны гранаты?
+
+MENU_YES = Да
+MENU_NO = Нет

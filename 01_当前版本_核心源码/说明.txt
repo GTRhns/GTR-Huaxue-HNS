@@ -1,0 +1,35 @@
+01_当前版本_核心源码 —— 目录说明
+================================
+内容:
+- *.sma         当前部署版核心插件源码(24 个, 见下清单)
+- include/      编译头文件(标准 AMXX include + hns-match 项目 include + hns_* 接口)
+- compiled/     编译产物 .amxx(对应当前源码的已编译版本, 含测试/比对版)
+
+源码清单(register_plugin 名称):
+  HnsAISignup.sma            AI 报名系统 v1.17 (GTR 自研核心)
+  HnsMatchSystem.sma         Hide'n'Seek Match System 2.0.5
+  HnsMatchBans.sma           Match: Bans 1.1
+  HnsMatchChatmanager.sma    聊天管理
+  HnsMatchMapRules.sma       Kill Piranesi 0.0.1
+  HnsMatchMaps.sma           Match: Maps 4.0.4
+  HnsMatchOwnage.sma         Match: Ownage 1.0.1
+  HnsMatchPause.sma          HNS Match Pause 1.0
+  HnsMatchPlayerInfo.sma     Match: Player info 1.0.1
+  HnsMatchPts.sma            Match: Pts 1.1
+  HnsMatchQuery.sma          Match: Query 1.0.0
+  HnsMatchRecontrol.sma      Match: ReControl 1.3
+  HnsMatchSql.sma            Match: Sql 1.1
+  HnsMatchStats.sma          Match: Stats 1.1.1
+  HnsMatchTraining.sma       Match: Training 1.0
+  HnsMatchWatcher.sma        Match: Watcher 1.1
+  HnsMatchAdmin.sma          Match: Admin 1.0.0 (GTR)
+  HnsLanguage.sma            HNS Language Core 1.3.0
+  HnsPersistentDataStorage.sma Hns Persistent Data Storage 1.0
+  HnsSponsorLocal.sma        Match: Sponsor Local (ICGB) 1.0
+  HnsAISignupBots.sma        AI 报名测试人机 v1.5
+  hns_bot_test.sma           HNS Bot Test 1.0
+
+注意:
+- 这份是 source/ 交付目录的快照(交接文档工作目录 c:\...\delivery 的 source 子目录)
+- 各插件的其他历史版本见 02_各插件历史版本/
+- 皮肤系统(HnsMatchSkin)源码不在此, 见 02/HnsMatchSkin 与 05 皮肤包

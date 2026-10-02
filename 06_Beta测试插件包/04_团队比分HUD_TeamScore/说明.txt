@@ -1,0 +1,20 @@
+============================================================
+  04_团队比分HUD  Team Score  v3
+  作者: OciXCrom
+============================================================
+【功能】
+  屏幕上方实时显示双方比分和当前回合数:
+      CT [3]   vs   [5] T
+      Round 8
+  每回合自动累加, 回合重置/换图自动清零。
+
+【文件】
+  hudteamscorev3.sma   源码(留档/修改用)
+  hudteamscorev3.amxx  编译好的插件(上传到 plugins/)
+  teamscorev3.jpg      效果预览图
+
+【安装】
+  1. hudteamscorev3.amxx  ->  addons/amxmodx/plugins/
+  2. plugins.ini 加一行:  hudteamscorev3.amxx
+  3. 重启地图生效
+============================================================

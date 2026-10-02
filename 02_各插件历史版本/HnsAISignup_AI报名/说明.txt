@@ -1,0 +1,44 @@
+HnsAISignup.sma —— AI 报名系统 版本历史说明
+============================================
+主插件：AI 报名（/signup 报名、收团分组、模式/地图投票、赞助局、强制开赛、HUD 等）
+作者：HNSai（GTR 自研） 当前版本：v1.17
+
+版本列表（按时间从旧到新）：
+1. v1.3_teamfix_0927-1912/
+   - 原文件: source/HnsAISignup.sma.bak_teamfix
+   - 70726 字节, 2026-09-27 19:12
+   - 状态: 队伍相关修复前的备份
+
+2. v1.5_adminfix_0927-1955/
+   - 原文件: source/HnsAISignup.sma.bak_adminfix
+   - 71883 字节, 2026-09-27 19:55
+   - 状态: 管理员(adminfix)修复版备份
+
+3. v1.5_before_fix2_0927-2000/
+   - 原文件: source/HnsAISignup.sma.bak_before_fix2
+   - 71983 字节, 2026-09-27 20:00
+   - 状态: 第二次修复(第二版问题)前的备份
+
+4. v1.9_before_19_0927-2207/
+   - 原文件: source/HnsAISignup.sma.bak_before_19
+   - 79463 字节, 2026-09-27 22:07
+   - 状态: "第19项改动"前的备份, 文件明显增大
+
+5. v1.17_当前部署版 —— 在 01_当前版本_核心源码/HnsAISignup.sma
+   - 92766 字节, 2026-09-30 23:00
+   - 与 cstrike/scripting/、cstrike/addons/amxmodx/scripting/ 副本 md5 一致
+   - 当前服务器部署使用的版本
+
+6. v1.17_scripting最新_1001-0213/
+   - 原文件: scripting/HnsAISignup.sma
+   - 92873 字节, 2026-10-01 02:13
+   - 在部署版基础上新增 taskRestorePendingRules（换图后延迟恢复比赛模式）
+   - 注意: 未确认是否已部署, 属最新开发版
+
+关键背景（详见 10_交接与文档/插件修改记录.txt）:
+- 换图会重载插件, 跨图状态靠 PDS 恢复（ai_pending_start 等键）
+- 上场必须用 rg_set_user_team, 不要用 jointeam
+- 报名菜单第3项 = HNS比赛选择(娱乐局/赞助局)
+- 强制开赛允许 1 人测试, 不卡观战, 仍走模式+地图选择
+- 报名人数数字条(012345678910)已按用户要求取消
+- 普通换图不再自动开报名/开赛(pending 例外)

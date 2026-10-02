@@ -1,0 +1,30 @@
+HnsMatchSkin.sma —— 玩家自定义皮肤系统 版本说明
+================================================
+功能: /skin 用 ICGB 金币购买/选用皮肤(租期/永久), /cpm 管理员菜单; 与 HnsMatchSql 共用 MySQL(cpm_ 前缀分表)
+
+3 份变体:
+
+1. v1.0_完整版MySQL/
+   - 原文件: skin 1.0/addons/amxmodx/scripting/HnsMatchSkin.sma
+   - 78233 字节, 2026-09-30 22:29
+   - 完整版(随 05_皮肤系统_v1.0完整版 包发布): 管理菜单完整、多死亡音效随机、
+     MySQL 连接与调试入口、本地/盗版玩家按 get_user_authid 入库
+   - 安装说明见 05_皮肤系统_v1.0完整版/文档/安装说明.txt
+
+2. addons部署版/
+   - 原文件: cstrike/addons/amxmodx/scripting/HnsMatchSkin.sma
+   - 44295 字节, 2026-09-28 19:42
+   - 服务器运行侧副本(精简过)
+
+3. scripting重构版/
+   - 原文件: scripting/HnsMatchSkin.sma
+   - 45905 字节, 2026-10-01 22:29
+   - 最新重构版: 玩家菜单 1.CT皮肤 2.TT皮肤 3.ICGB金币 4.管理员设置 5.MySQL调试;
+     管理菜单从主菜单独立进入, 不再混在皮肤列表; 死亡音效改为拦截 player/die*
+     替换为当前皮肤音效, 不再叠原声
+   - 依赖: CustomPlayerModelsApi.amxx(须排在前) + HnsLanguage.amxx + HnsMatchSql
+
+注意:
+- 皮肤名全服唯一, 一旦定下别改, 否则玩家已购记录丢失
+- skins.cfg 修改后 换图/重启 生效(自动重新导入 MySQL)
+- 老库若已有 cpm_player_skins, 需补 expire_at 列(安装说明里有 SQL)

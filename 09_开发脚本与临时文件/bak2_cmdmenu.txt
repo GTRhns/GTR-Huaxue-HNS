@@ -1,0 +1,25 @@
+public cmdSignupMenu(id) {
+	if (!is_user_connected(id))
+		return PLUGIN_HANDLED;
+
+	if (g_eState == SIGNUP_SETUP) {
+		if (isUserVipOrAdmin(id)) {
+			showSetupMenu(id);
+			return PLUGIN_HANDLED;
+		}
+		ai_print(id, "正在选择比赛模式/地图, 请稍候");
+		return PLUGIN_HANDLED;
+	}
+
+	new szReason[64];
+	if (!canOpenMenu(id, szReason, charsmax(szReason))) {
+		ai_print(id, "%s", szReason);
+		return PLUGIN_HANDLED;
+	}
+
+	// 打开菜单即播报当前比赛状态
+	ai_printModeInfo(id);
+	showMainMenu(id);
+	return PLUGIN_HANDLED;
+}
+

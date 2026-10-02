@@ -1,0 +1,34 @@
+============================================================
+  CS 1.6 AMX Mod X 插件整理包
+  整理日期: 2026-09-28
+  共 5 个插件
+============================================================
+
+【目录总览】
+  01_观察者列表_SpecList   -> 显示"谁在观察你"的HUD列表
+  02_广告管理_AdManager    -> 聊天栏滚动广告 (含颜色代码/变量)
+  03_解封菜单_UnbanMenu    -> 管理员解封菜单
+  04_团队比分HUD_TeamScore -> 屏幕上方显示 CT vs T 比分和回合数
+  05_游戏内广告_InGameAds  -> 游戏内3D广告牌系统
+
+【部署方法】(统一)
+  1. 每个插件文件夹里的 *.amxx  -> 上传到服务器
+       cstrike/addons/amxmodx/plugins/
+  2. 各插件的配置文件 (*.ini / *.cfg) -> 上传到服务器
+       cstrike/addons/amxmodx/configs/  (具体路径见各插件说明)
+  3. 编辑 cstrike/addons/amxmodx/configs/plugins.ini
+     在末尾加上要启用的插件名, 例如:
+       speclist.amxx
+       ad_manager.amxx
+       unbanmenu.amxx
+       hudteamscorev3.amxx
+       in_game_ads.amxx
+  4. 源码 (*.sma) 是给你留档/二次修改用的, 不需要上传服务器;
+     若要重编译, 放到 cstrike/addons/amxmodx/scripting/ 用 compile.sh 编译。
+
+【备注】
+  - 03_解封菜单 和 05_游戏内广告 的压缩包里没有提供源码, 只有编译好的
+    .amxx(和配置文件), 所以本包也只整理了成品文件。
+  - 所有 .url 快捷方式、广告网址等无用杂质已剔除。
+
+============================================================

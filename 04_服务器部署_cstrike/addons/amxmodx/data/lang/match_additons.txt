@@ -1,0 +1,622 @@
+[en]
+
+PTS_RANK = %s Your rank is ^3%d^1 (Pts: ^3%d^1 | Wins: ^3%d^1 | Loss: ^3%d^1 | Skill: ^3%s^1)
+PTS_NOT_TIME = %s Pts not counted, playing time is less than 15 minutes.
+PTS_NOT_PLR = %s Pts not counted, less than 6 players.
+PTS_SET_TT = %s Team ^3TT^1 set ^3+15^1 pts.
+PTS_SET_CT = %s Team ^3CT^1 set ^3+15^1 pts.
+
+WTR_LEAVE = %s ^3%n^1 (watcher) is left, wait him or chose new watcher (say ^4rnw^1)...
+WTR_DELETE = %s ^3%n^1 removes ^3%n^1 watcher privileges.
+WTR_DELETE_STEAM = %s ^3%n^1 removes from ^3%n^1 (steamid) watcher privileges.
+WTR_PLR_DISC = %s Player you chose is disconnected.
+WTR_CHOOSE_NEW = %s ^3%n^1 choose ^3%n^1 as new server watcher.
+WTR_NOT_ADM = %s Can't start vote if admin is online.
+WTR_NOT_NEED = %s Need more people on server to vote for watcher... (^3need > 3^1)
+WTR_ALR_VOTE = %s You already voted. Need ^3%d^1 to start vote.
+WTR_VOTE = %s ^3%n^1 wanna change Watcher! Need ^3%d^1 to start vote.
+WTR_START = %s Starting vote for new watcher!
+WTR_VOTE_CANCL = %s You have cancel your vote for new Watcher vote.
+WTR_VOTE_CHOOSE = %s ^3%n^1 voted for ^3%n^1 (^3%d^1)!
+WTR_VOTE_DISC = %s Can't vote player disconnected or can't find!
+WTR_NEW_RANDOM = %s New Watcher ^3%n^1 has randomly choosed between ^3%d^1 players!
+WTR_NEW = %s New Watcher - ^3%n^1 (^3%d^1 votes)
+
+WTR_MENU_NEW = \rChoose new watcher:
+WTR_MENU_CHOSE = \rVote for new watcher:
+WTR_MENU_MANAGMENT = \rWatcher managment
+WTR_MENU = Add / Remove Watcher
+WTR_MENU_TRANSFER = Team Transfer Player
+WTR_MENU_CHANGEMAP = Change map
+WTR_MENU_KILLPLAYERS = Kill players
+WTR_MENU_KICKMENU = Kick players
+WTR_MENU_BLACKLIST = Blacklist menu
+WTR_MENU_NOT_BLACKLIST = \dBlacklist menu
+WTR_MENU_MIXBANMENUS = Ban menu \d[Match]
+WTR_MENU_NOT_MIXBANMENUS = \dBan menu \d[Match]
+
+WTR_MENU_DEL = Remove current watcher
+WTR_MENU_NOT_DEL = \dRemove current watcher
+WTR_MENU_ADD = Choose new watcher
+
+KNIFE_HIDE = Hide knife
+KNIFE_CT = Hide for \yCT \r%s
+KNIFE_TT = Hide for \yTT \r%s
+
+MENU_YES = Yes
+MENU_NO = No
+
+MENU_TRNING_TITLE = \yTrainig menu
+MENU_TRNING_CPNT = Checkpoint
+MENU_TRNING_TLPRT = Teleport
+MENU_TRNING_NOCLIP = No Clip
+MENU_TRNING_RESPAWN = Respawn
+MENU_TRNING_DAMAGE = Damage
+MENU_TRNING_ANGL_ON = Save angles \yOn
+MENU_TRNING_ANGL_OFF = Save angles \dOff
+MENU_TRNING_INVIS_ON = Invis players \yOn
+MENU_TRNING_INVIS_OFF = Invis players \dOff
+MENU_TRNING_WEAPONS = Get weapons
+MENU_TRNING_SMOKE = Get smoke grenade
+MENU_TRNING_FLASH = Get flashbang
+
+TRNING_NOT_ALIVE = %s You must be alive to use this command!
+TRNING_CPNT_SAVE = %s Checkpoint saved!
+TRNING_TLPRT_NOT = %s You haven't got any checkpoints!
+TRNING_STUCK_NOT = %s You must have another checkpoint to use stuck!
+TRNING_SHOW_ON = %s Damage show ^3enabled^1!
+TRNING_SHOW_OFF = %s Damage show ^3disabled^1!
+TRNING_ANGLES_ON = %s Save angles ^3enabled^1!
+TRNING_ANGLES_OFF = %s Save angles ^3disabled^1!
+TRNING_CLIP_ON = %s No Clip ^3enabled^1!
+TRNING_CLIP_OFF = %s No Clip ^3disabled^1!
+TRNING_INVIS_ON = %s Invis players ^3enabled^1!
+TRNING_INVIS_OFF = %s Invis players ^3disabled^1!
+TRNING_DMG = %s You have taken ^3%i^1 damage.
+
+HNS_OWNAGE_MIX = %n owned %n's head! [#%d]
+HNS_OWNAGE = %n owned %n's head!
+
+STATS_TOP = %s Show top — ^3/top
+
+MAPS_NOM = %s ^3%n^1 nominated map: ^3%s^1.
+MAPS_CHAGE = %s ^3%n^1 changed map to: ^3%s^1.
+MAPS_MENU_TITLE = Map menu
+MAPS_MENU_DESC_TYPE = Select a map category
+MAPS_MENU_ALL = All maps
+MAPS_MENU_NOMINATED = Nominated maps
+MAPS_MENU_KNIFE = Knife maps
+MAPS_MENU_BOOST = Boost maps
+MAPS_MENU_SKILL = Skill maps
+MAPS_MENU_DESC_NONE = None
+MAPS_MENU_DESC_SELECTED = Selected category: %s
+MAPS_MENU_DESC_MAP = Select a map
+MAPS_MENU_NO_MAPS = %s No maps available.
+MAPS_MENU_PREV = Previous page
+MAPS_MENU_BACK = Back
+MAPS_MENU_NEXT = Next page
+MAPS_MENU_EXIT = Exit
+MAPS_MENU_NX = Next
+MAPS_MENU_ACTION_MAP = Map: %s
+MAPS_ACTION_DESC = Choose an action
+MAPS_ACTION_NOM = Nominate map
+MAPS_ACTION_CHANGE = Change map
+
+HUD_ON = %s HUD info is now ^3enabled^1.
+HUD_OFF = %s HUD info is now ^3disabled^1.
+ROUNDINFO_ON = %s Round info is now ^3enabled^1.
+ROUNDINFO_OFF = %s Round info is now ^3disabled^1.
+SPECLIST_ON = %s Speclist is now ^3enabled^1.
+SPECLIST_OFF = %s Speclist is now ^3disabled^1.
+SPECHIDE_ON = %s Spechide is now ^3enabled^1.
+SPECHIDE_OFF = %s Spechide is now ^3disabled^1.
+
+DMG_SPAM = %s Please wait ^3%.1f^1 seconds between commands!
+DMG_ERR = %s There is no OR multiple players with matching pattern -> ^3%s^1.
+DMG_SHOW_ROUND = %s ^3%n^1's fall damage ^3%.0f^1 HP - before ^3%.0f^1 HP - ^3This round^1, ^3%.1f^1 seconds ago.
+DMG_SHOW = %s ^3%n^1's fall damage ^3%.0f^1 HP - before ^3%.0f^1 HP - ^3Not this round^1, ^3%.1f^1 seconds ago.
+
+
+BAN_MAIN_MENU = \rMatch ban menu
+BAN_MAIN_BAN = Ban player
+BAN_MAIN_OFFBAN = OffBan player
+BAN_MAIN_UNBAN = Unban player
+
+BAN_BAN_MENU = \rBan player on match
+BAN_OFFBAN_MENU = \rBan disconnected player on match
+BAN_TIME_MENU_S = \rSelect ban time^n\dTarget: %s
+BAN_TIME_MENU_N = \rSelect ban time^n\dTarget: %n
+BAN_UNBAN_MENU = \rUnban player on match
+
+BAN_DATE_EXPIRED_P = Permanent
+BAN_EXPIRED = %s Player ^3%n^1 has expired match ban.
+BAN_PLAYER = %s ^3%n^1 banned a player ^3%n^1 on match. Expired: ^3%s^1.
+BAN_PLAYER_PERM = %s ^3%n^1 banned a player ^3%n^1 on match. Expired: ^3Permanent^1.
+BAN_PLAYER_OFF = %s ^3%n^1 banned a player ^3%s^1 on match. Expired: ^3%s^1.
+BAN_PLAYER_PERM_OFF = %s ^3%n^1 banned a player ^3%s^1 on match. Expired: ^3Permanent^1.
+UNBAN_PLAYER = %s ^3%n^1 unbanned a player ^3%s^1 on match.
+
+BAN_INFO = You were banned on match!^nAdmin: %s | Steamid: %s^nExpired: %s
+BAN_FULLINFO = \rUnban player^n\dPlayer name: %s^nPlayer steamid: %s^nAdmin name: %s^nAdmin steamid: %s^nExpired: %s
+
+RECON_TITLE_CONTROL = \rChoose a player to give control
+RECON_TITLE_REPLACE = \rSelect a player to replace
+RECON_BANNED = \d%n \r[Banned]
+RECON_INVITED = %s \d[\rInvited\d]
+RECON_DELAY = %s Please wait ^3%.1f^1 sec..
+RECON_ADM_TRANSF_TO = \rSelect the player to replace
+RECON_ADM_TRANSF_IT = \rWho should we replace it with?
+RECON_ADM_REPLACE = %s Admin ^3%n^1 replaced the player ^3%n^1 with a ^3%n^1.
+RECON_CONFIRM_CONTROL = \rTake control of %n?
+RECON_CONFIRM_REPLACE = \r%n wants you to replace him?
+RECON_REFUSED_CONTROL = %s ^3%n^1 refused to take control.
+RECON_REFUSED_REPLACE = %s ^3%n^1 refused to replace.
+RECON_REPLACE = %s ^3%n^1 was replaced by ^3%n
+RECON_DIDNT_CHOOSE = %s Player ^3%n^1 didn't chose anything.
+RECON_EXPIRED = %s Time expired.
+
+[ru]
+
+PTS_RANK = %s Ваш ранг: ^3%d^1 (Птс: ^3%d^1 | Побед: ^3%d^1 | Поражений: ^3%d^1 | Скилл: ^3%s^1)
+PTS_NOT_TIME = %s Птс не засчитан, время игры меньше 15 минут.
+PTS_NOT_PLR = %s Птс не засчитан, меньше 6-ти игроков.
+PTS_SET_TT = %s Команда ^3TT^1 получила ^3+15^1 птс.
+PTS_SET_CT = %s Команда ^3КT^1 получила ^3+15^1 птс.
+
+WTR_LEAVE = %s ^3%n^1 (watcher) ливнул, подождите его или выберите нового watcher'a (say ^3rnw^1)
+WTR_DELETE = %s ^3%n^3 удалил c ^3%n привилегию watcher.
+WTR_DELETE_STEAM = %s ^3%n^1 снял c ^3%s^1 (Стим) привилегию watcher.
+WTR_PLR_DISC = %s Выбранный вами игрок отключен.
+WTR_CHOOSE_NEW = %s ^3%n^1 выбрал ^3%n^1 в качестве нового Watcher'a
+WTR_NOT_ADM = %s Нельзя начать голосование, когда админ находится на сервере.
+WTR_NOT_NEED = %s Нужно больше людей, чтобы проголосовать за нового Watcher'a. (^3нужно > 3^1)
+WTR_ALR_VOTE = %s Вы уже проголосовали, нужно + ^4%d^1, чтобы начать голосование.
+WTR_VOTE = %s ^3%n^1 написал ^3/rnw^1 ! Нужно еще ^3%d^1 голоса чтобы начать голосование.
+WTR_START = %s Начинается голосование за нового watcher'a!
+WTR_VOTE_CANCL = %s Вы отменили свой голос за нового watcher'a.
+WTR_VOTE_CHOOSE = %s ^3%n^1 проголосовал за ^3%n^1 (^3%d^1)!
+WTR_VOTE_DISC = %s Невозможно проголосовать, игрок отключен или недоступен!
+WTR_NEW_RANDOM = %s Новый watcher ^3%n^1 был выбран случайно между ^3%d^1 игроков!
+WTR_NEW = %s Новый watcher - ^3%n^1 с ^3%d^1 голосами!
+
+WTR_MENU_NEW = \rВыберите нового watcher'a:
+WTR_MENU_CHOSE = \rПроголосуйте за watcher'a:
+WTR_MENU_MANAGMENT = \rWatcher меню
+WTR_MENU = Добавить / Удалить Watcher'а
+WTR_MENU_TRANSFER = Изменить команду игрока
+WTR_MENU_CHANGEMAP = Сменить карту
+WTR_MENU_KILLPLAYERS = Убить игрока
+WTR_MENU_KICKMENU = Кикнуть игрока
+WTR_MENU_BLACKLIST = Меню черного списка
+WTR_MENU_NOT_BLACKLIST = \dМеню черного списка
+WTR_MENU_MIXBANMENUS = Бан меню \d[Матч]
+WTR_MENU_NOT_MIXBANMENUS = \dБан меню \d[Матч]
+
+WTR_MENU_DEL = Удалить текущего watcher'a
+WTR_MENU_NOT_DEL = \dУдалить текущего watcher'a
+WTR_MENU_ADD = Добавить нового watcher'a
+
+KNIFE_HIDE = Спрятать нож
+KNIFE_CT = Спрятать у \yКТ \r%s
+KNIFE_TT = Спрятать у \yТТ \r%s
+
+MENU_YES = Да
+MENU_NO = Нет
+
+MENU_TRNING_TITLE = \yТренировочное меню
+MENU_TRNING_CPNT = Чекпоинт
+MENU_TRNING_TLPRT = Телепорт
+MENU_TRNING_NOCLIP = Ноклип
+MENU_TRNING_RESPAWN = Возродиться
+MENU_TRNING_DAMAGE = Показать дамаг
+MENU_TRNING_ANGL_ON = Сохранять прицел \yOn
+MENU_TRNING_ANGL_OFF = Сохранять прицел \dOff
+MENU_TRNING_INVIS_ON = Невидимные игроки \yOn
+MENU_TRNING_INVIS_OFF = Невидимные игроки \dOff
+MENU_TRNING_WEAPONS = Получить оружие
+MENU_TRNING_SMOKE = Получить дымовую гранату
+MENU_TRNING_FLASH = Получить светошумовую гранату
+
+TRNING_NOT_ALIVE = %s Вы должны быть живы, чтобы использовать эту команду!
+TRNING_CPNT_SAVE = %s Чекпоинт сохранен!
+TRNING_TLPRT_NOT = %s У вас нет чекпоинтов!
+TRNING_STUCK_NOT = %s У вас должен быть другой чекпоинт, чтобы использовать stuck!
+TRNING_SHOW_ON = %s Показать урон: ^3включено^1!
+TRNING_SHOW_OFF = %s Показать урон: ^3выключено^1!
+TRNING_ANGLES_ON = %s Сохранение прицела ^3включено^1!
+TRNING_ANGLES_OFF = %s Сохранение прицела ^3выключено^1!
+TRNING_CLIP_ON = %s Ноклип ^3включен^1!
+TRNING_CLIP_OFF = %s Ноклип ^3выключен^1!
+TRNING_INVIS_ON = %s Невидимые игроки ^3включено^1!
+TRNING_INVIS_OFF = %s Невидимые игроки ^3выключено^1!
+TRNING_DMG = %s Вы получили ^3%i^1 урона.
+
+HNS_OWNAGE_MIX = %n запрыгнул на голову %n! [#%d]
+HNS_OWNAGE = %n запрыгнул на голову %n!
+
+STATS_TOP = %s Показать топ — ^3/top
+
+MAPS_NOM = %s ^3%n^1 номинировал карту: ^3%s^1.
+MAPS_CHAGE = %s ^3%n^1 сменил карту на: ^3%s^1.
+MAPS_MENU_TITLE = Меню карт
+MAPS_MENU_DESC_TYPE = Выберите категорию карт
+MAPS_MENU_ALL = Все карты
+MAPS_MENU_NOMINATED = Номинированные карты
+MAPS_MENU_KNIFE = Ножевые карты
+MAPS_MENU_BOOST = Буст карты
+MAPS_MENU_SKILL = Скилл карты
+MAPS_MENU_DESC_NONE = Нет
+MAPS_MENU_DESC_SELECTED = Выбранная категория: %s
+MAPS_MENU_DESC_MAP = Выберите карту
+MAPS_MENU_NO_MAPS = %s Нет доступных карт.
+MAPS_MENU_PREV = Предыдущая страница
+MAPS_MENU_BACK = Назад
+MAPS_MENU_NEXT = Следующая страница
+MAPS_MENU_EXIT = Выход
+MAPS_MENU_NX = Далее
+MAPS_MENU_ACTION_MAP = Карта: %s
+MAPS_ACTION_DESC = Выберите действие
+MAPS_ACTION_NOM = Номинировать карту
+MAPS_ACTION_CHANGE = Сменить карту
+
+HUD_ON = %s HUD информация: ^3включена^1.
+HUD_OFF = %s HUD информация: ^3выключена^1.
+ROUNDINFO_ON = %s Информация лучших игроков: ^3включена^1.
+ROUNDINFO_OFF = %s Информация лучших игроков: ^3выключена^1.
+SPECLIST_ON = %s Список наблюдателей: ^3включен^1.
+SPECLIST_OFF = %s Список наблюдателей: ^3выключен^1.
+SPECHIDE_ON = %s Спрятаться в списке наблюдателей: ^3включено^1.
+SPECHIDE_OFF = %s Спрятаться в списке наблюдателей: ^3выключено^1.
+
+DMG_SPAM = %s Пожалуйста, подождите ^3%.1f^1 секунды между командами!
+DMG_ERR = %s Не существует ИЛИ нескольких игроков с совпадающим шаблоном -> ^3%s^1.
+DMG_SHOW_ROUND = %s ^3%n^1 потерял ^3%.0f^1 HP - до ^3%.0f^1 HP - ^3В этом раунде^1, ^3%.1f^1 секунд назад.
+DMG_SHOW = %s ^3%n^1 потерял ^3%.0f^1 HP - до ^3%.0f^1 HP - ^3Не в этом раунде^1, ^3%.1f^1 секунд назад.
+
+BAN_MAIN_MENU = \rМатч бан меню
+BAN_MAIN_BAN = Забанить игрока
+BAN_MAIN_OFFBAN = Забанить отключившегося игрока
+BAN_MAIN_UNBAN = Разбанить игрока
+
+BAN_BAN_MENU = \rЗабанить игрока на матчи:
+BAN_OFFBAN_MENU = \rЗабанить отключившегося игрока на матчи:
+BAN_TIME_MENU_S = \rВыберите время бана^n\dЦель: %s
+BAN_TIME_MENU_N = \rВыберите время банаe^n\dЦель: %n
+BAN_UNBAN_MENU = \rРазбанить игрока на матчи
+
+BAN_DATE_EXPIRED_P = Навсегда
+BAN_EXPIRED = %s У игрока ^3%n^1 истек срок запрета на матч.
+BAN_PLAYER = %s ^3%n^1 забанил игрока ^3%n^1 на матчи. Истек срок действия: ^3%s^1.
+BAN_PLAYER_PERM = %s ^3%n^1 забанил игрока ^3%n^1 на матчи. Истекло: ^3Постоянный^1.
+BAN_PLAYER_OFF = %s ^3%n^1 забанил игрока ^3%s^1 на матчи. Истекает: ^3%s^1.
+BAN_PLAYER_PERM_OFF = %s ^3%n^1 забанил игрока ^3%s^1 на матчи. Истекло: ^3Permanent^1.
+UNBAN_PLAYER = %s ^3%n^1 разбанил игрока ^3%s^1 на матчи.
+
+BAN_INFO = Вы были забанены на матчах!^nАдмин: %s | Стимайди: %s^nИстекает: %s
+BAN_FULLINFO = \rРазбан игрока^n\dНик игрока: %s^nСтимайди игрока: %s^nНик админа: %s^nСтимайди админа: %s^nИстекает: %s
+
+RECON_TITLE_CONTROL = \rВыберите игрока для передачи контроля
+RECON_TITLE_REPLACE = \rВыберите игрока для замены
+RECON_BANNED = \d%s \r[Забанен]
+RECON_INVITED = %s \d[\rОтправлено\d]
+RECON_DELAY = %s Пожалуйста, подождите ^3%.1f^1 сек...
+RECON_ADM_TRANSF_TO = \rВыберите игрока для замены
+RECON_ADM_TRANSF_IT = \rНа кого мы должны его заменить?
+RECON_ADM_REPLACE = %s Администратор ^3%n^1 заменил игрока ^3%n^1 на ^3%n^1.
+RECON_CONFIRM_CONTROL = \rВзять контроль от %n?
+RECON_CONFIRM_REPLACE = \r%n хочет, чтобы вы его заменили?
+RECON_REFUSED_CONTROL = %s ^3%n^1 отказался от контроля.
+RECON_REFUSED_REPLACE = %s ^3%n^1 отказался от замены.
+RECON_REPLACE = %s ^3%n^1 был заменен на ^3%n.
+RECON_DIDNT_CHOOSE = %s Игрок ^3%n^1 ничего не выбрал.
+RECON_EXPIRED = %s Время истекло.
+
+[cn]
+PTS_RANK = %s 您的排名是 ^3%d^1 （积分：^3%d^1 | 胜场：^3%d^1 | 负场：^3%d^1 | 技术：^3%s^1）
+PTS_NOT_TIME = %s 未计积分，游戏时间少于 15 分钟。
+PTS_NOT_PLR = %s 未计积分，玩家少于 6 人。
+PTS_SET_TT = %s ^3TT^1 队获得 ^3+15^1 积分。
+PTS_SET_CT = %s ^3CT^1 队获得 ^3+15^1 积分。
+
+WTR_LEAVE = %s ^3%n^1（观察员）离开了，等待他或选择新的观察员（输入 ^4rnw^1）……
+WTR_DELETE = %s ^3%n^1 移除了 ^3%n^1 的观察员权限。
+WTR_DELETE_STEAM = %s ^3%n^1 移除了 ^3%n^1（steamid）的观察员权限。
+WTR_PLR_DISC = %s 您选择的玩家已断开连接。
+WTR_CHOOSE_NEW = %s ^3%n^1 选择 ^3%n^1 为新的服务器观察员。
+WTR_NOT_ADM = %s 管理员在线时无法发起投票。
+WTR_NOT_NEED = %s 服务器需要更多人才能投票选观察员……（^3需要 > 3^1）
+WTR_ALR_VOTE = %s 您已经投过票了。需要 ^3%d^1 人才能发起投票。
+WTR_VOTE = %s ^3%n^1 想更换观察员！需要 ^3%d^1 人才能发起投票。
+WTR_START = %s 开始投票选新观察员！
+WTR_VOTE_CANCL = %s 您已取消对新观察员的投票。
+WTR_VOTE_CHOOSE = %s ^3%n^1 投票给 ^3%n^1（^3%d^1）！
+WTR_VOTE_DISC = %s 无法投票，玩家已断开或找不到！
+WTR_NEW_RANDOM = %s 新观察员 ^3%n^1 从 ^3%d^1 名玩家中随机选出！
+WTR_NEW = %s 新观察员 - ^3%n^1（^3%d^1 票）
+
+WTR_MENU_NEW = \r选择新观察员：
+WTR_MENU_CHOSE = \r投票选新观察员：
+WTR_MENU_MANAGMENT = \r观察员管理
+WTR_MENU = 添加 / 移除观察员
+WTR_MENU_TRANSFER = 转移玩家队伍
+WTR_MENU_CHANGEMAP = 更换地图
+WTR_MENU_KILLPLAYERS = 杀死玩家
+WTR_MENU_KICKMENU = 踢出玩家
+WTR_MENU_BLACKLIST = 黑名单菜单
+WTR_MENU_NOT_BLACKLIST = \d黑名单菜单
+WTR_MENU_MIXBANMENUS = 封禁菜单 \d[比赛]
+WTR_MENU_NOT_MIXBANMENUS = \d封禁菜单 \d[比赛]
+
+WTR_MENU_DEL = 移除当前观察员
+WTR_MENU_NOT_DEL = \d移除当前观察员
+WTR_MENU_ADD = 选择新观察员
+
+KNIFE_HIDE = 隐藏刀
+KNIFE_CT = 为 \yCT \r%s 隐藏
+KNIFE_TT = 为 \yTT \r%s 隐藏
+
+MENU_YES = 是
+MENU_NO = 否
+
+MENU_TRNING_TITLE = \y训练菜单
+MENU_TRNING_CPNT = 检查点
+MENU_TRNING_TLPRT = 传送
+MENU_TRNING_NOCLIP = 穿墙
+MENU_TRNING_RESPAWN = 重生
+MENU_TRNING_DAMAGE = 伤害
+MENU_TRNING_ANGL_ON = 保存视角 \y开启
+MENU_TRNING_ANGL_OFF = 保存视角 \d关闭
+MENU_TRNING_INVIS_ON = 隐藏玩家 \y开启
+MENU_TRNING_INVIS_OFF = 隐藏玩家 \d关闭
+MENU_TRNING_WEAPONS = 获取武器
+MENU_TRNING_SMOKE = 获得烟雾弹
+MENU_TRNING_FLASH = 获得闪光弹
+
+TRNING_NOT_ALIVE = %s 您必须活着才能使用此命令！
+TRNING_CPNT_SAVE = %s 检查点已保存！
+TRNING_TLPRT_NOT = %s 您还没有任何检查点！
+TRNING_STUCK_NOT = %s 您必须有另一个检查点才能使用 stuck！
+TRNING_SHOW_ON = %s 显示伤害 ^3已开启^1！
+TRNING_SHOW_OFF = %s 显示伤害 ^3已关闭^1！
+TRNING_ANGLES_ON = %s 保存视角 ^3已开启^1！
+TRNING_ANGLES_OFF = %s 保存视角 ^3已关闭^1！
+TRNING_CLIP_ON = %s 穿墙 ^3已开启^1！
+TRNING_CLIP_OFF = %s 穿墙 ^3已关闭^1！
+TRNING_INVIS_ON = %s 隐藏玩家 ^3已开启^1！
+TRNING_INVIS_OFF = %s 隐藏玩家 ^3已关闭^1！
+TRNING_DMG = %s 您受到了 ^3%i^1 点伤害。
+
+HNS_OWNAGE_MIX = %n 爆了 %n 的头！[#%d]
+HNS_OWNAGE = %n 爆了 %n 的头！
+
+STATS_TOP = %s 显示排行 — ^3/top
+
+MAPS_NOM = %s ^3%n^1 提名了地图：^3%s^1。
+MAPS_CHAGE = %s ^3%n^1 将地图更换为：^3%s^1。
+MAPS_MENU_TITLE = 地图菜单
+MAPS_MENU_DESC_TYPE = 请选择地图分类
+MAPS_MENU_ALL = 全部地图
+MAPS_MENU_NOMINATED = 已提名地图
+MAPS_MENU_KNIFE = 拼刀地图
+MAPS_MENU_BOOST = Boost 地图
+MAPS_MENU_SKILL = Skill 地图
+MAPS_MENU_DESC_NONE = 无
+MAPS_MENU_DESC_SELECTED = 当前分类：%s
+MAPS_MENU_DESC_MAP = 请选择地图
+MAPS_MENU_NO_MAPS = %s 没有可用地图。
+MAPS_MENU_PREV = 上一页
+MAPS_MENU_BACK = 返回
+MAPS_MENU_NEXT = 下一页
+MAPS_MENU_EXIT = 退出
+MAPS_MENU_NX = 下一页
+MAPS_MENU_ACTION_MAP = 当前地图：%s
+MAPS_ACTION_DESC = 请选择操作
+MAPS_ACTION_NOM = 提名地图
+MAPS_ACTION_CHANGE = 更换地图
+
+HUD_ON = %s HUD 信息 ^3已开启^1。
+HUD_OFF = %s HUD 信息 ^3已关闭^1。
+ROUNDINFO_ON = %s 回合信息 ^3已开启^1。
+ROUNDINFO_OFF = %s 回合信息 ^3已关闭^1。
+SPECLIST_ON = %s 观察者列表 ^3已开启^1。
+SPECLIST_OFF = %s 观察者列表 ^3已关闭^1。
+SPECHIDE_ON = %s 隐藏观察者 ^3已开启^1。
+SPECHIDE_OFF = %s 隐藏观察者 ^3已关闭^1。
+
+DMG_SPAM = %s 请等待 ^3%.1f^1 秒后再使用命令！
+DMG_ERR = %s 没有或多个匹配的玩家 -> ^3%s^1。
+DMG_SHOW_ROUND = %s ^3%n^1 的坠落伤害 ^3%.0f^1 HP - 之前 ^3%.0f^1 HP - ^3本回合^1，^3%.1f^1 秒前。
+DMG_SHOW = %s ^3%n^1 的坠落伤害 ^3%.0f^1 HP - 之前 ^3%.0f^1 HP - ^3非本回合^1，^3%.1f^1 秒前。
+
+
+BAN_MAIN_MENU = \r比赛封禁菜单
+BAN_MAIN_BAN = 封禁玩家
+BAN_MAIN_OFFBAN = 封禁离线玩家
+BAN_MAIN_UNBAN = 解封玩家
+
+BAN_BAN_MENU = \r封禁玩家参加比赛
+BAN_OFFBAN_MENU = \r封禁离线玩家参加比赛
+BAN_TIME_MENU_S = \r选择封禁时长^n\d目标：%s
+BAN_TIME_MENU_N = \r选择封禁时长^n\d目标：%n
+BAN_UNBAN_MENU = \r解封玩家参加比赛
+
+BAN_DATE_EXPIRED_P = 永久
+BAN_EXPIRED = %s 玩家 ^3%n^1 的比赛封禁已到期。
+BAN_PLAYER = %s ^3%n^1 封禁了玩家 ^3%n^1 参加比赛。到期：^3%s^1。
+BAN_PLAYER_PERM = %s ^3%n^1 封禁了玩家 ^3%n^1 参加比赛。到期：^3永久^1。
+BAN_PLAYER_OFF = %s ^3%n^1 封禁了玩家 ^3%s^1 参加比赛。到期：^3%s^1。
+BAN_PLAYER_PERM_OFF = %s ^3%n^1 封禁了玩家 ^3%s^1 参加比赛。到期：^3永久^1。
+UNBAN_PLAYER = %s ^3%n^1 解封了玩家 ^3%s^1 参加比赛。
+
+BAN_INFO = 您已被禁止参加比赛！^n管理员：%s | Steamid：%s^n到期：%s
+BAN_FULLINFO = \r解封玩家^n\d玩家名称：%s^n玩家 steamid：%s^n管理员名称：%s^n管理员 steamid：%s^n到期：%s
+
+RECON_TITLE_CONTROL = \r选择要移交控制权的玩家
+RECON_TITLE_REPLACE = \r选择要替换的玩家
+RECON_BANNED = \d%n \r[已封禁]
+RECON_INVITED = %s \d[\r已邀请\d]
+RECON_DELAY = %s 请等待 ^3%.1f^1 秒……
+RECON_ADM_TRANSF_TO = \r选择要替换的玩家
+RECON_ADM_TRANSF_IT = \r我们要用谁来替换他？
+RECON_ADM_REPLACE = %s 管理员 ^3%n^1 用 ^3%n^1 替换了玩家 ^3%n^1。
+RECON_CONFIRM_CONTROL = \r接管 %n 的控制权？
+RECON_CONFIRM_REPLACE = \r%n 想让你替换他？
+RECON_REFUSED_CONTROL = %s ^3%n^1 拒绝接管控制权。
+RECON_REFUSED_REPLACE = %s ^3%n^1 拒绝替换。
+RECON_REPLACE = %s ^3%n^1 被 ^3%n 替换了。
+RECON_DIDNT_CHOOSE = %s 玩家 ^3%n^1 未做任何选择。
+RECON_EXPIRED = %s 时间已到。
+
+[tw]
+PTS_RANK = %s 您的排名是 ^3%d^1 （積分：^3%d^1 | 勝場：^3%d^1 | 負場：^3%d^1 | 技術：^3%s^1）
+PTS_NOT_TIME = %s 未計積分，遊戲時間少於 15 分鐘。
+PTS_NOT_PLR = %s 未計積分，玩家少於 6 人。
+PTS_SET_TT = %s ^3TT^1 隊獲得 ^3+15^1 積分。
+PTS_SET_CT = %s ^3CT^1 隊獲得 ^3+15^1 積分。
+
+WTR_LEAVE = %s ^3%n^1（觀察員）離開了，等待他或選擇新的觀察員（輸入 ^4rnw^1）……
+WTR_DELETE = %s ^3%n^1 移除了 ^3%n^1 的觀察員權限。
+WTR_DELETE_STEAM = %s ^3%n^1 移除了 ^3%n^1（steamid）的觀察員權限。
+WTR_PLR_DISC = %s 您選擇的玩家已斷開連線。
+WTR_CHOOSE_NEW = %s ^3%n^1 選擇 ^3%n^1 為新的伺服器觀察員。
+WTR_NOT_ADM = %s 管理員線上時無法發起投票。
+WTR_NOT_NEED = %s 伺服器需要更多人才能投票選觀察員……（^3需要 > 3^1）
+WTR_ALR_VOTE = %s 您已經投過票了。需要 ^3%d^1 人才能發起投票。
+WTR_VOTE = %s ^3%n^1 想更換觀察員！需要 ^3%d^1 人才能發起投票。
+WTR_START = %s 開始投票選新觀察員！
+WTR_VOTE_CANCL = %s 您已取消對新觀察員的投票。
+WTR_VOTE_CHOOSE = %s ^3%n^1 投票給 ^3%n^1（^3%d^1）！
+WTR_VOTE_DISC = %s 無法投票，玩家已斷開或找不到！
+WTR_NEW_RANDOM = %s 新觀察員 ^3%n^1 從 ^3%d^1 名玩家中隨機選出！
+WTR_NEW = %s 新觀察員 - ^3%n^1（^3%d^1 票）
+
+WTR_MENU_NEW = \r選擇新觀察員：
+WTR_MENU_CHOSE = \r投票選新觀察員：
+WTR_MENU_MANAGMENT = \r觀察員管理
+WTR_MENU = 新增 / 移除觀察員
+WTR_MENU_TRANSFER = 轉移玩家隊伍
+WTR_MENU_CHANGEMAP = 更換地圖
+WTR_MENU_KILLPLAYERS = 殺死玩家
+WTR_MENU_KICKMENU = 踢出玩家
+WTR_MENU_BLACKLIST = 黑名單選單
+WTR_MENU_NOT_BLACKLIST = \d黑名單選單
+WTR_MENU_MIXBANMENUS = 封禁選單 \d[比賽]
+WTR_MENU_NOT_MIXBANMENUS = \d封禁選單 \d[比賽]
+
+WTR_MENU_DEL = 移除目前觀察員
+WTR_MENU_NOT_DEL = \d移除目前觀察員
+WTR_MENU_ADD = 選擇新觀察員
+
+KNIFE_HIDE = 隱藏刀
+KNIFE_CT = 為 \yCT \r%s 隱藏
+KNIFE_TT = 為 \yTT \r%s 隱藏
+
+MENU_YES = 是
+MENU_NO = 否
+
+MENU_TRNING_TITLE = \y訓練選單
+MENU_TRNING_CPNT = 檢查點
+MENU_TRNING_TLPRT = 傳送
+MENU_TRNING_NOCLIP = 穿牆
+MENU_TRNING_RESPAWN = 重生
+MENU_TRNING_DAMAGE = 傷害
+MENU_TRNING_ANGL_ON = 儲存視角 \y開啟
+MENU_TRNING_ANGL_OFF = 儲存視角 \d關閉
+MENU_TRNING_INVIS_ON = 隱藏玩家 \y開啟
+MENU_TRNING_INVIS_OFF = 隱藏玩家 \d關閉
+MENU_TRNING_WEAPONS = 取得武器
+
+TRNING_NOT_ALIVE = %s 您必須活著才能使用此指令！
+TRNING_CPNT_SAVE = %s 檢查點已儲存！
+TRNING_TLPRT_NOT = %s 您還沒有任何檢查點！
+TRNING_STUCK_NOT = %s 您必須有另一個檢查點才能使用 stuck！
+TRNING_SHOW_ON = %s 顯示傷害 ^3已開啟^1！
+TRNING_SHOW_OFF = %s 顯示傷害 ^3已關閉^1！
+TRNING_ANGLES_ON = %s 儲存視角 ^3已開啟^1！
+TRNING_ANGLES_OFF = %s 儲存視角 ^3已關閉^1！
+TRNING_CLIP_ON = %s 穿牆 ^3已開啟^1！
+TRNING_CLIP_OFF = %s 穿牆 ^3已關閉^1！
+TRNING_INVIS_ON = %s 隱藏玩家 ^3已開啟^1！
+TRNING_INVIS_OFF = %s 隱藏玩家 ^3已關閉^1！
+TRNING_DMG = %s 您受到了 ^3%i^1 點傷害。
+
+HNS_OWNAGE_MIX = %n 爆了 %n 的頭！[#%d]
+HNS_OWNAGE = %n 爆了 %n 的頭！
+
+STATS_TOP = %s 顯示排行 — ^3/top
+
+MAPS_NOM = %s ^3%n^1 提名了地圖：^3%s^1。
+MAPS_CHAGE = %s ^3%n^1 將地圖更換為：^3%s^1。
+MAPS_MENU_TITLE = 地圖選單
+MAPS_MENU_DESC_TYPE = 請選擇地圖分類
+MAPS_MENU_ALL = 全部地圖
+MAPS_MENU_NOMINATED = 已提名地圖
+MAPS_MENU_KNIFE = 拼刀地圖
+MAPS_MENU_BOOST = Boost 地圖
+MAPS_MENU_SKILL = Skill 地圖
+MAPS_MENU_DESC_NONE = 無
+MAPS_MENU_DESC_SELECTED = 目前分類：%s
+MAPS_MENU_DESC_MAP = 請選擇地圖
+MAPS_MENU_NO_MAPS = %s 沒有可用地圖。
+MAPS_MENU_PREV = 上一頁
+MAPS_MENU_BACK = 返回
+MAPS_MENU_NEXT = 下一頁
+MAPS_MENU_EXIT = 離開
+MAPS_MENU_NX = 下一頁
+MAPS_MENU_ACTION_MAP = 目前地圖：%s
+MAPS_ACTION_DESC = 請選擇操作
+MAPS_ACTION_NOM = 提名地圖
+MAPS_ACTION_CHANGE = 更換地圖
+
+HUD_ON = %s HUD 資訊 ^3已開啟^1。
+HUD_OFF = %s HUD 資訊 ^3已關閉^1。
+ROUNDINFO_ON = %s 回合資訊 ^3已開啟^1。
+ROUNDINFO_OFF = %s 回合資訊 ^3已關閉^1。
+SPECLIST_ON = %s 觀察者列表 ^3已開啟^1。
+SPECLIST_OFF = %s 觀察者列表 ^3已關閉^1。
+SPECHIDE_ON = %s 隱藏觀察者 ^3已開啟^1。
+SPECHIDE_OFF = %s 隱藏觀察者 ^3已關閉^1。
+
+DMG_SPAM = %s 請等待 ^3%.1f^1 秒後再使用指令！
+DMG_ERR = %s 沒有或多個符合的玩家 -> ^3%s^1。
+DMG_SHOW_ROUND = %s ^3%n^1 的墜落傷害 ^3%.0f^1 HP - 之前 ^3%.0f^1 HP - ^3本回合^1，^3%.1f^1 秒前。
+DMG_SHOW = %s ^3%n^1 的墜落傷害 ^3%.0f^1 HP - 之前 ^3%.0f^1 HP - ^3非本回合^1，^3%.1f^1 秒前。
+
+
+BAN_MAIN_MENU = \r比賽封禁選單
+BAN_MAIN_BAN = 封禁玩家
+BAN_MAIN_OFFBAN = 封禁離線玩家
+BAN_MAIN_UNBAN = 解封玩家
+
+BAN_BAN_MENU = \r封禁玩家參加比賽
+BAN_OFFBAN_MENU = \r封禁離線玩家參加比賽
+BAN_TIME_MENU_S = \r選擇封禁時長^n\d目標：%s
+BAN_TIME_MENU_N = \r選擇封禁時長^n\d目標：%n
+BAN_UNBAN_MENU = \r解封玩家參加比賽
+
+BAN_DATE_EXPIRED_P = 永久
+BAN_EXPIRED = %s 玩家 ^3%n^1 的比賽封禁已到期。
+BAN_PLAYER = %s ^3%n^1 封禁了玩家 ^3%n^1 參加比賽。到期：^3%s^1。
+BAN_PLAYER_PERM = %s ^3%n^1 封禁了玩家 ^3%n^1 參加比賽。到期：^3永久^1。
+BAN_PLAYER_OFF = %s ^3%n^1 封禁了玩家 ^3%s^1 參加比賽。到期：^3%s^1。
+BAN_PLAYER_PERM_OFF = %s ^3%n^1 封禁了玩家 ^3%s^1 參加比賽。到期：^3永久^1。
+UNBAN_PLAYER = %s ^3%n^1 解封了玩家 ^3%s^1 參加比賽。
+
+BAN_INFO = 您已被禁止參加比賽！^n管理員：%s | Steamid：%s^n到期：%s
+BAN_FULLINFO = \r解封玩家^n\d玩家名稱：%s^n玩家 steamid：%s^n管理員名稱：%s^n管理員 steamid：%s^n到期：%s
+
+RECON_TITLE_CONTROL = \r選擇要移交控制權的玩家
+RECON_TITLE_REPLACE = \r選擇要替換的玩家
+RECON_BANNED = \d%n \r[已封禁]
+RECON_INVITED = %s \d[\r已邀請\d]
+RECON_DELAY = %s 請等待 ^3%.1f^1 秒……
+RECON_ADM_TRANSF_TO = \r選擇要替換的玩家
+RECON_ADM_TRANSF_IT = \r我們要用誰來替換他？
+RECON_ADM_REPLACE = %s 管理員 ^3%n^1 用 ^3%n^1 替換了玩家 ^3%n^1。
+RECON_CONFIRM_CONTROL = \r接管 %n 的控制權？
+RECON_CONFIRM_REPLACE = \r%n 想讓你替換他？
+RECON_REFUSED_CONTROL = %s ^3%n^1 拒絕接管控制權。
+RECON_REFUSED_REPLACE = %s ^3%n^1 拒絕替換。
+RECON_REPLACE = %s ^3%n^1 被 ^3%n 替換了。
+RECON_DIDNT_CHOOSE = %s 玩家 ^3%n^1 未做任何選擇。
+RECON_EXPIRED = %s 時間已到。

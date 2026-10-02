@@ -1,0 +1,82 @@
+﻿public startMatch() {
+	filterDisconnected();
+
+	// 统计实际两队人数
+	new iT = 0, iCT = 0;
+	for (new i = 0; i < g_iSignupCount; i++) {
+		new id = g_iSignupList[i];
+		if (!is_user_connected(id))
+			continue;
+
+		new TeamName:iTeam = getUserTeam(id);
+		if (iTeam == TEAM_TERRORIST)
+			iT++;
+		else if (_:iTeam == TEAM_CT)
+			iCT++;
+	}
+
+	// 人数不足则中止, 回到报名 (强制开赛允许 1 人测试)
+	if (!g_bForceStart && (iT + iCT < SIGNUP_MIN || iT < 3 || iCT < 3)) {
+		ai_print(0, "参赛人数不足 (^3T%d^1 v ^3%dCT^1), 取消开赛, 报名继续", iT, iCT);
+		g_eState = SIGNUP_OPEN;
+		g_flSignupTimer = 60.0;
+		set_task(1.0, "taskCountdown", TASK_COUNTDOWN, .flags = "b");
+		return;
+	}
+
+	if (iT + iCT < 1) {
+		ai_print(0, "没有上场玩家, 取消开赛");
+		g_bForceStart = false;
+		g_bPostGroupSetup = false;
+		g_eState = SIGNUP_OPEN;
+		g_flSignupTimer = 60.0;
+		set_task(1.0, "taskCountdown", TASK_COUNTDOWN, .flags = "b");
+		return;
+	}
+
+	if (g_szPickedMap[0] && !equali(g_szPickedMap, g_szLastMap)) {
+		if (!isMapSafeToLoad(g_szPickedMap)) {
+			ai_print(0, "地图 ^3%s^1 缺少模型, 留在当前图开赛", g_szPickedMap);
+			log_amx("[HNSai] skip unsafe map %s, stay on %s", g_szPickedMap, g_szLastMap);
+			g_szPickedMap[0] = EOS;
+		}savePendingMatch();
+			saveSignupTeams(tch ? 1 : 0);
+			PDS_SetString("ai_sponsor_name", g_szSponsorName);
+			PDS_SetCell("ai_force_start", g_bForceStart ? 1 : 0);
+			PDS_SetCell("ai_team_size", g_iPlaceTeamSize);
+			g_eState = SIGNUP_OPEN;
+			g_bPostGroupSetup = false;
+			server_cmd("changelevel %s", g_szPickedMap);
+			return;
+		}
+	}
+
+	// ★ 绿色聊天提示 (启动比分)
+	ai_print(0, "^2比赛启动!^1 T队 ^2%d^1 人 v CT队 ^2%d^1 人", iT, iCT);
+	ai_print(0, "^2类型: %s ^1| ^2模式: %s ^1| 报名 %d 人 | 祝大家好运!",
+		g_bSponsorMatch ? "赞助局" : "娱乐局", g_szRules[_:g_iMatchRules], iT + iCT);
+
+	// 聊天框播报最终分组 (蓝 CT / 红 TT)
+	showGroups(0);
+
+	// 开赛
+	hns_external_set_team_size(g_iPlaceTeamSize, g_iPlaceTeamSize);
+	hns_external_set_match_mode(_:g_iMatchRules);
+	if (g_bSponsorMatch && g_szSponsorName[0])
+		hns_external_set_sponsor_name(g_szSponsorName);
+	hns_begin_external_match(g_bSponsorMatch, g_iSponsorAskId);
+
+	g_bForceStart = false;
+	g_bPostGroupSetup = false;
+	g_bWaitingSponsor = false;
+	g_bPendingMatchStart = false;
+	PDS_SetCell("ai_pending_start", 0);
+	g_eState = MATCH_RUNNING;
+}
+
+// ============================================================
+/g_bKeepSavedTeams = false;
+	PDS_SetCell("ai_pending_start", 0);
+	PDS_SetCell("ai_saved_n
+// ============================================================
+

@@ -1,4 +1,8 @@
-# 🎮 GTRhns HNS 比赛插件系统 · 华雪版
+# 🎮 GTR HNS 比赛插件系统 · 华雪版
+
+<p align="center">
+  <img src="assets/banner.jpg" alt="华雪版封面" width="480">
+</p>
 
 > **基于 OpenHNS 比赛引擎二次开发，融合 GTR 团队大量自研功能**
 > 适用：CS 1.6 / ReHLDS / AMX Mod X 1.10

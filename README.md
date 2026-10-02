@@ -15,6 +15,8 @@
 
 </div>
 
+**🌐 语言 / Languages:** [简体中文](README.md) · [繁體中文](README_ZH-TW.md) · [English](README_EN.md) · [Deutsch](README_DE.md) · [Русский](README_RU.md) · [Italiano](README_IT.md) · [Türkçe](README_TR.md) · [Français](README_FR.md)
+
 > **基于 OpenHNS 比赛引擎二次开发，融合 GTR 团队大量自研功能**
 > 适用：CS 1.6 / ReHLDS / AMX Mod X 1.10
 > 当前版本：**华雪版 v1.17**（tag: `huaxue-v1.17`）
@@ -46,6 +48,7 @@
 - [六、快速部署](#六快速部署)
 - [七、技术栈](#七技术栈)
 - [八、版权说明](#八版权说明)
+- [九、多语言版本](#九多语言版本)
 
 ---
 
@@ -191,6 +194,19 @@ GTR 团队在其上围绕「**报名 → 分组 → 选赛制/地图 → 开赛 
 - **第三方插件包**（SEM / rtv / FreshBans 等）：版权归各自作者，来源俄站 dream-x.ru。
 - **皮肤素材**（models / sounds / 贴图）：版权未注明，商用前请自行确认。
 - 欢迎 Fork / PR / 提 Issue，标注来源即可。
+
+---
+
+## 九、多语言版本
+
+- [简体中文](README.md)
+- [繁體中文](README_ZH-TW.md)
+- [English](README_EN.md)
+- [Deutsch](README_DE.md)
+- [Русский](README_RU.md)
+- [Italiano](README_IT.md)
+- [Türkçe](README_TR.md)
+- [Français](README_FR.md)
 
 ---
 

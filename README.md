@@ -196,6 +196,8 @@ GTR 团队在其上围绕「**报名 → 分组 → 选赛制/地图 → 开赛 
 
 <div align="center">
 
-<font color="red"><b>一切解释权归 LINNA 所有，GTRhns 将服务于每一个人。</b></font>
+![声明](https://img.shields.io/badge/declaration-%E4%B8%80%E5%88%87%E8%A7%A3%E9%87%8A%E6%9D%83%E5%BD%92%20LINNA%20%E6%89%80%E6%9C%89%EF%BC%8CGTRhns%20%E5%B0%86%E6%9C%8D%E5%8A%A1%E4%BA%8E%E6%AF%8F%E4%B8%80%E4%B8%AA%E4%BA%BA%E3%80%82-red)
+
+<b>一切解释权归 LINNA 所有，GTRhns 将服务于每一个人。</b>
 
 </div>

@@ -10,7 +10,7 @@
   [![Version](https://img.shields.io/badge/Version-v1.17-green)]()
   [![Storage](https://img.shields.io/badge/Storage-PDS_%2B_MySQL-9cf)]()
   [![Language](https://img.shields.io/badge/Language-4_Languages-ff69b4)]()
-  [![License](https://img.shields.io/badge/License-MIT-success)]()
+  [![License](https://img.shields.io/badge/License-GPLv3-success)]()
 </p>
 
 > **基于 OpenHNS 比赛引擎二次开发，融合 GTR 团队大量自研功能**

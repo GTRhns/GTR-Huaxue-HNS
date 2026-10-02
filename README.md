@@ -4,6 +4,15 @@
   <img src="assets/banner.jpg" alt="华雪版封面" width="480">
 </p>
 
+<p align="center">
+  [![AMX Mod X](https://img.shields.io/badge/AMX_Mod_X-1.10-blue)]()
+  [![ReGameDLL](https://img.shields.io/badge/ReGameDLL-5.x-orange)]()
+  [![Version](https://img.shields.io/badge/Version-v1.17-green)]()
+  [![Storage](https://img.shields.io/badge/Storage-PDS_%2B_MySQL-9cf)]()
+  [![Language](https://img.shields.io/badge/Language-4_Languages-ff69b4)]()
+  [![License](https://img.shields.io/badge/License-MIT-success)]()
+</p>
+
 > **基于 OpenHNS 比赛引擎二次开发，融合 GTR 团队大量自研功能**
 > 适用：CS 1.6 / ReHLDS / AMX Mod X 1.10
 > 当前版本：**华雪版 v1.17**（tag: `huaxue-v1.17`）

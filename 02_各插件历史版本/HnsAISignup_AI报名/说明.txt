@@ -1,7 +1,7 @@
 HnsAISignup.sma —— AI 报名系统 版本历史说明
 ============================================
 主插件：AI 报名（/signup 报名、收团分组、模式/地图投票、赞助局、强制开赛、HUD 等）
-作者：HNSai（GTR 自研） 当前版本：v1.18
+作者：HNSai（GTR 自研） 当前版本：v1.19
 
 版本列表（按时间从旧到新）：
 1. v1.3_teamfix_0927-1912/
@@ -48,6 +48,14 @@ HnsAISignup.sma —— AI 报名系统 版本历史说明
      e. 赛制状态单一来源: AI 菜单选完立即同步 MatchSystem, 含 pending 一律不再分叉
    - 依赖 HnsMatchSystem 新增 native: hns_get_player_match_team / hns_get_match_team_cs
    - 当前服务器部署使用的版本 (04_服务器部署_cstrike 已同步 .amxx)
+
+8. v1.19_当前部署版 —— 在 01_当前版本_核心源码/HnsAISignup.sma
+   - 版本号 1.19, 2026-10-03 整理发布
+   - v1.18 基础上主要改动:
+     a. 主菜单更名: 菜单标题由「GTR 游戏菜单」统一改为 Hide'And'Seek(捉迷藏比赛系统英文名)
+     b. hns_language.txt 四个语言区(简中/繁中/English/Русский)同步修改
+     c. hnsmenu.inc 兜底文本同步更新为 Hide'And'Seek
+   - 其余功能与 v1.18 一致(胜负判定修复/换图恢复赛制/权限收敛等全部继承)
 
 关键背景（详见 10_交接与文档/插件修改记录.txt）:
 - 换图会重载插件, 跨图状态靠 PDS 恢复（ai_pending_start 等键）

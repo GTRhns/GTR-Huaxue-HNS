@@ -8,7 +8,7 @@
 
 [![AMX Mod X](https://img.shields.io/badge/AMX_Mod_X-1.10-blue)]()
 [![ReGameDLL](https://img.shields.io/badge/ReGameDLL-5.x-orange)]()
-[![Version](https://img.shields.io/badge/Version-v1.18-green)]()
+[![Version](https://img.shields.io/badge/Version-v1.19-green)]()
 [![Storage](https://img.shields.io/badge/Storage-PDS_%2B_MySQL-9cf)]()
 [![Language](https://img.shields.io/badge/Language-4_Languages-ff69b4)]()
 [![License](https://img.shields.io/badge/License-GPLv3-success)]()
@@ -19,7 +19,7 @@
 
 > **OpenHNS maç motoru temel alınarak geliştirilmiş, GTR ekibinin çok sayıda özgün özelliğiyle birleştirilmiştir**
 > Uyumluluk: CS 1.6 / ReHLDS / AMX Mod X 1.10
-> Güncel sürüm: **Huaxue Sürümü v1.18** (etiket: `huaxue-v1.18`) · 2026-10-01 sürümü
+> Güncel sürüm: **Huaxue Sürümü v1.19** (etiket: `huaxue-v1.19`) · 2026-10-01 sürümü
 
 ---
 
@@ -27,7 +27,7 @@
 
 - [1. Proje Tanıtımı](#1-proje-tanıtımı)
 - [2. Yeni Sürüm vs Eski Sürüm: Farklar](#2-yeni-surum-vs-eski-surum-farklar)
-- [3. Huaxue Sürümü v1.18'in Öne Çıkanları](#3-huaxue-surumu-v118in-one-cikanlari)
+- [3. Huaxue Sürümü v1.19'in Öne Çıkanları](#3-huaxue-surumu-v118in-one-cikanlari)
 - [4. Eklenti Listesi](#4-eklenti-listesi)
 - [5. Depo Yapısı](#5-depo-yapisi)
 - [6. Hızlı Dağıtım](#6-hizli-dagitim)
@@ -64,7 +64,7 @@ GTR ekibi bunun üzerine «**kayıt → takım oluşturma → mod/harita seçimi
 | 9 | Kayıt sayısı şeridi | Sohbet/HUD'da `012345[6]78910` görünüyor, kullanıcılar kaldırılmasını istedi |
 | 10 | Kayıt menüsü bir tıkta kapanıyor | Menüde sürekli işlem yapılmak isteniyor ama menü kendiliğinden kapanıyor |
 
-### 2.2 Yeni sürümdeki (Huaxue Sürümü v1.18) karşılık gelen iyileştirmeler
+### 2.2 Yeni sürümdeki (Huaxue Sürümü v1.19) karşılık gelen iyileştirmeler
 
 | # | İyileştirme | Uygulama şekli |
 |---|---|---|
@@ -78,9 +78,9 @@ GTR ekibi bunun üzerine «**kayıt → takım oluşturma → mod/harita seçimi
 | 8 | **Mix menüsünde sabit numaralandırma** | 7. madde her zaman ICGB (sponsorlu maç yoksa gri ve tıklanamaz), 8. madde her zaman admin menüsü |
 | 9 | **Sayı şeridi arayüzü kaldırıldı** | `buildSignupBar()` silindi, HUD yalnızca `报名: n/12` gösterir |
 | 10 | **Menü tıklamadan sonra kapanmıyor** | Kayıt menüsünde işlem sonrası ana menüye dönülür, kesintisiz işlem için |
-| 11 | **Kazananın mantıksal takıma göre belirlenmesi** | Yeni native `hns_get_player_match_team`; wintime hesaplaması doğru takıma puan ekler (v1.18) |
-| 12 | **Menü izinlerinin daraltılması** | Takım boyutu / yeniden gruplama / zorla başlatma yalnızca VIP/admin tarafından görülebilir ve tıklanabilir (v1.18) |
-| 13 | **Tek maç modu durumu** | AI ve MatchSystem aynı maç modunu paylaşır; harita değişince modla birlikte geri yüklenir, çatallanma önlendi (v1.18) |
+| 11 | **Kazananın mantıksal takıma göre belirlenmesi** | Yeni native `hns_get_player_match_team`; wintime hesaplaması doğru takıma puan ekler (v1.19) |
+| 12 | **Menü izinlerinin daraltılması** | Takım boyutu / yeniden gruplama / zorla başlatma yalnızca VIP/admin tarafından görülebilir ve tıklanabilir (v1.19) |
+| 13 | **Tek maç modu durumu** | AI ve MatchSystem aynı maç modunu paylaşır; harita değişince modla birlikte geri yüklenir, çatallanma önlendi (v1.19) |
 
 ### 2.3 Sürüm geçmişi zaman çizelgesi (HnsAISignup ana eklentisi)
 
@@ -92,15 +92,15 @@ GTR ekibi bunun üzerine «**kayıt → takım oluşturma → mod/harita seçimi
 | v1.9 | 09-27 22:07 | Tarihî yedek | Büyük değişikliklerden önce (kayıt akışı yeniden yapılandırılmadan önce) |
 | **v1.17** | 09-30 23:00 | **Önceki sürüm** | Huaxue Sürümü resmî sürümü, tüm iyileştirmeler uygulandı |
 | v1.17+ | 10-01 02:13 | Geliştiriliyor | `taskRestorePendingRules` eklendi (harita değişiminden sonra modu gecikmeli geri yükleme), dağıtılmadı |
-| **v1.18** | 10-01 | **Güncel dağıtılan sürüm** | wintime kazanan belirleme düzeltmesi + harita değişiminde modun geri yüklenmesi + menü izinlerinin daraltılması + tek maç modu durumu |
+| **v1.19** | 10-01 | **Güncel dağıtılan sürüm** | wintime kazanan belirleme düzeltmesi + harita değişiminde modun geri yüklenmesi + menü izinlerinin daraltılması + tek maç modu durumu |
 
 > Tam sürüm geçmişi `02_各插件历史版本/` içindedir; her sürümün ayrı klasörü + açıklaması vardır.
 
 ---
 
-## 3. Huaxue Sürümü v1.18'in Öne Çıkanları
+## 3. Huaxue Sürümü v1.19'in Öne Çıkanları
 
-- 🤖 **AI kayıt sistemi v1.18**: `/signup` tek tıkla kayıt, takım toplama ve gruplama, eğlence/sponsorlu maçlar, mod ve harita oylaması,
+- 🤖 **AI kayıt sistemi v1.19**: `/signup` tek tıkla kayıt, takım toplama ve gruplama, eğlence/sponsorlu maçlar, mod ve harita oylaması,
   zorla maç başlatma (1 kişiyle test edilebilir), harita değişince maçı sürdürme, HUD kayıt sayacı.
 - 🎨 **Skin sistemi (MySQL)**: oyuncuya özel skinler, jetonla satın alma / kiralama / kalıcı yükseltme,
   rastgele ölüm sesleri, admin `/cpm` menüsünden yönetim.
@@ -118,7 +118,7 @@ GTR ekibi bunun üzerine «**kayıt → takım oluşturma → mod/harita seçimi
 
 | Eklenti | Sürüm | İşlev |
 |---|---|---|
-| HnsAISignup | v1.18 | AI kayıt sistemi (temel özgün geliştirme) |
+| HnsAISignup | v1.19 | AI kayıt sistemi (temel özgün geliştirme) |
 | HnsMatchSystem | 2.0.5+ | Maç durum makinesi (OpenHNS tabanı + 2 yeni native: `hns_get_player_match_team` / `hns_get_match_team_cs`) |
 | HnsMatchBans | 1.1 | Yasaklama yönetimi |
 | HnsMatchMaps | 4.0.4 | Harita yönetimi |
@@ -154,7 +154,7 @@ GTR ekibi bunun üzerine «**kayıt → takım oluşturma → mod/harita seçimi
 
 ## 6. Hızlı Dağıtım
 
-1. **Release** bölümüne gidip en son **Huaxue Sürümü** dağıtım paketini indirin: `gtr_deploy_package_v1.18.zip`
+1. **Release** bölümüne gidip en son **Huaxue Sürümü** dağıtım paketini indirin: `gtr_deploy_package_v1.19.zip`
 2. `addons/` klasörünü açıp sunucunun `cstrike/` dizininin üzerine yazın
 3. `部署说明.txt` talimatına göre MySQL'i yapılandırın (skin veritabanı için ilk açılışta tablo oluşturulmalı)
 4. Sunucuyu yeniden başlatın / harita değiştirin, konsolda `amxx plugins` ile failed olmadığını doğrulayın

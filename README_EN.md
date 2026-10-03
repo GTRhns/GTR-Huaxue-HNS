@@ -8,7 +8,7 @@
 
 [![AMX Mod X](https://img.shields.io/badge/AMX_Mod_X-1.10-blue)]()
 [![ReGameDLL](https://img.shields.io/badge/ReGameDLL-5.x-orange)]()
-[![Version](https://img.shields.io/badge/Version-v1.18-green)]()
+[![Version](https://img.shields.io/badge/Version-v1.19-green)]()
 [![Storage](https://img.shields.io/badge/Storage-PDS_%2B_MySQL-9cf)]()
 [![Language](https://img.shields.io/badge/Language-4_Languages-ff69b4)]()
 [![License](https://img.shields.io/badge/License-GPLv3-success)]()
@@ -19,7 +19,7 @@
 
 > **Built on the OpenHNS match engine and extended with extensive self-developed features by the GTR team**
 > Requires: CS 1.6 / ReHLDS / AMX Mod X 1.10
-> Current version: **Huaxue Edition v1.18** (tag: `huaxue-v1.18`) · 2026-10-01 release
+> Current version: **Huaxue Edition v1.19** (tag: `huaxue-v1.19`) · 2026-10-01 release
 
 ---
 
@@ -27,7 +27,7 @@
 
 - [1. Project Introduction](#1-project-introduction)
 - [2. New vs Old: What's Different](#2-new-vs-old-whats-different)
-- [3. Huaxue Edition v1.18 Highlights](#3-huaxue-edition-v118-highlights)
+- [3. Huaxue Edition v1.19 Highlights](#3-huaxue-edition-v118-highlights)
 - [4. Plugin List](#4-plugin-list)
 - [5. Repository Structure](#5-repository-structure)
 - [6. Quick Deployment](#6-quick-deployment)
@@ -64,7 +64,7 @@ forming an independent **GTR self-developed match engine**.
 | 9 | Signup count number bar | Chat/HUD shows `012345[6]78910`; users asked to remove it |
 | 10 | Signup menu closes on a single click | Users want to keep operating the menu, but it auto-closes |
 
-### 2.2 Corresponding Improvements in the New Version (Huaxue Edition v1.18)
+### 2.2 Corresponding Improvements in the New Version (Huaxue Edition v1.19)
 
 | # | Improvement | Implementation |
 |---|---|---|
@@ -78,9 +78,9 @@ forming an independent **GTR self-developed match engine**.
 | 8 | **Fixed mix menu numbering** | Item 7 is always ICGB (grayed out and unclickable in non-sponsored matches), item 8 is always the admin menu |
 | 9 | **Number bar UI removed** | `buildSignupBar()` deleted; HUD only shows `Signup: n/12` |
 | 10 | **Menu stays open after selection** | The signup menu returns to the main menu after an action, making consecutive operations convenient |
-| 11 | **Win/loss determined by logical team** | New native `hns_get_player_match_team`; wintime settlement credits the correct team (v1.18) |
-| 12 | **Tightened menu permissions** | Team size / re-group / force start visible and clickable only for VIP/admin (v1.18) |
-| 13 | **Single match-type state** | AI and MatchSystem share one match type, restored together after a map change; no more divergence (v1.18) |
+| 11 | **Win/loss determined by logical team** | New native `hns_get_player_match_team`; wintime settlement credits the correct team (v1.19) |
+| 12 | **Tightened menu permissions** | Team size / re-group / force start visible and clickable only for VIP/admin (v1.19) |
+| 13 | **Single match-type state** | AI and MatchSystem share one match type, restored together after a map change; no more divergence (v1.19) |
 
 ### 2.3 Version Evolution Timeline (HnsAISignup Main Plugin)
 
@@ -92,15 +92,15 @@ forming an independent **GTR self-developed match engine**.
 | v1.9 | 09-27 22:07 | Historical backup | Before large-scale changes (before the signup flow refactor) |
 | **v1.17** | 09-30 23:00 | **Previous release** | Huaxue Edition release, all improvements in place |
 | v1.17+ | 10-01 02:13 | In development | Adds `taskRestorePendingRules` (delayed mode recovery after map change), not deployed |
-| **v1.18** | 10-01 | **Currently deployed version** | wintime win/loss fix + match type restored after map change + tightened menu permissions + single match-type state |
+| **v1.19** | 10-01 | **Currently deployed version** | wintime win/loss fix + match type restored after map change + tightened menu permissions + single match-type state |
 
 > For the full version history, see `02_各插件历史版本/`; each version has its own folder + description.
 
 ---
 
-## 3. Huaxue Edition v1.18 Highlights
+## 3. Huaxue Edition v1.19 Highlights
 
-- 🤖 **AI Signup System v1.18**: `/signup` one-click signup, team gathering and grouping, casual/sponsored matches, mode and map voting, force start (testable with 1 player), cross-map match resumption, HUD signup counter.
+- 🤖 **AI Signup System v1.19**: `/signup` one-click signup, team gathering and grouping, casual/sponsored matches, mode and map voting, force start (testable with 1 player), cross-map match resumption, HUD signup counter.
 - 🎨 **Skin System (MySQL)**: player-customized skins, coin purchase / rental / permanent upgrades, random death sounds, admin management via the `/cpm` menu.
 - 💳 **Sponsorship / ICGB Coin System**: sponsored matches auto-record the sponsor; coins are linked to skins.
 - 🗂 **Cross-map Persistence (PDS)**: map changes don't lose match state; the match auto-resumes after AI map selection.
@@ -116,7 +116,7 @@ forming an independent **GTR self-developed match engine**.
 
 | Plugin | Version | Function |
 |---|---|---|
-| HnsAISignup | v1.18 | AI signup system (core, self-developed) |
+| HnsAISignup | v1.19 | AI signup system (core, self-developed) |
 | HnsMatchSystem | 2.0.5+ | Match state machine (OpenHNS base + 2 new natives: `hns_get_player_match_team` / `hns_get_match_team_cs`) |
 | HnsMatchBans | 1.1 | Ban management |
 | HnsMatchMaps | 4.0.4 | Map management |
@@ -152,7 +152,7 @@ forming an independent **GTR self-developed match engine**.
 
 ## 6. Quick Deployment
 
-1. Go to **Release** and download the latest **Huaxue Edition** deployment package `gtr_deploy_package_v1.18.zip`
+1. Go to **Release** and download the latest **Huaxue Edition** deployment package `gtr_deploy_package_v1.19.zip`
 2. Extract `addons/` over the server's `cstrike/` directory
 3. Configure MySQL according to `部署说明.txt` (the skin database needs tables created on first use)
 4. Restart the server / change the map, then verify there are no failed entries with `amxx plugins` in the console

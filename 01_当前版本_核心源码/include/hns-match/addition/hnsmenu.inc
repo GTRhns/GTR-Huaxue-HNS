@@ -34,7 +34,7 @@ public gtrMainMenu(id) {
 		return PLUGIN_HANDLED;
 
 	new szMenu[512], szText[128], iLen;
-	gtrMenuText(id, "MENU_MAIN_TITLE", szText, charsmax(szText), "GTR游戏菜单");
+	gtrMenuText(id, "MENU_MAIN_TITLE", szText, charsmax(szText), "Hide'And'Seek");
 	iLen = formatex(szMenu, charsmax(szMenu), "\r%s^n ^n", szText);
 	gtrMenuText(id, "MENU_MAIN_MATCH", szText, charsmax(szText), "比赛菜单");
 	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r1. \w%s^n", szText);

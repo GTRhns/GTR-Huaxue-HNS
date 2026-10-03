@@ -515,3 +515,26 @@ B. 取消 UI 012345678910
 - HnsLanguage.sma 逻辑没动
 - 不要改无关模块
 )
+
+
+============================================================
+13. v1.19 主菜单更名 Hide'And'Seek (2026-10-03)
+============================================================
+
+改动文件:
+1. configs/hns_language.txt
+   - 四个语言区 (简中 / 繁中 / English / Русский) 的 MENU_MAIN_TITLE
+     统一从「GTR游戏菜单 / GTR遊戲選單 / GTR Game Menu / Меню GTR」
+     改为 Hide'And'Seek (捉迷藏比赛系统英文名)
+2. scripting/include/hns-match/addition/hnsmenu.inc
+   - gtrMainMenu 里 gtrMenuText 的兜底文本从「GTR游戏菜单」改为 Hide'And'Seek
+     (语言文件未加载时也显示新标题)
+3. HnsAISignup.sma PLUGIN_VERSION 1.18 -> 1.19
+
+同步位置:
+- 最新部署包 (.uploads/gtr2_new) 三处副本
+- 仓库 01_当前版本_核心源码
+- 仓库 04_服务器部署_cstrike
+
+说明: 菜单标题由语言文件运行时读取, 换图/重载 HnsLanguage 后游戏内即显示
+Hide'And'Seek, 无需重新编译 .amxx 即可生效 (hnsmenu.inc 兜底仅防语言文件缺失)。

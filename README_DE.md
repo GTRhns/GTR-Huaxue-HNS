@@ -8,7 +8,7 @@
 
 [![AMX Mod X](https://img.shields.io/badge/AMX_Mod_X-1.10-blue)]()
 [![ReGameDLL](https://img.shields.io/badge/ReGameDLL-5.x-orange)]()
-[![Version](https://img.shields.io/badge/Version-v1.18-green)]()
+[![Version](https://img.shields.io/badge/Version-v1.19-green)]()
 [![Storage](https://img.shields.io/badge/Storage-PDS_%2B_MySQL-9cf)]()
 [![Language](https://img.shields.io/badge/Language-4_Languages-ff69b4)]()
 [![License](https://img.shields.io/badge/License-GPLv3-success)]()
@@ -19,7 +19,7 @@
 
 > **Basierend auf der OpenHNS-Match-Engine weiterentwickelt, mit vielen selbst entwickelten Funktionen des GTR-Teams**
 > Geeignet für: CS 1.6 / ReHLDS / AMX Mod X 1.10
-> Aktuelle Version: **Huaxue Edition v1.18** (Tag: `huaxue-v1.18`) · Version vom 2026-10-01
+> Aktuelle Version: **Huaxue Edition v1.19** (Tag: `huaxue-v1.19`) · Version vom 2026-10-01
 
 ---
 
@@ -27,7 +27,7 @@
 
 - [1. Projektübersicht](#1-projektübersicht)
 - [2. Neu vs. Alt: Was hat sich geändert](#2-neu-vs-alt-was-hat-sich-geändert)
-- [3. Highlights der Huaxue Edition v1.18](#3-highlights-der-huaxue-edition-v118)
+- [3. Highlights der Huaxue Edition v1.19](#3-highlights-der-huaxue-edition-v118)
 - [4. Plugin-Übersicht](#4-plugin-übersicht)
 - [5. Repository-Struktur](#5-repository-struktur)
 - [6. Schnelle Bereitstellung](#6-schnelle-bereitstellung)
@@ -63,7 +63,7 @@ Das GTR-Team hat darauf rund um den gesamten Ablauf „**Anmeldung → Gruppieru
 | 9 | Zahlenleiste der Anmeldeanzahl | Chat/HUD zeigt `012345[6]78910`; die Benutzer fordern die Entfernung |
 | 10 | Anmeldemenü schließt sich nach einem Klick | Das Menü schließt sich automatisch, obwohl man es mehrfach bedienen möchte |
 
-### 2.2 Die Verbesserungen der neuen Version (Huaxue Edition v1.18)
+### 2.2 Die Verbesserungen der neuen Version (Huaxue Edition v1.19)
 
 | # | Verbesserung | Umsetzung |
 |---|---|---|
@@ -77,9 +77,9 @@ Das GTR-Team hat darauf rund um den gesamten Ablauf „**Anmeldung → Gruppieru
 | 8 | **mix-Menü mit fester Nummerierung** | Eintrag 7 ist immer ICGB (bei Nicht-Sponsoring-Runden ausgegraut und nicht anklickbar), Eintrag 8 ist immer das Admin-Menü |
 | 9 | **Zahlenleisten-UI entfernt** | `buildSignupBar()` entfernt; das HUD zeigt nur noch „Anmeldung: n/12" |
 | 10 | **Menü schließt nach Auswahl nicht** | Nach einer Aktion im Anmeldemenü kehrt man zum Hauptmenü zurück, für bequeme Mehrfachbedienung |
-| 11 | **Sieg/Niederlage nach logischem Team** | Neues native `hns_get_player_match_team`; wintime-Abrechnung schreibt dem richtigen Team gut (v1.18) |
-| 12 | **Eingeschränkte Menü-Berechtigungen** | Teamgröße / erneutes Aufteilen / erzwungener Matchstart nur für VIP/Admin sichtbar und klickbar (v1.18) |
-| 13 | **Eindeutiger Modus-Zustand** | AI und MatchSystem nutzen denselben Modus; nach Kartenwechsel wird er mit wiederhergestellt – keine Divergenz mehr (v1.18) |
+| 11 | **Sieg/Niederlage nach logischem Team** | Neues native `hns_get_player_match_team`; wintime-Abrechnung schreibt dem richtigen Team gut (v1.19) |
+| 12 | **Eingeschränkte Menü-Berechtigungen** | Teamgröße / erneutes Aufteilen / erzwungener Matchstart nur für VIP/Admin sichtbar und klickbar (v1.19) |
+| 13 | **Eindeutiger Modus-Zustand** | AI und MatchSystem nutzen denselben Modus; nach Kartenwechsel wird er mit wiederhergestellt – keine Divergenz mehr (v1.19) |
 
 ### 2.3 Zeitleiste der Versionsentwicklung (HnsAISignup Hauptplugin)
 
@@ -91,15 +91,15 @@ Das GTR-Team hat darauf rund um den gesamten Ablauf „**Anmeldung → Gruppieru
 | v1.9 | 09-27 22:07 | Historisches Backup | Vor den großen Änderungen (vor der Neustrukturierung des Anmeldeablaufs) |
 | **v1.17** | 09-30 23:00 | **Letzte Version** | Offizielle Huaxue-Version; alle Verbesserungen umgesetzt |
 | v1.17+ | 10-01 02:13 | In Entwicklung | Neu: `taskRestorePendingRules` (verzögerte Wiederherstellung des Modus nach Kartenwechsel); nicht bereitgestellt |
-| **v1.18** | 10-01 | **Aktuell bereitgestellte Version** | wintime-Reparatur der Sieg/Niederlage-Wertung + Wiederherstellung des Modus nach Kartenwechsel + eingeschränkte Menü-Berechtigungen + eindeutiger Modus-Zustand |
+| **v1.19** | 10-01 | **Aktuell bereitgestellte Version** | wintime-Reparatur der Sieg/Niederlage-Wertung + Wiederherstellung des Modus nach Kartenwechsel + eingeschränkte Menü-Berechtigungen + eindeutiger Modus-Zustand |
 
 > Vollständige Versionshistorie siehe `02_各插件历史版本/`; jede Version hat einen eigenen Ordner + Beschreibung.
 
 ---
 
-## 3. Highlights der Huaxue Edition v1.18
+## 3. Highlights der Huaxue Edition v1.19
 
-- 🤖 **AI-Anmeldesystem v1.18**: Ein-Klick-Anmeldung mit `/signup`, Gruppenbildung, Freizeit-/Sponsoring-Runden, Abstimmung über Modus und Karten,
+- 🤖 **AI-Anmeldesystem v1.19**: Ein-Klick-Anmeldung mit `/signup`, Gruppenbildung, Freizeit-/Sponsoring-Runden, Abstimmung über Modus und Karten,
   erzwungener Matchstart (auch mit 1 Spieler testbar), Fortsetzung über Kartenwechsel hinweg, HUD-Anmeldezähler.
 - 🎨 **Skin-System (MySQL)**: Individuelle Skins für Spieler, Kauf mit Münzen / Miete / dauerhafter Upgrade,
   zufällige Todes-Sounds, Verwaltung über das Admin-Menü `/cpm`.
@@ -117,7 +117,7 @@ Das GTR-Team hat darauf rund um den gesamten Ablauf „**Anmeldung → Gruppieru
 
 | Plugin | Version | Funktion |
 |---|---|---|
-| HnsAISignup | v1.18 | AI-Anmeldesystem (Kern-Eigenentwicklung) |
+| HnsAISignup | v1.19 | AI-Anmeldesystem (Kern-Eigenentwicklung) |
 | HnsMatchSystem | 2.0.5+ | Match-Zustandsmaschine (OpenHNS-Basis + 2 neue natives: `hns_get_player_match_team` / `hns_get_match_team_cs`) |
 | HnsMatchBans | 1.1 | Bannverwaltung |
 | HnsMatchMaps | 4.0.4 | Kartenverwaltung |
@@ -153,7 +153,7 @@ Das GTR-Team hat darauf rund um den gesamten Ablauf „**Anmeldung → Gruppieru
 
 ## 6. Schnelle Bereitstellung
 
-1. Lade in der **Release**-Sektion das neueste Bereitstellungspaket der **Huaxue Edition** herunter: `gtr_deploy_package_v1.18.zip`
+1. Lade in der **Release**-Sektion das neueste Bereitstellungspaket der **Huaxue Edition** herunter: `gtr_deploy_package_v1.19.zip`
 2. Entpacke `addons/` und überschreibe damit das `cstrike/`-Verzeichnis auf dem Server
 3. Konfiguriere MySQL gemäß `部署说明.txt` (beim ersten Mal muss die Skin-Datenbanktabelle erstellt werden)
 4. Starte den Server neu / wechsle die Karte; prüfe in der Konsole mit `amxx plugins`, dass keine failed auftreten

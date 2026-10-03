@@ -30,7 +30,7 @@
 #include <hns_language>
 #include <PersistentDataStorage>
 
-#define PLUGIN_VERSION "1.17"
+#define PLUGIN_VERSION "1.19"
 
 // ---------------- 常量 ----------------
 #define SIGNUP_MIN         6        // 最少 6 人 (3v3)

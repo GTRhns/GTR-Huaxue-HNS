@@ -156,10 +156,6 @@ new g_sPrefix[24];
 new g_hBanForwards;
 new g_hBanForwardsInit;
 
-stock bool:CanUseMatchBanMenu(id) {
-	return isUserAdmin(id) || (get_user_flags(id) & hns_get_flag_admin()) != 0;
-}
-
 public plugin_natives() {
 	hns_register_optional_sql();
 	register_native("hns_sync_official_ban", "NativeSyncOfficialBan");
@@ -387,8 +383,12 @@ public NativeSyncOfficialBan(plugin, params) {
 	new admin_id = get_param(1);
 	new player_id = get_param(2);
 	new minutes = get_param(3);
+	new ip_only = get_param(4);
 
-	if (!is_user_connected(player_id) || !g_bSqlReady)
+	if (!is_user_connected(player_id))
+		return 0;
+
+	if (!g_bSqlReady)
 		return 0;
 
 	new player_name[MAX_NAME_LENGTH], player_steam[24], player_ip[16];
@@ -417,7 +417,7 @@ public NativeSyncOfficialBan(plugin, params) {
 	cData[0] = SQL_TABLE;
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", query, cData, sizeof(cData));
 
-	return 1;
+	return ip_only ? 1 : 1;
 }
 
 public NativeSyncOfficialUnban(plugin, params) {
@@ -639,8 +639,8 @@ public Task_ShowHud(id) {
 
 
 public HnsBansMenu(id) {
-	if (!is_user_connected(id) || !(isUserFullWatcher(id) || CanUseMatchBanMenu(id)))
-		return;
+	if (!is_user_connected(id) || !isUserAdmin(id))
+		return PLUGIN_HANDLED;
 
 	static szMsg[128];
 
@@ -709,7 +709,7 @@ public codeHnsBansMenu(id, hMenu, item) {
 }
 
 public HnsBanMenu(id, page) {
-	if (!is_user_connected(id) || !(isUserWatcher(id) || CanUseMatchBanMenu(id))) {
+	if (!is_user_connected(id) || !isUserAdmin(id)) {
 		return PLUGIN_HANDLED;
 	}
 
@@ -775,7 +775,7 @@ public HnsBanHandler(id, hMenu, item) {
 }
 
 public HnsOffBanMenu(id, page) {
-	if (!is_user_connected(id) || !(isUserWatcher(id) || CanUseMatchBanMenu(id))) {
+	if (!is_user_connected(id) || !isUserAdmin(id)) {
 		return PLUGIN_HANDLED;
 	}
 
@@ -830,7 +830,7 @@ public HnsOffBanHandler(id, hMenu, item) {
 }
 
 public HnsTimeMenu(id) {
-	if (!is_user_connected(id) || !isUserWatcher(id)) {
+	if (!is_user_connected(id) || !isUserAdmin(id)) {
 		return PLUGIN_HANDLED;
 	}
 
@@ -872,7 +872,7 @@ public HnsTimeHandler(id, hMenu, item) {
 }
 
 public HnsUnbanMenu(id, page) {
-	if (!is_user_connected(id) || !(isUserWatcher(id) || CanUseMatchBanMenu(id))) {
+	if (!is_user_connected(id) || !isUserAdmin(id)) {
 		return PLUGIN_HANDLED;
 	}
 
@@ -919,7 +919,7 @@ public HnsUnbanHandler(id, hMenu, item) {
 }
 
 public HnsInfoBanMenu(id) {
-	if (!is_user_connected(id) || !isUserWatcher(id)) {
+	if (!is_user_connected(id) || !isUserAdmin(id)) {
 		return PLUGIN_HANDLED;
 	}
 

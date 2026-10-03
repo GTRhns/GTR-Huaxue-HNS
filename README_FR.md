@@ -8,7 +8,7 @@
 
 [![AMX Mod X](https://img.shields.io/badge/AMX_Mod_X-1.10-blue)]()
 [![ReGameDLL](https://img.shields.io/badge/ReGameDLL-5.x-orange)]()
-[![Version](https://img.shields.io/badge/Version-v1.17-green)]()
+[![Version](https://img.shields.io/badge/Version-v1.18-green)]()
 [![Storage](https://img.shields.io/badge/Storage-PDS_%2B_MySQL-9cf)]()
 [![Language](https://img.shields.io/badge/Language-4_Languages-ff69b4)]()
 [![License](https://img.shields.io/badge/License-GPLv3-success)]()
@@ -19,7 +19,7 @@
 
 > **Développé à partir du moteur de matchs OpenHNS, avec de nombreuses fonctionnalités développées par l'équipe GTR**
 > Compatible : CS 1.6 / ReHLDS / AMX Mod X 1.10
-> Version actuelle : **Huaxue Edition v1.17** (tag : `huaxue-v1.17`)
+> Version actuelle : **Huaxue Edition v1.18** (tag : `huaxue-v1.18`) · version du 2026-10-01
 
 ---
 
@@ -27,7 +27,7 @@
 
 - [1. Présentation du projet](#1-présentation-du-projet)
 - [2. Nouveau vs ancien : quelles différences](#2-nouveau-vs-ancien-quelles-différences)
-- [3. Points forts de la Huaxue Edition v1.17](#3-points-forts-de-la-huaxue-edition-v117)
+- [3. Points forts de la Huaxue Edition v1.18](#3-points-forts-de-la-huaxue-edition-v118)
 - [4. Liste des plugins](#4-liste-des-plugins)
 - [5. Structure du dépôt](#5-structure-du-dépôt)
 - [6. Déploiement rapide](#6-déploiement-rapide)
@@ -63,7 +63,7 @@ L'équipe GTR y a ajouté une grande quantité de code maison autour de tout le 
 | 9 | Barre numérique du nombre d'inscrits | Le chat/HUD affiche `012345[6]78910` ; les utilisateurs demandent sa suppression |
 | 10 | Le menu d'inscription se ferme au premier clic | Le menu se ferme automatiquement alors qu'on souhaite l'utiliser en continu |
 
-### 2.2 Les améliorations correspondantes dans la nouvelle version (Huaxue Edition v1.17)
+### 2.2 Les améliorations correspondantes dans la nouvelle version (Huaxue Edition v1.18)
 
 | # | Amélioration | Mise en œuvre |
 |---|---|---|
@@ -77,6 +77,9 @@ L'équipe GTR y a ajouté une grande quantité de code maison autour de tout le 
 | 8 | **Menu mix à numérotation fixe** | L'élément 7 est toujours ICGB (grisé et non cliquable hors ronde sponsorisée), l'élément 8 est toujours le menu admin |
 | 9 | **Suppression de la barre numérique** | `buildSignupBar()` supprimé ; le HUD n'affiche plus que « Inscription : n/12 » |
 | 10 | **Le menu ne se ferme plus après un clic** | Retour au menu principal après une action dans le menu d'inscription, pour une utilisation en continu |
+| 11 | **Victoire déterminée par l'équipe logique** | Nouveau native `hns_get_player_match_team` ; le règlement wintime crédite la bonne équipe (v1.18) |
+| 12 | **Permissions du menu restreintes** | Taille d'équipe / nouvelle répartition / démarrage forcé visibles et cliquables uniquement pour VIP/admin (v1.18) |
+| 13 | **État de mode unique** | L'IA et MatchSystem partagent un seul mode ; restauré avec le reste après un changement de carte, plus de divergence (v1.18) |
 
 ### 2.3 Chronologie des versions (plugin principal HnsAISignup)
 
@@ -86,16 +89,17 @@ L'équipe GTR y a ajouté une grande quantité de code maison autour de tout le 
 | v1.5 | 09-27 19:55 | Sauvegarde historique | Version avec correction admin (adminfix) |
 | v1.5 | 09-27 20:00 | Sauvegarde historique | Sauvegarde avant la deuxième correction |
 | v1.9 | 09-27 22:07 | Sauvegarde historique | Avant les modifications majeures (avant la refonte du processus d'inscription) |
-| **v1.17** | 09-30 23:00 | **Version déployée actuellement** | Version officielle Huaxue ; toutes les améliorations incluses |
+| **v1.17** | 09-30 23:00 | **Version précédente** | Version officielle Huaxue ; toutes les améliorations incluses |
 | v1.17+ | 10-01 02:13 | En développement | Ajout de `taskRestorePendingRules` (restauration différée du mode après changement de carte) ; non déployé |
+| **v1.18** | 10-01 | **Version déployée actuellement** | Correctif de détermination du vainqueur wintime + restauration du mode après changement de carte + permissions du menu restreintes + état de mode unique |
 
 > Historique complet des versions dans `02_各插件历史版本/` ; chaque version a son propre dossier + description.
 
 ---
 
-## 3. Points forts de la Huaxue Edition v1.17
+## 3. Points forts de la Huaxue Edition v1.18
 
-- 🤖 **Système d'inscription IA v1.17** : inscription en un clic avec `/signup`, répartition en équipes, rondes loisir/sponsorisées, vote du mode et des cartes,
+- 🤖 **Système d'inscription IA v1.18** : inscription en un clic avec `/signup`, répartition en équipes, rondes loisir/sponsorisées, vote du mode et des cartes,
   démarrage forcé (testable à 1 joueur), reprise après changement de carte, compteur d'inscrits HUD.
 - 🎨 **Système de skins (MySQL)** : skins personnalisés pour les joueurs, achat avec pièces / location / mise à niveau permanente,
   sons de mort aléatoires, gestion via le menu admin `/cpm`.
@@ -104,6 +108,8 @@ L'équipe GTR y a ajouté une grande quantité de code maison autour de tout le 
 - 🌐 **Localisation en quatre langues** : chinois simplifié / traditionnel / anglais / russe ; menus IA et de match unifiés.
 - 🧠 **IA pour les matchs** : quand personne n'est là, un match de test peut démarrer avec 1 joueur ; pas de blocage en spectateur.
 - 🛡 **Ordre de chargement stable** : `plugins.ini` fixe déjà l'ordre HnsLanguage → PDS → Sponsor → MatchSystem → … → AISignup → Skin.
+- 🎯 **Correctif de détermination du vainqueur** : le règlement wintime ajoute les points selon l'équipe logique du match ; plus de mauvais joueurs crédités après un changement de camp ou de carte.
+- 🔐 **Permissions restreintes** : les actions d'administration (taille d'équipe / nouvelle répartition / démarrage forcé) visibles et cliquables uniquement pour VIP/admin.
 
 ---
 
@@ -111,8 +117,8 @@ L'équipe GTR y a ajouté une grande quantité de code maison autour de tout le 
 
 | Plugin | Version | Fonction |
 |---|---|---|
-| HnsAISignup | v1.17 | Système d'inscription IA (développement maison central) |
-| HnsMatchSystem | 2.0.5 | Machine à états de match (base OpenHNS + 3 natives) |
+| HnsAISignup | v1.18 | Système d'inscription IA (développement maison central) |
+| HnsMatchSystem | 2.0.5+ | Machine à états de match (base OpenHNS + 2 natives : `hns_get_player_match_team` / `hns_get_match_team_cs`) |
 | HnsMatchBans | 1.1 | Gestion des bannissements |
 | HnsMatchMaps | 4.0.4 | Gestion des cartes |
 | HnsMatchStats | 1.1.1 | Statistiques de données |
@@ -147,7 +153,7 @@ L'équipe GTR y a ajouté une grande quantité de code maison autour de tout le 
 
 ## 6. Déploiement rapide
 
-1. Rendez-vous dans la section **Release** pour télécharger le pack de déploiement de la **Huaxue Edition** : `gtr_deploy_package_v1.17.zip`
+1. Rendez-vous dans la section **Release** pour télécharger le pack de déploiement de la **Huaxue Edition** : `gtr_deploy_package_v1.18.zip`
 2. Décompressez `addons/` et écrasez le dossier `cstrike/` du serveur
 3. Configurez MySQL selon `部署说明.txt` (la première fois, la table des skins doit être créée)
 4. Redémarrez le serveur / changez de carte ; vérifiez dans la console `amxx plugins` qu'il n'y a pas de failed

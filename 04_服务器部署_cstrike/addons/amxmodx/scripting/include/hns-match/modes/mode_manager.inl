@@ -10,7 +10,18 @@ public delayed_mode() {
 	PDS_GetCell("match_mode", g_iCurrentMode);
 	PDS_GetCell("match_gameplay", g_iCurrentGameplay);
 	PDS_GetCell("match_status", g_iMatchStatus);
-	PDS_GetCell("match_rules", g_iCurrentRules);
+
+	// ★ 换图后赛制的权威来源是 match_rules (由管理员 /mr /timer 等直接改
+	//   g_iCurrentRules, PDS_Save 时写入)。ai_match_rules 只是 AI 报名的辅助记录,
+	//   只有在 match_rules 从未写过时才用它兜底, 否则会覆盖管理员的切换。
+	new bool:bHasSavedRules = bool:PDS_GetCell("match_rules", g_iCurrentRules);
+	if (!bHasSavedRules || g_iCurrentRules < RULES_MR || g_iCurrentRules > RULES_ROUNDS) {
+		new iAiRules;
+		if (PDS_GetCell("ai_match_rules", iAiRules) && iAiRules >= 0 && iAiRules <= _:RULES_ROUNDS) {
+			g_iCurrentRules = NATCH_RULES:iAiRules;
+			bHasSavedRules = true;
+		}
+	}
 
 	if (hns_is_knife_map()) {
 		g_iMatchStatus = MATCH_NONE;
@@ -30,13 +41,17 @@ public delayed_mode() {
 	} else if (g_iCurrentGameplay == GAMEPLAY_HNS && g_iCurrentMode == MODE_DM) {
 		training_start();
 	} else if (g_iCurrentMode == MODE_LOBBY) {
-		// ★ 比赛前公共模式: 换图后保持大厅身份, 防止被误切成训练
+		// ★ 比赛前公共模式: 换图后保持大厅身份, 防止被误切成训练。
+		//   赛制已在上方按 match_rules 恢复, 不再用 ai_match_rules 覆盖。
 		lobby_start();
 	} else {
-		if (!g_iSettings[RULES]) {
-			g_iCurrentRules = RULES_MR;
-		} else {
-			g_iCurrentRules = RULES_TIMER;
+		// ★ 只有当 match_rules / ai_match_rules 都没有可用值时, 才回退到默认。
+		if (!bHasSavedRules) {
+			if (!g_iSettings[RULES]) {
+				g_iCurrentRules = RULES_MR;
+			} else {
+				g_iCurrentRules = RULES_TIMER;
+			}
 		}
 		g_iMatchStatus = MATCH_NONE;
 		training_start();

@@ -27,10 +27,6 @@ new g_eRnw[RNW];
 public plugin_init() {
 	register_plugin("Match: Watcher", "1.1", "OpenHNS"); // Garey
 
-	RegisterSayCmd("rnw", "rocknewwatcher", "cmdRnw", 0, "Rock new watchers");
-	RegisterSayCmd("unrnw", "nornw", "cmdUnRnw", 0, "Cancel vote new watchers");
-	RegisterSayCmd("watcher", "wt", "WatcherMenu", hns_get_flag_watcher(), "Watcher menu");
-
 	register_dictionary("match_additons.txt");
 
 	LoadWatcher();
@@ -63,7 +59,7 @@ public client_disconnected(id) {
 }
 
 public WatcherMenu(id) {
-	if (!is_user_connected(id) || !isUserWatcher(id))
+	if (!is_user_connected(id) || !isUserVip(id))
 		return;
 
 	static szMsg[128];
@@ -83,7 +79,7 @@ public WatcherMenu(id) {
 	formatex(szMsg, charsmax(szMsg), "%L", LANG_PLAYER, "WTR_MENU_KILLPLAYERS");
 	menu_additem(hMenu, szMsg, "4");
 
-	if (isUserFullWatcher(id)) {
+	if (isUserVip(id)) {
 		formatex(szMsg, charsmax(szMsg), "%L", LANG_PLAYER, "WTR_MENU_KICKMENU");
 	} else {
 		formatex(szMsg, charsmax(szMsg), "\d%L", LANG_PLAYER, "WTR_MENU_KICKMENU");
@@ -91,7 +87,7 @@ public WatcherMenu(id) {
 
 	menu_additem(hMenu, szMsg, "5");
 
-	if (isUserFullWatcher(id)) {
+	if (isUserAdmin(id)) {
 		formatex(szMsg, charsmax(szMsg), "%L", LANG_PLAYER, "WTR_MENU_MIXBANMENUS");
 	} else {
 		formatex(szMsg, charsmax(szMsg), "\d%L", LANG_PLAYER, "WTR_MENU_NOT_MIXBANMENUS");
@@ -123,7 +119,10 @@ public codeWatcherMenu(id, hMenu, item) {
 
 	switch(iKey) {
 		case 1: {
-			ManagementWatcherMenu(id);
+			if (isUserAdmin(id))
+				ManagementWatcherMenu(id);
+			else
+				WatcherMenu(id);
 		}
 		case 2: {
 			client_cmd(id, "amx_teammenu");
@@ -135,14 +134,14 @@ public codeWatcherMenu(id, hMenu, item) {
 			client_cmd(id, "amx_slapmenu");
 		}
 		case 5: {
-			if (isUserFullWatcher(id)) {
+			if (isUserVip(id)) {
 				client_cmd(id, "amx_kickmenu");
 			} else {
 				WatcherMenu(id);
 			}
 		}
 		case 6: {
-			if (isUserFullWatcher(id)) {
+			if (isUserAdmin(id)) {
 				client_cmd(id, "hns_bans_menu");
 			} else {
 				WatcherMenu(id);
@@ -161,7 +160,7 @@ public codeWatcherMenu(id, hMenu, item) {
 }
 
 public ManagementWatcherMenu(id) {
-	if (!is_user_connected(id) || !isUserWatcher(id))
+	if (!is_user_connected(id) || !isUserAdmin(id))
 		return;
 
 	static szMsg[128];

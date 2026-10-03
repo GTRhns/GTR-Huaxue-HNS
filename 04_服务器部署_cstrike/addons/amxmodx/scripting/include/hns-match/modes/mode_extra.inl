@@ -88,6 +88,11 @@ stock cvar_update_wintime(Float:fTime) {
 }
 stock save_reset_data() {}
 stock getRoundsScore(&iCT, &iTT) {
-	iCT = g_iRoundsScore[HNS_TEAM_B];
-	iTT = g_iRoundsScore[HNS_TEAM_A];
+	if (g_isTeamTT == HNS_TEAM_A) {
+		iTT = g_iRoundsScore[HNS_TEAM_A];
+		iCT = g_iRoundsScore[HNS_TEAM_B];
+	} else {
+		iTT = g_iRoundsScore[HNS_TEAM_B];
+		iCT = g_iRoundsScore[HNS_TEAM_A];
+	}
 }

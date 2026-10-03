@@ -88,7 +88,6 @@ stock cvar_update_wintime(Float:fTime) {
 }
 stock save_reset_data() {}
 stock getRoundsScore(&iCT, &iTT) {
-	// A/B 分数不随换边移动; 按当前哪边当 TT 映射到 CT/TT 显示
 	if (g_isTeamTT == HNS_TEAM_A) {
 		iTT = g_iRoundsScore[HNS_TEAM_A];
 		iCT = g_iRoundsScore[HNS_TEAM_B];

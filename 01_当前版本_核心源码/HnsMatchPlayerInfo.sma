@@ -457,6 +457,10 @@ public task_ShowPlayerInfo() {
 			continue;
 		}
 
+		if (rg_get_user_team(id) == TEAM_SPECTATOR) {
+			continue;
+		}
+
 		new show_id = is_user_alive(id) ? id : get_entvar(id, var_iuser2);
 
 		if (!show_id) {
@@ -464,7 +468,7 @@ public task_ShowPlayerInfo() {
 		}
 
 		if (g_HudOnOff[id]) {
-			set_hudmessage(.red = 100, .green = 100, .blue = 100, .x = 0.01, .y = 0.28, .holdtime = 1.0);
+			set_hudmessage(.red = 100, .green = 100, .blue = 100, .x = 0.01, .y = 0.25, .holdtime = 1.0);
 			new szHudMess[1024], iLen;
 
 			if (show_id != id) {

@@ -30,7 +30,7 @@
 #include <hns_language>
 #include <PersistentDataStorage>
 
-#define PLUGIN_VERSION "1.17"
+#define PLUGIN_VERSION "1.18"
 
 // ---------------- 常量 ----------------
 #define SIGNUP_MIN         6        // 最少 6 人 (3v3)
@@ -221,6 +221,15 @@ public plugin_cfg() {
 	new szMap[32];
 	get_mapname(szMap, charsmax(szMap));
 	copy(g_szLastMap, charsmax(g_szLastMap), szMap);
+
+	// ★ 无论是否有 pending 开赛, 都先恢复上一把选择的赛制,
+	//   否则换图后 g_iMatchRules 会退回默认 MR, 导致下一次开赛用错模式。
+	new iRules;
+	if (PDS_GetCell("ai_match_rules", iRules) && iRules >= 0 && iRules < RULE_COUNT) {
+		g_iMatchRules = NATCH_RULES:iRules;
+		// 换图后 HnsMatchSystem 会重新初始化，必须把持久化的赛制同步回真正的 MatchSystem。
+		hns_external_set_match_mode(_:g_iMatchRules);
+	}
 
 	new iPending;
 	if (PDS_GetCell("ai_pending_start", iPending) && iPending)
@@ -459,9 +468,12 @@ public cmdSignupMenu(id) {
 }
 
 public showMainMenu(id) {
-	new szTitle[192], szItem[96], szTmp[64];
-	new szType[32], szSignup[64], szCancel[64], szGroup[64];
-	new szReshuffle[64], szForce[64], szRules[64], szSize[64], szTypeMenu[64], szExit[32];
+	new szTitle[192], szItem[128], szTmp[64];
+	new szType[32], szSignup[64], szGroup[64], szTypeMenu[64];
+	new szRules[64], szSize[64], szReshuffle[64], szForce[64], szExit[32];
+
+	if (!is_user_connected(id))
+		return;
 
 	ai_lang(id, "AI_TYPE_SPONSOR", szTmp, charsmax(szTmp));
 	if (!g_bSponsorMatch)
@@ -470,40 +482,43 @@ public showMainMenu(id) {
 
 	ai_lang(id, "AI_MENU_TITLE", szTitle, charsmax(szTitle));
 	format(szTitle, charsmax(szTitle), szTitle, szType, g_iSignupCount, getOnlineCount());
-
 	new menu = menu_create(szTitle, "MainMenuHandler");
 
+	// 主菜单只放真正可用的功能，管理员专用项动态显示，避免普通玩家看到一堆灰色/无效入口。
 	ai_lang(id, "AI_MENU_GROUP", szGroup, charsmax(szGroup));
-	ai_lang(id, "AI_MENU_SIGNUP", szSignup, charsmax(szSignup));
-	ai_lang(id, "AI_MENU_CANCEL", szCancel, charsmax(szCancel));
-	ai_lang(id, "AI_MENU_RESHUFFLE", szReshuffle, charsmax(szReshuffle));
-	ai_lang(id, "AI_MENU_FORCE", szForce, charsmax(szForce));
-	ai_lang(id, "AI_MENU_RULES", szRules, charsmax(szRules));
-	ai_lang(id, "AI_MENU_SIZE", szSize, charsmax(szSize));
-	ai_lang(id, "AI_MENU_TYPE", szTypeMenu, charsmax(szTypeMenu));
-	ai_lang(id, "AI_MENU_EXIT", szExit, charsmax(szExit));
-
 	menu_additem(menu, szGroup, "group");
-	menu_additem(menu, g_bSignedUp[id] ? szCancel : szSignup, "signup");
-	menu_additem(menu, szTypeMenu, "type");
 
-	menu_addblank(menu, 0);
+	ai_lang(id, g_bSignedUp[id] ? "AI_MENU_CANCEL" : "AI_MENU_SIGNUP", szSignup, charsmax(szSignup));
+	menu_additem(menu, szSignup, "signup");
 
-	menu_additem(menu, szReshuffle, "reshuffle");
-	menu_additem(menu, szForce, "forcestart");
+	ai_lang(id, "AI_MENU_TYPE", szTypeMenu, charsmax(szTypeMenu));
+	formatex(szItem, charsmax(szItem), "%s  \y[%s]", szTypeMenu, szType);
+	menu_additem(menu, szItem, "type");
 
-	menu_addblank(menu, 0);
-
+	ai_lang(id, "AI_MENU_RULES", szRules, charsmax(szRules));
 	ai_ruleName(id, _:g_iMatchRules, szTmp, charsmax(szTmp));
-	formatex(szItem, charsmax(szItem), "%s \y[%s]", szRules, szTmp);
+	formatex(szItem, charsmax(szItem), "%s  \y[%s]", szRules, szTmp);
 	menu_additem(menu, szItem, "rules");
 
-	formatex(szItem, charsmax(szItem), "%s \y[%d : %d]", szSize, getEffectiveTeamSize(), getEffectiveTeamSize());
-	menu_additem(menu, szItem, "size");
+	// 队伍人数只有管理员/VIP能修改；普通玩家只看当前人数，避免点进去再被拒绝。
+	if (isUserVipOrAdmin(id)) {
+		ai_lang(id, "AI_MENU_SIZE", szSize, charsmax(szSize));
+		formatex(szItem, charsmax(szItem), "%s  \y[%d : %d]", szSize, getEffectiveTeamSize(), getEffectiveTeamSize());
+		menu_additem(menu, szItem, "size");
+	}
 
+	// 重新分队与强制开赛均属于管理操作，不再污染普通报名菜单。
+	if (isUserVipOrAdmin(id)) {
+		ai_lang(id, "AI_MENU_RESHUFFLE", szReshuffle, charsmax(szReshuffle));
+		menu_additem(menu, szReshuffle, "reshuffle");
+		ai_lang(id, "AI_MENU_FORCE", szForce, charsmax(szForce));
+		menu_additem(menu, szForce, "forcestart");
+	}
+
+	ai_lang(id, "AI_MENU_EXIT", szExit, charsmax(szExit));
 	menu_setprop(menu, MPROP_EXIT, MEXIT_ALL);
 	menu_setprop(menu, MPROP_EXITNAME, szExit);
-	menu_display(id, menu);
+	menu_display(id, menu, 0);
 }
 
 public MainMenuHandler(id, menu, item) {
@@ -525,16 +540,19 @@ public MainMenuHandler(id, menu, item) {
 			showMainMenu(id);
 	} else if (equal(data, "type")) {
 		showTypeMenu(id);
-	} else if (equal(data, "reshuffle")) {
-		cmdReshuffle(id);
-		if (is_user_connected(id) && g_eState != MATCH_RUNNING && g_eState != SIGNUP_SETUP)
-			showMainMenu(id);
-	} else if (equal(data, "forcestart")) {
-		cmdForceStart(id);
 	} else if (equal(data, "rules")) {
 		showRulesMenu(id);
 	} else if (equal(data, "size")) {
-		showSizeMenu(id);
+		if (isUserVipOrAdmin(id))
+			showSizeMenu(id);
+		else
+			showMainMenu(id);
+	} else if (equal(data, "reshuffle")) {
+		if (isUserVipOrAdmin(id))
+			cmdReshuffle(id);
+		showMainMenu(id);
+	} else if (equal(data, "forcestart")) {
+		cmdForceStart(id);
 	}
 
 	return PLUGIN_HANDLED;
@@ -655,6 +673,11 @@ stock doSignupToggle(id) {
 //  重新分配队伍 / 强制开启
 // ============================================================
 public cmdReshuffle(id) {
+	if (!isUserVipOrAdmin(id)) {
+		ai_print_lang(id, "AI_CHAT_ERR_NEED_ADMIN", "需要管理员权限才能重新分配队伍");
+		return PLUGIN_HANDLED;
+	}
+
 	if (g_eState == MATCH_RUNNING) {
 		ai_print_lang(id, "AI_CHAT_ERR_RESHUFFLE_MATCH", "比赛进行中, 无法重新分配队伍");
 		return PLUGIN_HANDLED;
@@ -762,12 +785,9 @@ public RulesMenuHandler(id, menu, item) {
 stock applyMatchRules(iRule) {
 	g_iMatchRules = NATCH_RULES:iRule;
 	PDS_SetCell("ai_match_rules", iRule);
-	if (g_bPendingMatchStart)
-		hns_external_set_match_mode(_:g_iMatchRules);
-
-	// 比赛已在进行中则立即生效
-	if (g_eState == MATCH_RUNNING)
-		hns_external_set_match_mode(_:g_iMatchRules);
+	// 赛制状态只有一份：AI 菜单选择后立即同步到 MatchSystem。
+	// 无论是否 pending、是否正在比赛，都不再允许两套状态分叉。
+	hns_external_set_match_mode(_:g_iMatchRules);
 }
 
 public startRulesVote(id, iProposed) {
@@ -1544,8 +1564,8 @@ public hns_match_finished(iWinTeam) {
 		if (!is_user_connected(id) || !g_bGuest[id])
 			continue;
 
-		new iTeam = getUserTeam(id) == TEAM_TERRORIST ? 1 : 2;
-		if (iTeam == iWinTeam)
+		new iTeam = hns_get_player_match_team(id);
+		if (iTeam > 0 && iTeam == iWinTeam)
 			guestAddPts(id, 1, 0);
 		else
 			guestAddPts(id, 0, 1);

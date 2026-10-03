@@ -8,7 +8,6 @@
 forward hns_ownage(iToucher, iTouched);
 
 #define TASK_TIMER_STATS 61237
-#define TASK_SETSCORE 61238
 
 enum _:TYPE_STATS
 {
@@ -211,29 +210,20 @@ public client_putinserver(id) {
 	TrieGetArray(g_tSaveRoundData, getUserKey(id), g_StatsRound[id], PLAYER_STATS);
 
 	if (hns_get_mode() == MODE_MIX || hns_get_state() == STATE_PAUSED) {
-		// ★ 延迟到实体初始化后再同步分数: 假客户端/玩家在 client_putinserver 时刻
-		//   edict->pvPrivateData 可能尚未分配, is_user_connected 已为 1 但立即
-		//   set_entvar/set_member 仍会报 "invalid or uninitialized entity" (ReAPI)
 		if (iStats[id][PLR_STATS_STOPS] < g_iGameStops) {
 			iStats[id][PLR_STATS_KILLS] -= g_StatsRound[id][PLR_STATS_KILLS]
 			iStats[id][PLR_STATS_DEATHS] -= g_StatsRound[id][PLR_STATS_DEATHS]
 			iStats[id][PLR_STATS_ASSISTS] -= g_StatsRound[id][PLR_STATS_ASSISTS]
+
+			SetScoreInfo(id);
+		} else {
+			SetScoreInfo(id);
 		}
-		remove_task(id + TASK_SETSCORE);
-		set_task(0.2, "taskSetScoreDelayed", id + TASK_SETSCORE);
 	} else
 		arrayset(iStats[id], 0, PLAYER_STATS);
 }
 
-public taskSetScoreDelayed(taskid) {
-	new id = taskid - TASK_SETSCORE;
-	if (is_user_connected(id)) {
-		SetScoreInfo(id);
-	}
-}
-
 public client_disconnected(id) {
-	remove_task(id + TASK_SETSCORE);
 	if ((iStats[id][PLR_TEAM] == TEAM_TERRORIST || iStats[id][PLR_TEAM] == TEAM_CT) && (hns_get_mode() == MODE_MIX || hns_get_state() == STATE_PAUSED)) {
 		iStats[id][PLR_STATS_STOPS] = g_iGameStops;
 	}

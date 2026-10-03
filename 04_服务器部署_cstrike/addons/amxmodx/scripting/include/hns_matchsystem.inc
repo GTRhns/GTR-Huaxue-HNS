@@ -125,12 +125,17 @@ native MATCH_STATUS:hns_get_status();
 */
 native MODE_STATES:hns_get_state();
 
+native hns_match_pause(id);
+native hns_match_unpause(id);
+
 /*
 * Gets match rules
 *
 * @return type NATCH_RULES
 */
 native NATCH_RULES:hns_get_rules();
+native TeamName:hns_get_match_team_cs(iMatchTeam);
+native hns_get_player_match_team(id);
 
 /* 
 * Gets score in match (For RULES_DUEL)

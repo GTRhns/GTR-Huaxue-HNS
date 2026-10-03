@@ -71,6 +71,14 @@ stock set_semiclip(opt, bool:enemy = false) {
 	server_cmd("semiclip_option time 0");
 }
 
+stock apply_hns_semiclip() {
+	if (g_iSemiclipForceMode == 0) {
+		set_semiclip(SEMICLIP_OFF);
+	} else {
+		set_semiclip((g_iSemiclipForceMode == 1 || !g_iSettings[HNSBOOST]) ? SEMICLIP_ON : SEMICLIP_OFF);
+	}
+}
+
 stock bool:hns_semiclip_menu_set(iMode) {
 	new iPlugin = find_plugin_byfile("hns_semiclip.amxx");
 	if (iPlugin == -1)

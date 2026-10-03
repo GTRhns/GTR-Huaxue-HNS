@@ -174,10 +174,9 @@ public hns_match_finished(iWinTeam) {
 		if (get_num_players_in_match() < 5) {
 			client_print_color(0, print_team_blue, "%L", LANG_PLAYER, "PTS_NOT_PLR", g_sPrefix);
 		} else {
-			if (iWinTeam == 1)
-				SetPts(TEAM_TERRORIST);
-			else
-				SetPts(TEAM_CT);
+			new TeamName:winCsTeam = hns_get_match_team_cs(iWinTeam);
+			if (winCsTeam == TEAM_TERRORIST || winCsTeam == TEAM_CT)
+				SetPts(winCsTeam);
 		}
 	}
 	g_flMatchDelay = 0.0;

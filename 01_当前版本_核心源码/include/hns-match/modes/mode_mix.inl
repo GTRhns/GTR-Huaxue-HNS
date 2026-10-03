@@ -822,7 +822,8 @@ stock award_match_gbic(iWinTeam) {
 	if (iWinTeam != 1 && iWinTeam != 2)
 		return;
 
-	new TeamName:winTeam = (iWinTeam == 1) ? TEAM_TERRORIST : TEAM_CT;
+	new PLAYER_ROLES:winRole = iWinTeam == 1 ? ROLE_TEAM_A : ROLE_TEAM_B;
+	new PLAYER_ROLES:winCapRole = iWinTeam == 1 ? ROLE_CAP_A : ROLE_CAP_B;
 	new iAward = g_iSponsorGC;
 	new iGiven;
 
@@ -834,7 +835,7 @@ stock award_match_gbic(iWinTeam) {
 			continue;
 		if (!g_ePlayerInfo[id][PLAYER_MATCH])
 			continue;
-		if (getUserTeam(id) != winTeam)
+		if (g_ePlayerInfo[id][PLAYER_ROLE] != winRole && g_ePlayerInfo[id][PLAYER_ROLE] != winCapRole)
 			continue;
 
 		new iNew = hns_gc_add_player(id, iAward);

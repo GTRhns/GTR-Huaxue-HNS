@@ -18,8 +18,10 @@ public mix_start() {
 	new bool:bKeepExternalSize = g_bExternalTeamSize;
 	new iKeepTeamSize = g_eMatchInfo[e_mTeamSize];
 	new iKeepTeamSizeTT = g_eMatchInfo[e_mTeamSizeTT];
+	new NATCH_RULES:iKeepRules = g_iCurrentRules;
 
 	match_reset_data();
+	g_iCurrentRules = iKeepRules;
 
 	if (bKeepExternalSize) {
 		g_bExternalTeamSize = true;
@@ -243,8 +245,6 @@ public mix_freezeend() {
 		return PLUGIN_HANDLED;
 	}
 
-	set_task(5.0, "taskCheckAfk");
-	
 	if (g_bHnsBannedInit) {
 		if (checkUserBan()) {
 			return PLUGIN_HANDLED;
@@ -424,7 +424,6 @@ public mix_roundstart() {
 
 	set_task(0.3, "taskSaveAfk");
 
-	set_task(3.0, "taskCheckAfk");
 }
 
 public taskCheckLeave() {
@@ -822,7 +821,8 @@ stock award_match_gbic(iWinTeam) {
 	if (iWinTeam != 1 && iWinTeam != 2)
 		return;
 
-	new TeamName:winTeam = (iWinTeam == 1) ? TEAM_TERRORIST : TEAM_CT;
+	new PLAYER_ROLES:winRole = iWinTeam == 1 ? ROLE_TEAM_A : ROLE_TEAM_B;
+	new PLAYER_ROLES:winCapRole = iWinTeam == 1 ? ROLE_CAP_A : ROLE_CAP_B;
 	new iAward = g_iSponsorGC;
 	new iGiven;
 
@@ -834,7 +834,7 @@ stock award_match_gbic(iWinTeam) {
 			continue;
 		if (!g_ePlayerInfo[id][PLAYER_MATCH])
 			continue;
-		if (getUserTeam(id) != winTeam)
+		if (g_ePlayerInfo[id][PLAYER_ROLE] != winRole && g_ePlayerInfo[id][PLAYER_ROLE] != winCapRole)
 			continue;
 
 		new iNew = hns_gc_add_player(id, iAward);
@@ -850,6 +850,11 @@ stock award_match_gbic(iWinTeam) {
 stock match_reset_data(bool:bMatchFinish = false) {
 	g_iMatchStatus = MATCH_NONE;
 	g_eMatchState = STATE_DISABLED;
+
+	// 关闭/结束比赛后只复位本次会话内的 g_iCurrentRules, 不清除持久化的 AI 赛制。
+	// 之前这里会 PDS_SetCell("ai_match_rules", RULES_MR) 把 AI 报名记住的模式抹掉,
+	// 导致换图/打完一把后 AI 报名又退回 MR —— 这是 AI 赛制记不住的根因。
+	g_iCurrentRules = RULES_MR;
 
 	cancel_match_loading();
 

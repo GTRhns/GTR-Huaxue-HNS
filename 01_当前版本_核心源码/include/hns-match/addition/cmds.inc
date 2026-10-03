@@ -131,28 +131,10 @@ public sayHandle(id) {
 }
 
 public blockCmd(id) {
-	if (g_iCurrentMode == MODE_TRAINING || g_iCurrentMode == MODE_LOBBY)
+	// 只有训练模式允许玩家通过 M / chooseteam / jointeam / joinclass 自己换阵营。
+	if (g_iCurrentMode == MODE_TRAINING)
 		return PLUGIN_CONTINUE;
-
-	if (g_iCurrentMode == MODE_MIX && g_iMatchStatus == MATCH_STARTED) {
-		if (g_ePlayerInfo[id][PLAYER_MATCH])
-			return PLUGIN_CONTINUE;
-
-		new szCmd[16];
-		read_argv(0, szCmd, charsmax(szCmd));
-		if (equal(szCmd, "jointeam")) {
-			new szTeam[4];
-			read_argv(1, szTeam, charsmax(szTeam));
-			if (szTeam[0] == '6')
-				return PLUGIN_CONTINUE;
-		}
-		return PLUGIN_HANDLED;
-	}
-
-	if (g_iMatchStatus < MATCH_WAITCONNECT && g_iMatchStatus > MATCH_NONE)
-		return PLUGIN_HANDLED;
-
-	return PLUGIN_CONTINUE;
+	return PLUGIN_HANDLED;
 }
 
 public cmdMrMode(id) {

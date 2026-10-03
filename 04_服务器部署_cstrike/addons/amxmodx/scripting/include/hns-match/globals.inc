@@ -13,8 +13,13 @@
 #define TASK_WAITCAP 13131
 
 #define TASK_SURRENDER 55566
+#define TASK_PAUSE_SND 55567
+#define TASK_MATCH_HUD 55568
 
 new bool:g_bDebugMode;
+new bool:g_bExternalTeamSize;
+new g_iMatchCountdown;
+new g_iSemiclipForceMode = -1;
 
 new g_PluginId;
 
@@ -95,6 +100,8 @@ new g_szBaseHostname[128];
 // const
 new const sndDenySelect[] = "common/wpn_denyselect.wav";
 new const sndUseSound[] = "buttons/blip1.wav";
+new const sndPauseTalk[] = "buttons/blip2.wav";
+new const sndUnpauseAcquired[] = "buttons/bell1.wav";
 
 enum _: Forwards {
 	MATCH_START,
@@ -177,11 +184,11 @@ new bool:g_bMatchLoading;	// 正在执行开场加载流程 (进度条/回合刷
 new g_iRefreshWave;			// 已执行的回合刷新次数
 new g_iLoadingStep;			// 加载进度条当前步
 
-// 开场加载: 进度条2秒 + 等0.5秒 + 刷新2次(每2秒) + 缓冲3秒 ≈ 10秒
-#define LOADING_STEPS			20		// 进度条总步数 (0.1秒/步 = 2秒)
-#define LOADING_BAR_TIME		2.0		// 进度条总时长 (秒)
-#define REFRESH_WAVES			2		// 回合刷新次数
-#define REFRESH_WAVE_INTERVAL	2.0		// 每次刷新间隔 (秒)
-#define MATCH_ACTIVATE_DELAY	3.0		// 缓冲期 (秒)
+// 开场加载: C4进度条7秒 → 类型HUD → 刷新4次(每5秒) → 缓冲15秒倒计时 → 激活
+#define LOADING_STEPS			70		// 进度条总步数 (0.1秒/步 = 7秒)
+#define LOADING_BAR_TIME		7.0		// 进度条总时长 (秒)
+#define REFRESH_WAVES			4		// 回合刷新次数
+#define REFRESH_WAVE_INTERVAL	5.0		// 每次刷新间隔 (秒)
+#define MATCH_ACTIVATE_DELAY	15.0	// 缓冲期 (秒)
 
 new Float:g_flTrainingProtect;

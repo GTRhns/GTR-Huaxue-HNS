@@ -1,0 +1,50 @@
+GTR HNS 插件部署包 —— 10-01 部署版 v1.18
+=========================================
+生成日期: 2026-10-03 (整理 10-01 版发布)
+内容: addons/amxmodx 部署结构(解压后覆盖服务器对应目录即可)
+
+一、部署步骤
+1. 先备份服务器 cstrike/addons/amxmodx/plugins/ 与 configs/ 当前内容
+2. 将本包 addons/ 解压覆盖到服务器 cstrike/ 下(即与 cstrike/addons/amxmodx 合并)
+3. 确认 MySQL 配置:
+   - HnsMatchSql 连接信息在服务器 configs/sql.cfg(本包未带, 用服务器原有)
+   - 皮肤库建表脚本见完整包 05_皮肤系统_v1.0完整版/sql/hns_skins.sql(首次部署执行)
+   - 皮肤池 configs/mixsystem/skins.cfg 按需编辑
+4. 重启服务器, 或控制台 amxx reload 相关插件 + 换图生效
+
+二、本包内容
+- plugins/        10-01 编译产物(HnsAISignup v1.18 等 28 个 amxx) + plugins.ini 加载顺序
+- configs/        hns_language.txt(菜单标题已改为 Hide'And'Seek)、mixsystem/(hns-maps.ini、
+                  skins.cfg、mode/ 各模式 cfg、mapcfg)、openhns-prefixes.ini、HNSgtr/txt/players.txt
+- data/lang/      比赛文本语言文件(match_additons.txt、mixsystem.txt)
+- lang/           HnsSkin.txt(皮肤语言)
+
+三、v1.18 相比 v1.17 的改动(升级必读)
+1. wintime 胜负判定修复: HnsAISignup 结算改为按"逻辑比赛队伍"判胜负
+   (依赖 HnsMatchSystem 新增 native hns_get_player_match_team), 换边/换图后积分不再加错人。
+2. 换图后赛制自动恢复: 换图重载插件后从 PDS 恢复上一把赛制(ai_match_rules),
+   并立即同步回 MatchSystem, 下次开赛不再退回默认 MR。
+3. 菜单权限收敛: 报名主菜单中"队伍人数/重新分队/强制开赛"仅 VIP/管理员可见可点,
+   普通玩家菜单干净; cmdReshuffle 命令层同样校验权限。
+4. 菜单点完不关: 报名主菜单可连续操作(menu_display 末参 0)。
+5. 赛制状态单一来源: AI 菜单选完立即同步 MatchSystem, 杜绝两套状态分叉。
+6. 升级说明: 本次 4 个核心插件(HnsAISignup / HnsMatchSystem / HnsMatchSkin /
+   HnsMatchWatcher)均已重新编译, 直接覆盖 plugins/ 下对应 .amxx 即可, 配置文件无变化。
+
+四、注意事项
+1. 官方基础插件(admin.amxx / adminhelp.amxx / admincmd.amxx 等 20 个)不属于本包,
+   由服务器已有 AMXX 1.10 安装提供; plugins.ini 中对应行勿删。若服务器缺 admin.amxx
+   等文件, 插件加载会报错但不影响其余插件, 请自行补齐。
+2. HnsAISignupBots.amxx 是 AI 报名测试人机, 正式服请在 plugins.ini 注释该行。
+3. HnsSatchelTeleport.amxx / SemiclipSystem.amxx / rockthevote_custom.amxx 已随包放入,
+   但 plugins.ini 未启用(当前分别用 hns_semiclip.amxx 与 rockthevote.amxx), 无需处理。
+4. 菜单标题: 语言文件优先, 换图/重载 HnsLanguage 后游戏内显示 Hide'And'Seek。
+5. 加载顺序(plugins.ini 已排好): HnsLanguage -> HnsPersistentDataStorage -> HnsSponsorLocal
+   -> HnsMatchSystem -> ... -> HnsAISignup(在 MatchSystem 之后) -> CustomPlayerModelsApi
+   -> HnsMatchSkin -> rockthevote
+6. 比赛地图池: configs/mixsystem/hns-maps.ini 的 [skill] 段由 HnsAISignup 读取。
+
+五、验证
+- 换图后控制台: amxx plugins 应列出全部 HNS 插件且无 failed
+- 玩家 /menu 主菜单标题应为 Hide'And'Seek
+- 皮肤: /skin 与 /cpm 管理员菜单可用(需 MySQL 正常)

@@ -29,6 +29,7 @@ new g_hSaveForward;
 
 public plugin_init() {
 	register_plugin("Hns Persistent Data Storage", "1.0", "OpenHNS");
+	register_library("PersistentDataStorage");
 
 	g_iVault = nvault_open(VAULT_NAME);
 	g_hSaveForward = CreateMultiForward("PDS_Save", ET_IGNORE);
@@ -49,10 +50,6 @@ public plugin_end() {
 }
 
 public plugin_natives() {
-	// 必须在 plugin_natives() 注册: AMXX 在"插件加载时"就校验 #pragma reqlib,
-	// 早于 plugin_init(), 放到 plugin_init() 会导致 HnsMatchSystem bad load。
-	register_library("PersistentDataStorage");
-
 	register_native("PDS_SetCell", "native_set_cell");
 	register_native("PDS_GetCell", "native_get_cell");
 	register_native("PDS_SetArray", "native_set_array");
@@ -93,7 +90,7 @@ public native_get_cell(amxx, params) {
 public native_set_string(amxx, params) {
 	enum { arg_key = 1, arg_data };
 
-	new szKey[64], szData[4096];
+	new szKey[64], szData[8192];
 	get_string(arg_key, szKey, charsmax(szKey));
 	get_string(arg_data, szData, charsmax(szData));
 
@@ -106,14 +103,10 @@ public native_set_string(amxx, params) {
 public native_get_string(amxx, params) {
 	enum { arg_key = 1, arg_buffer, arg_maxlen };
 
-	new szKey[64], szData[4096];
+	new szKey[64], szData[8192];
 	get_string(arg_key, szKey, charsmax(szKey));
 
-	new iMaxLen = get_param(arg_maxlen);
-	if (iMaxLen > charsmax(szData))
-		iMaxLen = charsmax(szData);
-
-	if (!nvault_get(g_iVault, szKey, szData, iMaxLen) || !szData[0]) {
+	if (!nvault_get(g_iVault, szKey, szData, charsmax(szData)) || !szData[0]) {
 		set_string(arg_buffer, "", get_param(arg_maxlen));
 		return 0;
 	}

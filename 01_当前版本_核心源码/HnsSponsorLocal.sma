@@ -21,6 +21,7 @@ new g_iVault;
 
 public plugin_init() {
 	register_plugin("Match: Sponsor Local (ICGB)", "1.0", "OpenHNS");
+	register_library("hns_gc_local"); // 供 hns_gc.inc 的 library_exists 检测
 
 	g_iVault = nvault_open(VAULT_NAME);
 }
@@ -30,9 +31,6 @@ public plugin_end() {
 }
 
 public plugin_natives() {
-	// 必须在 plugin_natives() 注册 (AMXX 在插件加载时校验 reqlib, 早于 plugin_init)
-	register_library("hns_gc_local");
-
 	register_native("hns_gc_local_available", "native_gc_local_available");
 	register_native("hns_gc_local_get", "native_gc_local_get");
 	register_native("hns_gc_local_set", "native_gc_local_set");

@@ -47,6 +47,10 @@ stock bool:isUserFullWatcher(id) {
 		return false;
 }
 
+stock bool:isUserVip(id) {
+	return isUserFullWatcher(id);
+}
+
 stock bool:isUserAdmin(id) {
 	if (get_user_flags(id) & (read_flags(g_iSettings[ADMIN_FLAG]) | ADMIN_RESERVATION))
 		return true;

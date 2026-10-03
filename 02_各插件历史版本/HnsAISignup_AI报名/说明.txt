@@ -1,7 +1,7 @@
 HnsAISignup.sma —— AI 报名系统 版本历史说明
 ============================================
 主插件：AI 报名（/signup 报名、收团分组、模式/地图投票、赞助局、强制开赛、HUD 等）
-作者：HNSai（GTR 自研） 当前版本：v1.17
+作者：HNSai（GTR 自研） 当前版本：v1.18
 
 版本列表（按时间从旧到新）：
 1. v1.3_teamfix_0927-1912/
@@ -27,13 +27,27 @@ HnsAISignup.sma —— AI 报名系统 版本历史说明
 5. v1.17_当前部署版 —— 在 01_当前版本_核心源码/HnsAISignup.sma
    - 92766 字节, 2026-09-30 23:00
    - 与 cstrike/scripting/、cstrike/addons/amxmodx/scripting/ 副本 md5 一致
-   - 当前服务器部署使用的版本
+   - 上一部署版 (v1.18 发布后被替代, 见第7条)
 
 6. v1.17_scripting最新_1001-0213/
    - 原文件: scripting/HnsAISignup.sma
    - 92873 字节, 2026-10-01 02:13
    - 在部署版基础上新增 taskRestorePendingRules（换图后延迟恢复比赛模式）
    - 注意: 未确认是否已部署, 属最新开发版
+
+7. v1.18_当前部署版 —— 在 01_当前版本_核心源码/HnsAISignup.sma
+   - 版本号 1.18, 2026-10-01 版（本次发布整理上线）
+   - v1.17 基础上主要改动:
+     a. wintime 胜负判定修复: 改用 hns_get_player_match_team(id) 取逻辑比赛队伍
+        (1=TT/2=CT) 判定胜队积分, 不再按物理队伍(T/CT)判断, 换边/换图后积分正确
+     b. 换图跨图恢复赛制: 加载时从 PDS 读 ai_match_rules 恢复, 并立即
+        hns_external_set_match_mode 同步回 MatchSystem (替代 taskRestorePendingRules)
+     c. 菜单权限收敛: 队伍人数/重新分队/强制开赛仅 isUserVipOrAdmin 可见可点,
+        cmdReshuffle 命令层再加权限校验(AI_CHAT_ERR_NEED_ADMIN)
+     d. 菜单点完不关: 报名主菜单 menu_display(id, menu, 0) 可连续操作
+     e. 赛制状态单一来源: AI 菜单选完立即同步 MatchSystem, 含 pending 一律不再分叉
+   - 依赖 HnsMatchSystem 新增 native: hns_get_player_match_team / hns_get_match_team_cs
+   - 当前服务器部署使用的版本 (04_服务器部署_cstrike 已同步 .amxx)
 
 关键背景（详见 10_交接与文档/插件修改记录.txt）:
 - 换图会重载插件, 跨图状态靠 PDS 恢复（ai_pending_start 等键）

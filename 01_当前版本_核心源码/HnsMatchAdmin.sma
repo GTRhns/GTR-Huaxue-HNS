@@ -89,7 +89,7 @@ public AdminMenuHandler(id, key) {
 		case 4: client_cmd(id, "hns_offbanmenu");
 		case 5: client_cmd(id, "hns_unbanmenu");
 		case 6: ShowQuickMenu(id);
-		case 7: ShowPlayerActionMenu(id, false);
+		case 7: client_cmd(id, "amx_slapmenu");
 		case 8: ShowPlayerActionMenu(id, true);
 	}
 	return PLUGIN_HANDLED;
@@ -235,7 +235,7 @@ ShowQuickMenu2(id) {
 
 public QuickMenu2Handler(id, key) {
 	if (!is_user_connected(id) || key == 9) {
-		if (is_user_connected(id) && isUserAdmin(id) && key == 9)
+		if (is_user_connected(id) && CanOpenAdminMenu(id) && key == 9)
 			ShowAdminMenu(id);
 		return PLUGIN_HANDLED;
 	}
@@ -285,7 +285,7 @@ ShowQuickMenu3(id) {
 
 public QuickMenu3Handler(id, key) {
 	if (!is_user_connected(id) || key == 9) {
-		if (is_user_connected(id) && isUserAdmin(id) && key == 9)
+		if (is_user_connected(id) && CanOpenAdminMenu(id) && key == 9)
 			ShowAdminMenu(id);
 		return PLUGIN_HANDLED;
 	}

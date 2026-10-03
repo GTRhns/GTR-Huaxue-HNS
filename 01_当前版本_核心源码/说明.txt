@@ -6,7 +6,7 @@
 - compiled/     编译产物 .amxx(对应当前源码的已编译版本, 含测试/比对版)
 
 源码清单(register_plugin 名称):
-  HnsAISignup.sma            AI 报名系统 v1.17 (GTR 自研核心)
+  HnsAISignup.sma            AI 报名系统 v1.18 (GTR 自研核心, 2026-10-01 版)
   HnsMatchSystem.sma         Hide'n'Seek Match System 2.0.5
   HnsMatchBans.sma           Match: Bans 1.1
   HnsMatchChatmanager.sma    聊天管理

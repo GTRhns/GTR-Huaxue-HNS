@@ -133,7 +133,10 @@ stock get_num_players_in_match(ignoreId = 0) {
 	new numGameplr;
 	for (new i; i < iNum; i++) {
 		new tempid = iPlayers[i];
-		if (getUserTeam(tempid) == TEAM_SPECTATOR) continue;
+		if (ignoreId && tempid == ignoreId)
+			continue;
+		if (getUserTeam(tempid) == TEAM_SPECTATOR)
+			continue;
 		numGameplr++;
 	}
 	return numGameplr;

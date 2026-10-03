@@ -117,6 +117,8 @@ public plugin_natives() {
 	register_native("hns_match_unpause", "native_match_unpause");
 
 	register_native("hns_get_rules", "native_get_rules");
+	register_native("hns_get_match_team_cs", "native_get_match_team_cs");
+	register_native("hns_get_player_match_team", "native_get_player_match_team");
 
 	//register_native("hns_get_score_tt", "native_get_score_TT");
 	//register_native("hns_get_score_ct", "native_get_score_CT");
@@ -309,6 +311,25 @@ public native_match_unpause(amxx, params) {
 
 public NATCH_RULES:native_get_rules(amxx, params) {
 	return g_iCurrentRules;
+}
+
+public TeamName:native_get_match_team_cs(amxx, params) {
+	new iMatchTeam = get_param(1);
+	if (iMatchTeam != 1 && iMatchTeam != 2)
+		return TEAM_UNASSIGNED;
+	new HNS_TEAM:logicalTeam = iMatchTeam == 1 ? HNS_TEAM_A : HNS_TEAM_B;
+	return logicalTeam == g_isTeamTT ? TEAM_TERRORIST : TEAM_CT;
+}
+
+public native_get_player_match_team(amxx, params) {
+	new id = get_param(1);
+	if (id < 1 || id > MaxClients || !is_user_connected(id))
+		return 0;
+	switch (g_ePlayerInfo[id][PLAYER_ROLE]) {
+		case ROLE_CAP_A, ROLE_TEAM_A: return 1;
+		case ROLE_CAP_B, ROLE_TEAM_B: return 2;
+	}
+	return 0;
 }
 
 public fwdEmitSoundPre(id, iChannel, szSample[], Float:volume, Float:attenuation, fFlags, pitch) {
@@ -511,12 +532,6 @@ public Knife_TraceAttack(victim, attacker, Float:damage, Float:direction[3], tra
 
 	if (get_user_weapon(attacker) != CSW_KNIFE)
 		return HAM_IGNORED;
-
-	if (g_iMatchStatus == MATCH_CAPTAINKNIFE || g_iMatchStatus == MATCH_TEAMKNIFE)
-		return HAM_IGNORED;
-
-	if (g_iMatchStatus == MATCH_CAPTAINPICK || g_iMatchStatus == MATCH_TEAMPICK)
-		return HAM_SUPERCEDE;
 
 	if (g_iCurrentGameplay != GAMEPLAY_TRAINING && getUserTeam(attacker) == TEAM_CT && getUserTeam(victim) == TEAM_TERRORIST)
 		return HAM_IGNORED;

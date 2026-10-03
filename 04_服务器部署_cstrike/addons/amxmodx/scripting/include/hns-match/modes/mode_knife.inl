@@ -75,7 +75,6 @@ public kniferound_roundstart() {
 
 			ResetAfkData();
 			set_task(2.0, "taskSaveAfk");
-			set_task(4.0, "taskCheckAfk");
 		}
 		default: {
 			ChangeGameplay(GAMEPLAY_TRAINING);

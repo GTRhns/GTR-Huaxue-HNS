@@ -32,8 +32,6 @@ public plugin_init() {
 	RegisterSayCmd("invis", "inv", "cmdInvis");
 
 	RegisterSayCmd("weapons", "weap", "cmdWeapons");
-	RegisterSayCmd("smoke", "sg", "cmdSmoke");
-	RegisterSayCmd("flash", "fg", "cmdFlash");
 	RegisterSayCmd("scout", "sc", "cmdScout");
 	RegisterSayCmd("usp", "pistol", "cmdUsp");
 	RegisterSayCmd("awp", "sniper", "cmdAWP");
@@ -240,24 +238,6 @@ public cmdWeapons(id) {
 	return PLUGIN_HANDLED;
 }
 
-public cmdSmoke(id) {
-	if (hns_get_mode() != MODE_TRAINING && hns_get_state() != STATE_PAUSED) {
-		return PLUGIN_HANDLED;
-	}
-
-	give_user_grenade(id, "weapon_smokegrenade");
-	return PLUGIN_HANDLED;
-}
-
-public cmdFlash(id) {
-	if (hns_get_mode() != MODE_TRAINING && hns_get_state() != STATE_PAUSED) {
-		return PLUGIN_HANDLED;
-	}
-
-	give_user_grenade(id, "weapon_flashbang", 2, true);
-	return PLUGIN_HANDLED;
-}
-
 public cmdScout(id) {
 	if (hns_get_mode() != MODE_TRAINING && hns_get_state() != STATE_PAUSED) {
 		return PLUGIN_HANDLED
@@ -338,11 +318,6 @@ public hns_training_menu(id) {
 	formatex(szMsg, charsmax(szMsg), "%L", LANG_PLAYER, "MENU_TRNING_WEAPONS");
 	menu_additem(hMenu, szMsg, "8");
 
-	formatex(szMsg, charsmax(szMsg), "%L", LANG_PLAYER, "MENU_TRNING_SMOKE");
-	menu_additem(hMenu, szMsg, "9");
-
-	formatex(szMsg, charsmax(szMsg), "%L", LANG_PLAYER, "MENU_TRNING_FLASH");
-	menu_additem(hMenu, szMsg, "10");
 
 	menu_display(id, hMenu, 0);
 	
@@ -385,12 +360,6 @@ public hns_training_menu_code(id, hMenu, item) {
 		case 8: {
 			cmdWeapons(id);
 		}
-		case 9: {
-			cmdSmoke(id);
-		}
-		case 10: {
-			cmdFlash(id);
-		}
 	}
 	hns_training_menu(id);
 
@@ -402,8 +371,7 @@ public rgPlayerSpawn(id) {
 		return HC_CONTINUE;
 	}
 
-	if (task_exists(id))
-		remove_task(id);
+	set_task(0.2, "cmdUsp", id);
 
 	return HC_CONTINUE;
 }
@@ -458,17 +426,4 @@ stock give_user_item(id, const szWeapon[], numBullets, GiveType:giveType = GT_AP
 		rg_set_iteminfo(iWeapon, ItemInfo_iMaxClip, numBullets);
 		rg_set_user_ammo(id, rg_get_weapon_info(szWeapon, WI_ID), numBullets);		
 	}
-}
-
-stock give_user_grenade(id, const szWeapon[], iAmount = 1, bool:bReplace = false) {
-	if (!is_user_alive(id) || iAmount < 1)
-		return;
-
-	new WeaponIdType:iWid = rg_get_weapon_info(szWeapon, WI_ID);
-	new iHave = rg_get_user_bpammo(id, iWid);
-
-	if (iHave < 1)
-		rg_give_item(id, szWeapon, GT_APPEND);
-
-	rg_set_user_bpammo(id, iWid, bReplace ? iAmount : (iHave + iAmount));
 }

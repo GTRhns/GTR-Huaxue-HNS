@@ -134,6 +134,8 @@ native hns_match_unpause(id);
 * @return type NATCH_RULES
 */
 native NATCH_RULES:hns_get_rules();
+native TeamName:hns_get_match_team_cs(iMatchTeam);
+native hns_get_player_match_team(id);
 
 /* 
 * Gets score in match (For RULES_DUEL)
@@ -228,6 +230,10 @@ stock bool:isUserFullWatcher(id) {
 		return true;
 	else
 		return false;
+}
+
+stock bool:isUserVip(id) {
+	return isUserFullWatcher(id);
 }
 
 stock bool:isUserAdmin(id) {

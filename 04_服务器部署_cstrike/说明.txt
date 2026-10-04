@@ -1,10 +1,13 @@
 04_服务器部署_cstrike —— 目录说明
 =================================
-本目录是服务器部署结构(gtr/cstrike)的完整快照:
+本目录是服务器部署结构(gtr/cstrike)的完整快照, 对应 10-04 最新部署版 v1.19:
 
 - addons/amxmodx/            运行时部署目录(完整拷贝)
-    configs/   hns_language.txt(四语)、mixsystem/hns-maps.ini、skins.cfg、openhns-prefixes.ini
-    plugins/   已部署 .amxx 与 plugins.ini(加载顺序)
+    configs/   hns_language.txt(四语, 菜单标题 Hide'And'Seek)、mixsystem/(hns-maps.ini、
+               skins.cfg、hns_ads.cfg、hnsmatch-sql.cfg、knife_skins.cfg、matchsystem.cfg、
+               nade_skins.cfg、player_models.ini、mode/、mapcfg)、openhns-prefixes.ini、
+               plugins/custom_player_models.cfg、uq_jumpstats/config.cfg、KnifeModels.ini
+    plugins/   10-04 编译产物(HnsAISignup v1.19 等 39 个 amxx) + plugins.ini(加载顺序)
     data/lang/ match_additons.txt、mixsystem.txt
     lang/      HnsSkin.txt
     scripting/ 运行侧源码与 include 副本(改 hnsmenu/cmds 等需与 include/ 同步)
@@ -13,10 +16,25 @@
   FakeSteam_Blocker、HPP_Blocker、TeamSelect、Hud_Info、GeoIP、Oops、Vampire、
   Colored_Flash、SemiClip、GM_Decor、Snow、ReVoice 等)
 - 比赛通用/   旧比赛插件源码(hnsru_match-3.7.sma、icemartes_hns.sma、match_system.sma)
-- scripting/  含 UPDATELOG.txt 与 _bak_gbk/_bak_root_orig 旧档备份、_test 测试片段
 - sound/      音效资源
-- 根目录 PugRegistration.amxx、_skin_dump.txt(皮肤数据导出, 已转存 10_交接与文档)
+
+10-04 新增插件(相对 10-03 部署版):
+- HnsAds.amxx            聊天栏轮播广告, 配置 configs/mixsystem/hns_ads.cfg
+- HnsConnectInfo.amxx    进服信息提示(名字/PTS/地区), 走 /lang, 语言键 CONNECT_*
+- HnsModeVote.amxx       /rts 模式投票(公共/死斗/僵尸/训练), 比赛中禁用, 语言键 RTS_*
+- HnsSatchelTeleport.amxx  最后一名CT烟雾弹遥控传送(10-04 起 plugins.ini 启用)
+- crx_knife_models.amxx  刀皮模型/音效引擎, 排在 HnsMatchSkin 之前
+- speclist / flash-notifier / grenade_trail / uq_jumpstats / yj_prefog / cameraview
+  观战列表、闪光提示、手雷拖尾、跳跃统计、前雾优化、观战视角(可选)
+
+10-04 更新内容:
+- hns_language.txt 同步新语言键(CONNECT_/HUD_/RTS_/SKIN_ 商店系列), 四语区
+- HnsMatchSkin v1.0 商店版(皮肤商店/每日签到/在线奖励/GBIC 金币)
+- HnsLanguage v1.3.0 nvault 版(个人语言跨图记忆)
+- HnsMatchSystem v2.0.5 1004 版(AI 开赛赛制加固)
+- HnsAISignup v1.19 1004 版(PDS 同步加固/日志去隐私)
 
 注意:
-- cstrike/scripting/include/hns_matchsystem.inc 是旧 enum 版, 不要当编译源
+- 官方基础插件(admin.amxx、adminhelp.amxx 等 18 个)由服务器 AMXX 1.10 自带, 本包不包含
+- cstrike/scripting/include/hns_matchsystem.inc 已同步为新版(勿回退旧 enum 版)
 - 第三方程分类插件来自 dream-x.ru, 含 .URL 快捷方式与俄语说明(原始杂质未清理)

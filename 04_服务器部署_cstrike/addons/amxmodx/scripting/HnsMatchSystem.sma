@@ -212,6 +212,7 @@ public native_external_set_match_mode(amxx, params) {
 		return 0;
 
 	g_iCurrentRules = NATCH_RULES:iMode;
+	PDS_SetCell("match_rules", iMode);
 	if (g_iCurrentRules == RULES_ROUNDS) {
 		g_iSettings[MAXROUNDS] = 7;
 	} else if (g_iCurrentRules == RULES_MR) {
@@ -275,6 +276,15 @@ public native_begin_external_match(amxx, params) {
 	g_eMatchType = bSponsor ? MATCH_TYPE_SPONSOR : MATCH_TYPE_CASUAL;
 	g_bSponsorMatch = bSponsor;
 	g_iSponsorPlayer = iStarter;
+
+	// AI 开赛前再套一次报名选的赛制, 防止换图 delayed_mode 把回合制盖回 MR
+	new iAiRules;
+	if (PDS_GetCell("ai_match_rules", iAiRules) && iAiRules >= _:RULES_MR && iAiRules <= _:RULES_ROUNDS) {
+		g_iCurrentRules = NATCH_RULES:iAiRules;
+		PDS_SetCell("match_rules", iAiRules);
+		if (g_iCurrentRules == RULES_ROUNDS)
+			g_iSettings[MAXROUNDS] = 7;
+	}
 
 	// 开赛前把当前所有 T/CT 玩家标记为参赛者 (含测试人机),
 	// 否则 mix_start 的 forceUnmatchedToSpec 会把人踢到观战
@@ -507,8 +517,6 @@ public client_disconnected(id) {
 	g_bNoplay[id] = false;
 	g_eSpecBack[id] = TEAM_UNASSIGNED;
 
-	arrayset(eAfkData[id], 0, AfkData_s);
-	arrayset(flAfkOrigin[id], 0.0, sizeof(flAfkOrigin[]));
 	g_bSurrenderVoted[id] = false;
 	hook[id] = false;
 }

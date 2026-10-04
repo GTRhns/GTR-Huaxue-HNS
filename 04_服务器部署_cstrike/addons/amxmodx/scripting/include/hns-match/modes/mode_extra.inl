@@ -96,3 +96,29 @@ stock getRoundsScore(&iCT, &iTT) {
 		iCT = g_iRoundsScore[HNS_TEAM_A];
 	}
 }
+
+// 回合制: 引擎记分板按 CT/TT 阵营累加, 换边后不会跟着人走。
+// 这里按当前站边的 A/B 队伍分数覆盖 TeamScore。
+stock syncRoundsScoreboard() {
+	if (g_iCurrentRules != RULES_ROUNDS)
+		return;
+
+	remove_task(TASK_ROUNDS_SCORE);
+	applyRoundsScoreboard();
+	set_task(0.2, "taskSyncRoundsScoreboard", TASK_ROUNDS_SCORE);
+}
+
+public taskSyncRoundsScoreboard() {
+	applyRoundsScoreboard();
+}
+
+stock applyRoundsScoreboard() {
+	if (g_iCurrentRules != RULES_ROUNDS)
+		return;
+
+	new iCT, iTT;
+	getRoundsScore(iCT, iTT);
+	set_member_game(m_iNumCTWins, iCT);
+	set_member_game(m_iNumTerroristWins, iTT);
+	rg_update_teamscores(iCT, iTT, false);
+}

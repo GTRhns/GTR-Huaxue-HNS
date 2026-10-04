@@ -133,10 +133,36 @@ stock get_num_players_in_match(ignoreId = 0) {
 	new numGameplr;
 	for (new i; i < iNum; i++) {
 		new tempid = iPlayers[i];
+		if (ignoreId && tempid == ignoreId) continue;
 		if (getUserTeam(tempid) == TEAM_SPECTATOR) continue;
 		numGameplr++;
 	}
 	return numGameplr;
+}
+
+stock get_match_side_counts(&iTT, &iCT) {
+	iTT = 0;
+	iCT = 0;
+
+	new iPlayers[MAX_PLAYERS], iNum;
+	get_players(iPlayers, iNum, "ch");
+	for (new i; i < iNum; i++) {
+		new id = iPlayers[i];
+		if (is_user_bot(id) || is_user_hltv(id))
+			continue;
+
+		new TeamName:iTeam = getUserTeam(id);
+		if (iTeam == TEAM_TERRORIST)
+			iTT++;
+		else if (iTeam == TEAM_CT)
+			iCT++;
+	}
+}
+
+stock get_match_format_text(szOut[], iLen) {
+	new iTT, iCT;
+	get_match_side_counts(iTT, iCT);
+	formatex(szOut, iLen, "%dv%d", iTT, iCT);
 }
 
 stock bool:checkUserBan() {

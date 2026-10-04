@@ -2,7 +2,7 @@ HnsMatchSkin.sma —— 玩家自定义皮肤系统 版本说明
 ================================================
 功能: /skin 用 ICGB 金币购买/选用皮肤(租期/永久), /cpm 管理员菜单; 与 HnsMatchSql 共用 MySQL(cpm_ 前缀分表)
 
-3 份变体:
+3 份变体(另有 10-03 版见第5条):
 
 1. v1.0_完整版MySQL/
    - 原文件: skin 1.0/addons/amxmodx/scripting/HnsMatchSkin.sma
@@ -19,10 +19,27 @@ HnsMatchSkin.sma —— 玩家自定义皮肤系统 版本说明
 3. scripting重构版/
    - 原文件: scripting/HnsMatchSkin.sma
    - 45905 字节, 2026-10-01 22:29
-   - 最新重构版: 玩家菜单 1.CT皮肤 2.TT皮肤 3.ICGB金币 4.管理员设置 5.MySQL调试;
+   - 重构版: 玩家菜单 1.CT皮肤 2.TT皮肤 3.ICGB金币 4.管理员设置 5.MySQL调试;
      管理菜单从主菜单独立进入, 不再混在皮肤列表; 死亡音效改为拦截 player/die*
      替换为当前皮肤音效, 不再叠原声
    - 依赖: CustomPlayerModelsApi.amxx(须排在前) + HnsLanguage.amxx + HnsMatchSql
+
+4. v1.0_1003版/ —— 历史版(见第5条, 10-03 整理发布)
+
+5. v1.0_商店版_1004/  (当前部署版)
+   - 原文件: cstrike/addons/amxmodx/scripting/HnsMatchSkin.sma
+   - 134138 字节, 2026-10-04 06:00
+   - 皮肤商店大改版(10-04):
+     a. 主菜单改版为"皮肤商店": 显示金币(GBIC)余额与各商店数量
+     b. 新增子商店: 人物皮肤商店 / 刀模商店 / 投掷物商店(烟雾/闪光独立计数) /
+        GBIC点数 / 每日签到 / 购买点数 / 管理员设置
+     c. 每日签到: 每天一次签到得 GBIC(菜单显示已签到状态)
+     d. 在线时长奖励: 在线满 1 小时自动奖励 GBIC
+     e. 购买点数: 打开购买页面(联系管理员购 GBIC)
+     f. MySQL 管理入口保留(需管理员 A/B)
+     g. 菜单文案去掉 \w\d 颜色控制码, 改用 [数量] 计数显示
+   - 金币单位: GBIC; 依赖 CustomPlayerModelsApi / HnsLanguage / HnsMatchSql
+   - 对应语言键 SKIN_* 已同步到 hns_language.txt 四语言区
 
 注意:
 - 皮肤名全服唯一, 一旦定下别改, 否则玩家已购记录丢失

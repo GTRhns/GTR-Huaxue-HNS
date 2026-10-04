@@ -6,7 +6,6 @@
 
 #define TASK_TIMER 54345
 #define HUD_PAUSE 23931
-#define TASK_PAUSE_SND 23932
 
 #define TASK_WAIT 12319
 #define TASK_STARTED 13339
@@ -14,8 +13,13 @@
 #define TASK_WAITCAP 13131
 
 #define TASK_SURRENDER 55566
+#define TASK_PAUSE_SND 55567
+#define TASK_MATCH_HUD 55568
 
 new bool:g_bDebugMode;
+new bool:g_bExternalTeamSize;
+new g_iMatchCountdown;
+new g_iSemiclipForceMode = -1;
 
 new g_PluginId;
 
@@ -84,10 +88,6 @@ new g_eSurrenderData[SurrenderData_s];
 
 new bool:g_bNoplay[MAX_PLAYERS + 1];
 new bool:g_bPlayersListLoaded;
-new bool:g_bExternalTeamSize; // AI/外部开赛已指定队伍规模, mix_start 不要按场上人数覆盖
-
-// 穿透覆盖: -1 跟随地图默认, 0 强制关闭, 1 强制开启队友穿透
-new g_iSemiclipForceMode = -1;
 
 new Float:g_flRoundTime;
 
@@ -100,8 +100,8 @@ new g_szBaseHostname[128];
 // const
 new const sndDenySelect[] = "common/wpn_denyselect.wav";
 new const sndUseSound[] = "buttons/blip1.wav";
-new const sndPauseTalk[] = "fvox/eighty.wav";
-new const sndUnpauseAcquired[] = "fvox/acquired.wav";
+new const sndPauseTalk[] = "buttons/blip2.wav";
+new const sndUnpauseAcquired[] = "buttons/bell1.wav";
 
 enum _: Forwards {
 	MATCH_START,
@@ -179,16 +179,15 @@ new bool:g_bGcSqlConnected;
 #define TASK_LOADING_DONE	24002	// C4进度条走满后进入回合刷新
 #define TASK_REFRESH_WAVE	24003	// 回合刷新
 #define TASK_MATCH_ACTIVATE	24004	// 缓冲期结束, 正式激活比赛
-#define TASK_MATCH_HUD		24005	// 开场缓冲倒计时 HUD
+#define TASK_ROUNDS_SCORE	24005	// 回合制换边后同步引擎记分板
 
 new bool:g_bMatchLoading;	// 正在执行开场加载流程 (进度条/回合刷新/缓冲期)
 new g_iRefreshWave;			// 已执行的回合刷新次数
 new g_iLoadingStep;			// 加载进度条当前步
-new g_iMatchCountdown;		// 缓冲期倒计时 (秒)
 
 // 开场加载: C4进度条7秒 → 类型HUD → 刷新4次(每5秒) → 缓冲15秒倒计时 → 激活
 #define LOADING_STEPS			70		// 进度条总步数 (0.1秒/步 = 7秒)
-#define LOADING_BAR_TIME		7.0		// C4进度条总时长 (秒)
+#define LOADING_BAR_TIME		7.0		// 进度条总时长 (秒)
 #define REFRESH_WAVES			4		// 回合刷新次数
 #define REFRESH_WAVE_INTERVAL	5.0		// 每次刷新间隔 (秒)
 #define MATCH_ACTIVATE_DELAY	15.0	// 缓冲期 (秒)

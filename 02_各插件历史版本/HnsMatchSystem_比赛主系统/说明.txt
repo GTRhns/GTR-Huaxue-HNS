@@ -3,7 +3,7 @@ HnsMatchSystem.sma —— Hide'n'Seek 比赛主系统 版本说明
 作者: OpenHNS（Garey/Cultura 等） 版本号: 2.0.5
 作用: 比赛状态机/模式管理/菜单/native 提供方; AI 报名插件通过 native 驱动它开赛
 
-4 份变体内容各不相同(md5 全异), 请按用途取用:
+5 份变体内容各不相同(md5 全异), 请按用途取用:
 
 1. v2.0.5_cstrikeScripting_旧/
    - 原文件: cstrike/scripting/HnsMatchSystem.sma
@@ -24,7 +24,15 @@ HnsMatchSystem.sma —— Hide'n'Seek 比赛主系统 版本说明
 4. v2.0.5_scripting最新/
    - 原文件: scripting/HnsMatchSystem.sma
    - 19202 字节, 2026-10-01 02:06
-   - 最新开发版, 尚未与 source 同步
+   - 10-01 开发版(已被 v2.0.5_scripting最新_1004 替代)
+
+5. v2.0.5_scripting最新_1004/  (当前部署版)
+   - 原文件: cstrike/addons/amxmodx/scripting/HnsMatchSystem.sma
+   - 20025 字节, 2026-10-04 10:01
+   - 在 10-01 版基础上新增:
+     a. AI 开赛前再套一次报名选的赛制: 从 PDS 读 ai_match_rules 并立即写回
+        g_iCurrentRules / PDS "match_rules", 防止换图 delayed_mode 把回合制盖回 MR
+     b. 移除 afk 数据数组清零逻辑(arrayset eAfkData/flAfkOrigin)
 
 改动时注意:
 - include/hns_matchsystem.inc 必须与 sma 里的 native 一致(编译用 include/ 那套)

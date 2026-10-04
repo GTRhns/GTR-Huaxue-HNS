@@ -1,5 +1,6 @@
 #include <amxmodx>
 #include <amxmisc>
+#include <nvault>
 
 #define HNS_LANG_MAX 4
 #define HNS_LANG_ID_ZH      0
@@ -15,10 +16,11 @@ new bool:g_bLangManual[MAX_PLAYERS + 1];   // ★ 玩家手动选择语言后, �
 new Trie:g_hLang[HNS_LANG_MAX];
 new g_iKeyCount;
 new g_szLangFile[256];
+new g_iLangVault = INVALID_HANDLE;
 
 public plugin_init()
 {
-    register_plugin("HNS Language Core", "1.2.0", "HNSIC");
+    register_plugin("HNS Language Core", "1.3.0", "HNSIC");
     register_clcmd("say /lang", "CmdLanguageMenu");
     register_clcmd("say_team /lang", "CmdLanguageMenu");
     register_clcmd("say /language", "CmdLanguageMenu");
@@ -28,6 +30,7 @@ public plugin_init()
     for (new i = 0; i < HNS_LANG_MAX; i++)
         g_hLang[i] = TrieCreate();
 
+    g_iLangVault = nvault_open("hns_lang");
     LoadLanguageFile();
 }
 
@@ -38,13 +41,24 @@ public plugin_end()
         if (g_hLang[i])
             TrieDestroy(g_hLang[i]);
     }
+
+    if (g_iLangVault != INVALID_HANDLE)
+    {
+        nvault_close(g_iLangVault);
+        g_iLangVault = INVALID_HANDLE;
+    }
 }
 
 public client_putinserver(id)
 {
     g_iPlayerLang[id] = HNS_LANG_ID_ZH;
     g_bLangManual[id] = false;
-    set_task(0.5, "TaskDetectLanguage", id);
+
+    // 只恢复这个玩家自己的语言, 不改 amx_language / 其他人
+    if (LoadPlayerLang(id))
+        return;
+
+    set_task(1.0, "TaskDetectLanguage", id);
 }
 
 public client_infochanged(id)
@@ -135,11 +149,9 @@ public LanguageMenuHandler(id, menu, item)
     g_iPlayerLang[id] = lang;
     g_bLangManual[id] = true;
 
-    // ★ 关键: 同时把语言同步给 AMXX 原生多语言系统 (cl_language)。
-    //   主插件 HnsMatchSystem 的 mix 菜单/HUD 走的是原生 %L + mixsystem.txt,
-    //   它只看客户端 "lang" 信息, 与 /lang 插件无关。
-    //   这里主动改 cl_language, 让主插件菜单也跟随 /lang 的选择。
+    // 只改这个玩家自己的客户端 lang, 绝不写 amx_language
     SetClientLanguage(id, lang);
+    SavePlayerLang(id, lang);
 
     new msg[192];
     GetTranslation(id, "LANG_CHANGED", msg, charsmax(msg));
@@ -147,7 +159,7 @@ public LanguageMenuHandler(id, menu, item)
     return PLUGIN_HANDLED;
 }
 
-// 把插件内部语言 ID 同步为客户端 cl_language (供 AMXX 原生多语言系统使用)
+// 只同步当前玩家的客户端 lang, 供 AMXX %L 按人翻译; 不改服务器语言
 stock SetClientLanguage(id, lang)
 {
     if (!is_user_connected(id))
@@ -203,6 +215,7 @@ public NativeLangSet(plugin, params)
 
     g_iPlayerLang[id] = lang;
     g_bLangManual[id] = true;
+    SavePlayerLang(id, lang);
     SetClientLanguage(id, lang);
     return 1;
 }
@@ -221,6 +234,7 @@ public NativeLangReset(plugin, params)
     if (id < 1 || id > MaxClients)
         return 0;
     g_iPlayerLang[id] = HNS_LANG_ID_ZH;
+    ClearPlayerLang(id);
     g_bLangManual[id] = false;
     SetClientLanguage(id, HNS_LANG_ID_ZH);
     return 1;
@@ -313,5 +327,72 @@ stock LanguageId(const section[])
     if (equali(section, "en")) return HNS_LANG_ID_EN;
     if (equali(section, "ru")) return HNS_LANG_ID_RU;
     return HNS_LANG_ID_ZH;
+}
+
+stock GetLangVaultKey(id, szKey[], iLen)
+{
+    new szAuth[32];
+    get_user_authid(id, szAuth, charsmax(szAuth));
+
+    if (!szAuth[0] || containi(szAuth, "STEAM_ID") != -1 || containi(szAuth, "BOT") != -1
+        || equali(szAuth, "STEAM_0:0:0") || equali(szAuth, "STEAM_1:0:0"))
+    {
+        new szIp[22];
+        get_user_ip(id, szIp, charsmax(szIp), 1);
+        formatex(szKey, iLen, "ip:%s", szIp);
+        return;
+    }
+
+    copy(szKey, iLen, szAuth);
+}
+
+stock SavePlayerLang(id, lang)
+{
+    if (g_iLangVault == INVALID_HANDLE || !is_user_connected(id))
+        return;
+    if (lang < 0 || lang >= HNS_LANG_MAX)
+        return;
+
+    new szKey[48], szData[8];
+    GetLangVaultKey(id, szKey, charsmax(szKey));
+    if (!szKey[0])
+        return;
+
+    num_to_str(lang, szData, charsmax(szData));
+    nvault_set(g_iLangVault, szKey, szData);
+}
+
+stock ClearPlayerLang(id)
+{
+    if (g_iLangVault == INVALID_HANDLE || id < 1 || id > MaxClients)
+        return;
+
+    new szKey[48];
+    GetLangVaultKey(id, szKey, charsmax(szKey));
+    if (szKey[0])
+        nvault_remove(g_iLangVault, szKey);
+}
+
+stock bool:LoadPlayerLang(id)
+{
+    if (g_iLangVault == INVALID_HANDLE || !is_user_connected(id))
+        return false;
+
+    new szKey[48], szData[8];
+    GetLangVaultKey(id, szKey, charsmax(szKey));
+    if (!szKey[0])
+        return false;
+
+    if (!nvault_get(g_iLangVault, szKey, szData, charsmax(szData)) || !szData[0])
+        return false;
+
+    new lang = str_to_num(szData);
+    if (lang < 0 || lang >= HNS_LANG_MAX)
+        return false;
+
+    g_iPlayerLang[id] = lang;
+    g_bLangManual[id] = true;
+    SetClientLanguage(id, lang);
+    return true;
 }
 

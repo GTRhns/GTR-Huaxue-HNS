@@ -120,7 +120,7 @@ new g_hSqlForward;
 new g_hAuthorizedForward;
 
 public plugin_init() {
-	register_plugin("Match: Sql", "1.1", "OpenHNS"); // Garey
+	register_plugin("Match: Sql", "1.1.1", "OpenHNS"); // Garey
 
 	new pCvar;
 	pCvar = create_cvar("hns_host", "127.0.0.1", FCVAR_PROTECTED, "Host");
@@ -135,14 +135,14 @@ public plugin_init() {
 	pCvar = create_cvar("hns_db", "hns", FCVAR_PROTECTED, "db");
 	bind_pcvar_string(pCvar, g_eCvars[DB], charsmax(g_eCvars[DB]));
 
-	new szPath[PLATFORM_MAX_PATH]; 
+	new szPath[PLATFORM_MAX_PATH];
 	get_localinfo("amxx_configsdir", szPath, charsmax(szPath));
-	
+
 	server_cmd("exec %s/mixsystem/hnsmatch-sql.cfg", szPath);
 	server_exec();
 
-	g_hSqlForward 			= CreateMultiForward("hns_sql_connection", ET_CONTINUE, FP_CELL);
-	g_hAuthorizedForward 	= CreateMultiForward("hns_sql_player_authorized", ET_CONTINUE, FP_CELL);
+	g_hSqlForward = CreateMultiForward("hns_sql_connection", ET_CONTINUE, FP_CELL);
+	g_hAuthorizedForward = CreateMultiForward("hns_sql_player_authorized", ET_CONTINUE, FP_CELL);
 
 	g_hSqlTuple = SQL_MakeDbTuple(g_eCvars[HOST], g_eCvars[USER], g_eCvars[PASS], g_eCvars[DB]);
 	SQL_SetCharset(g_hSqlTuple, "utf-8");
@@ -176,24 +176,39 @@ public plugin_natives() {
 	register_native("hns_gc_sql_set", "native_gc_sql_set");
 }
 
+stock bool:IsPlayerIndex(id) {
+	return (id >= 1 && id <= MAX_PLAYERS);
+}
+
+stock bool:IsValidPlayer(id) {
+	return (IsPlayerIndex(id) && is_user_connected(id) && !is_user_hltv(id));
+}
+
 public native_gc_sql_available(amxx, params) {
 	return g_bSqlReady;
 }
 
 public native_gc_sql_get(amxx, params) {
-	enum { id = 1 };
-	return g_iGcCache[get_param(id)];
+	new id = get_param(1);
+	if (!IsPlayerIndex(id))
+		return 0;
+	return g_iGcCache[id];
 }
 
 public native_gc_sql_set(amxx, params) {
-	enum { id = 1, iAmount };
-	new iPlayer = get_param(id);
-	new iNewAmount = get_param(iAmount);
+	new iPlayer = get_param(1);
+	new iNewAmount = get_param(2);
+	if (!IsPlayerIndex(iPlayer))
+		return 0;
+
+	if (iNewAmount < 0)
+		iNewAmount = 0;
 
 	g_iGcCache[iPlayer] = iNewAmount;
 	g_bGcLoaded[iPlayer] = true;
 
-	GC_Set(iPlayer, iNewAmount);
+	if (g_bSqlReady && is_user_connected(iPlayer))
+		GC_Set(iPlayer, iNewAmount);
 	return 1;
 }
 
@@ -203,8 +218,10 @@ public native_sql_get_table_name(amxx, params) {
 }
 
 public native_sql_get_player_id(amxx, params) {
-	enum { id = 1 };
-	return g_iPlayerID[get_param(id)];
+	new id = get_param(1);
+	if (!IsPlayerIndex(id))
+		return 0;
+	return g_iPlayerID[id];
 }
 
 public QueryHandler(iFailState, Handle:hQuery, szError[], iErrnum, cData[], iSize, Float:fQueueTime) {
@@ -214,41 +231,46 @@ public QueryHandler(iFailState, Handle:hQuery, szError[], iErrnum, cData[], iSiz
 	}
 
 	g_bSqlReady = true;
+	if (iSize < 1)
+		return PLUGIN_HANDLED;
 
-	switch(cData[0]) {
+	switch (cData[0]) {
 		case SQL_SELECT: {
-			new id = cData[1];
+			if (iSize < 2)
+				return PLUGIN_HANDLED;
 
-			if (!is_user_connected(id))
+			new id = cData[1];
+			if (!IsValidPlayer(id))
 				return PLUGIN_HANDLED;
 
 			if (SQL_NumResults(hQuery)) {
 				new index_id = SQL_FieldNameToNum(hQuery, "id");
 				new index_name = SQL_FieldNameToNum(hQuery, "name");
 				new index_ip = SQL_FieldNameToNum(hQuery, "ip");
+				if (index_id < 0)
+					return PLUGIN_HANDLED;
 
 				g_iPlayerID[id] = SQL_ReadResult(hQuery, index_id);
 
 				new szNewName[MAX_NAME_LENGTH];
-				new szNewNameSQL[MAX_NAME_LENGTH * 2]
 				get_user_name(id, szNewName, charsmax(szNewName));
-				mysql_escape_string(szNewNameSQL, charsmax(szNewNameSQL), szNewName);
-				SQL_QuoteString(Empty_Handle, szNewNameSQL, charsmax(szNewNameSQL), fmt("%s", szNewNameSQL));
 
-				new szOldName[MAX_NAME_LENGTH];
-				SQL_ReadResult(hQuery, index_name, szOldName, charsmax(szOldName));
+				if (index_name >= 0) {
+					new szOldName[MAX_NAME_LENGTH];
+					SQL_ReadResult(hQuery, index_name, szOldName, charsmax(szOldName));
+					if (!equal(szNewName, szOldName))
+						SQL_Name(id, szNewName);
+				}
 
-				if (!equal(szNewNameSQL, szOldName))
-					SQL_Name(id, szNewNameSQL);
-				
-				new szNewIp[MAX_IP_LENGTH]; 
+				new szNewIp[MAX_IP_LENGTH];
 				get_user_ip(id, szNewIp, charsmax(szNewIp), true);
 
-				new szOldIp[MAX_NAME_LENGTH]; 
-				SQL_ReadResult(hQuery, index_ip, szOldIp, charsmax(szOldIp));
-
-				if (!equal(szNewIp, szOldIp))
-					SQL_Ip(id, szNewIp);
+				if (index_ip >= 0) {
+					new szOldIp[MAX_IP_LENGTH];
+					SQL_ReadResult(hQuery, index_ip, szOldIp, charsmax(szOldIp));
+					if (!equal(szNewIp, szOldIp))
+						SQL_Ip(id, szNewIp);
+				}
 
 				ExecuteForward(g_hAuthorizedForward, _, id);
 			} else {
@@ -256,43 +278,56 @@ public QueryHandler(iFailState, Handle:hQuery, szError[], iErrnum, cData[], iSiz
 			}
 		}
 		case SQL_INSERT: {
-		new id = cData[1];
-		g_iPlayerID[id] = SQL_GetInsertId(hQuery);
+			if (iSize < 2)
+				return PLUGIN_HANDLED;
 
-		ExecuteForward(g_hAuthorizedForward, _, id);
-	}
-	case SQL_GC_SELECT: {
-		new id = cData[1];
+			new id = cData[1];
+			if (!IsPlayerIndex(id))
+				return PLUGIN_HANDLED;
 
-		if (!is_user_connected(id))
-			return PLUGIN_HANDLED;
-
-		if (SQL_NumResults(hQuery)) {
-			g_iGcCache[id] = SQL_ReadResult(hQuery, SQL_FieldNameToNum(hQuery, "gc"));
-		} else {
-			// 无记录: 插入默认 0
-			GC_Insert(id);
+			g_iPlayerID[id] = SQL_GetInsertId(hQuery);
+			if (is_user_connected(id))
+				ExecuteForward(g_hAuthorizedForward, _, id);
 		}
-		g_bGcLoaded[id] = true;
-	}
-	case SQL_GC_INSERT: {
-		new id = cData[1];
-		if (!is_user_connected(id))
-			return PLUGIN_HANDLED;
+		case SQL_GC_SELECT: {
+			if (iSize < 2)
+				return PLUGIN_HANDLED;
 
-		// 缓存已由调用方设置, 这里仅标记加载完成
-		g_bGcLoaded[id] = true;
-	}
+			new id = cData[1];
+			if (!IsValidPlayer(id))
+				return PLUGIN_HANDLED;
+
+			if (SQL_NumResults(hQuery)) {
+				new index_gc = SQL_FieldNameToNum(hQuery, "gc");
+				if (index_gc >= 0)
+					g_iGcCache[id] = SQL_ReadResult(hQuery, index_gc);
+			} else {
+				GC_Insert(id);
+			}
+			g_bGcLoaded[id] = true;
+		}
+		case SQL_GC_INSERT: {
+			if (iSize < 2)
+				return PLUGIN_HANDLED;
+
+			new id = cData[1];
+			if (!IsValidPlayer(id))
+				return PLUGIN_HANDLED;
+
+			g_bGcLoaded[id] = true;
+		}
 	}
 
 	return PLUGIN_HANDLED;
 }
 
 public GC_Select(id) {
-	new szQuery[512];
+	if (!g_hSqlTuple || !IsValidPlayer(id))
+		return PLUGIN_HANDLED;
 
+	new szQuery[512];
 	new cData[2];
-	cData[0] = SQL_GC_SELECT,
+	cData[0] = SQL_GC_SELECT;
 	cData[1] = id;
 
 	new szAuthId[MAX_AUTHID_LENGTH];
@@ -305,10 +340,12 @@ public GC_Select(id) {
 }
 
 public GC_Insert(id) {
-	new szQuery[512];
+	if (!g_hSqlTuple || !IsValidPlayer(id))
+		return PLUGIN_HANDLED;
 
+	new szQuery[512];
 	new cData[2];
-	cData[0] = SQL_GC_INSERT,
+	cData[0] = SQL_GC_INSERT;
 	cData[1] = id;
 
 	new szAuthId[MAX_AUTHID_LENGTH];
@@ -321,9 +358,13 @@ public GC_Insert(id) {
 }
 
 public GC_Set(id, iAmount) {
-	new szQuery[512];
+	if (!g_hSqlTuple || !IsValidPlayer(id))
+		return;
 
-	new cData[1] = SQL_GC_INSERT;
+	new szQuery[512];
+	new cData[2];
+	cData[0] = SQL_GC_INSERT;
+	cData[1] = id;
 
 	new szAuthId[MAX_AUTHID_LENGTH];
 	get_user_authid(id, szAuthId, charsmax(szAuthId));
@@ -333,10 +374,12 @@ public GC_Set(id, iAmount) {
 }
 
 public SQL_Select(id) {
-	new szQuery[512];
+	if (!g_hSqlTuple || !IsValidPlayer(id))
+		return PLUGIN_HANDLED;
 
+	new szQuery[512];
 	new cData[2];
-	cData[0] = SQL_SELECT, 
+	cData[0] = SQL_SELECT;
 	cData[1] = id;
 
 	new szAuthId[MAX_AUTHID_LENGTH];
@@ -349,10 +392,12 @@ public SQL_Select(id) {
 }
 
 public SQL_Insert(id) {
-	new szQuery[512];
+	if (!g_hSqlTuple || !IsValidPlayer(id))
+		return PLUGIN_HANDLED;
 
+	new szQuery[512];
 	new cData[2];
-	cData[0] = SQL_INSERT,
+	cData[0] = SQL_INSERT;
 	cData[1] = id;
 
 	new szName[MAX_NAME_LENGTH * 2];
@@ -371,7 +416,10 @@ public SQL_Insert(id) {
 }
 
 SQL_Name(id, szNewname[]) {
-	new szQuery[512]
+	if (!g_hSqlTuple || !IsValidPlayer(id))
+		return;
+
+	new szQuery[512];
 	new cData[1] = SQL_NAME;
 
 	new szAuthId[MAX_AUTHID_LENGTH];
@@ -385,7 +433,10 @@ SQL_Name(id, szNewname[]) {
 }
 
 SQL_Ip(id, szNewip[]) {
-	new szQuery[512]
+	if (!g_hSqlTuple || !IsValidPlayer(id))
+		return;
+
+	new szQuery[512];
 	new cData[1] = SQL_IP;
 
 	new szAuthId[MAX_AUTHID_LENGTH];
@@ -396,24 +447,24 @@ SQL_Ip(id, szNewip[]) {
 }
 
 public rgSetClientUserInfoName(id, infobuffer[], szNewName[]) {
-	if (!is_user_connected(id))
+	if (!IsValidPlayer(id))
 		return;
 
 	SQL_Name(id, szNewName);
 }
 
 public SQL_Save(id) {
-	if (!is_user_connected(id))
+	if (!g_hSqlTuple || !IsPlayerIndex(id) || !is_user_connected(id))
 		return PLUGIN_HANDLED;
-	
+
 	new szQuery[512];
 	new cData[1] = SQL_SAVE;
 
 	new szAuthId[MAX_AUTHID_LENGTH];
 	get_user_authid(id, szAuthId, charsmax(szAuthId));
-	
+
 	new iSaveOnline = get_user_time(id);
-	
+
 	formatex(szQuery, charsmax(szQuery), SQL_SET_PLAYTIME, g_szTablePlayers, iSaveOnline, szAuthId);
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery, cData, sizeof(cData));
 
@@ -421,15 +472,18 @@ public SQL_Save(id) {
 }
 
 public SQL_SaveConn(id) {
+	if (!g_hSqlTuple || !IsPlayerIndex(id))
+		return PLUGIN_HANDLED;
+
 	new szQuery[512];
 	new cData[1] = SQL_SAVECON;
 
 	new szAuthId[MAX_AUTHID_LENGTH];
 	get_user_authid(id, szAuthId, charsmax(szAuthId));
-	
+
 	new iTime[32];
 	get_time("%S", iTime, charsmax(iTime));
-	
+
 	formatex(szQuery, charsmax(szQuery), SQL_SET_LASTCONNECT, g_szTablePlayers, iTime, szAuthId);
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery, cData, sizeof(cData));
 
@@ -437,30 +491,29 @@ public SQL_SaveConn(id) {
 }
 
 public client_putinserver(id) {
+	if (!IsValidPlayer(id) || is_user_bot(id))
+		return;
+
+	g_iPlayerID[id] = 0;
+	g_iGcCache[id] = 0;
+	g_bGcLoaded[id] = false;
 	SQL_Select(id);
 	GC_Select(id);
 }
 
 public client_disconnected(id) {
+	if (!IsPlayerIndex(id))
+		return;
+
 	SQL_Save(id);
 	SQL_SaveConn(id);
+	g_iPlayerID[id] = 0;
+	g_iGcCache[id] = 0;
+	g_bGcLoaded[id] = false;
 }
 
 public plugin_end() {
-	SQL_FreeHandle(g_hSqlTuple);
-}
-
-stock mysql_escape_string(dest[], len, src[])
-{
-    copy(dest, len, src);
-
-    replace_all(dest, len, "\", "\\");
-    replace_all(dest, len, "\0", "\\0");
-    replace_all(dest, len, "\r", "\\r");
-    replace_all(dest, len, "\n", "\\n");
-    replace_all(dest, len, "\x1a", "\Z");
-    replace_all(dest, len, "'", "\'");
-    replace_all(dest, len, "^"", "\^"");
-
-    return PLUGIN_HANDLED;
+	if (g_hSqlTuple)
+		SQL_FreeHandle(g_hSqlTuple);
+	g_hSqlTuple = Empty_Handle;
 }

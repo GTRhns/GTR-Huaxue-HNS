@@ -1,6 +1,6 @@
-GTR HNS 插件部署包 —— 10-03 部署版 v1.19
+GTR HNS 插件部署包 —— 10-04 部署版 v1.19
 =========================================
-生成日期: 2026-10-03
+生成日期: 2026-10-04
 内容: addons/amxmodx 部署结构(解压后覆盖服务器对应目录即可)
 
 一、部署步骤
@@ -13,18 +13,34 @@ GTR HNS 插件部署包 —— 10-03 部署版 v1.19
 4. 重启服务器, 或控制台 amxx reload 相关插件 + 换图生效
 
 二、本包内容
-- plugins/        10-03 编译产物(HnsAISignup v1.19 等 28 个 amxx) + plugins.ini 加载顺序
-- configs/        hns_language.txt(菜单标题统一为 Hide'And'Seek)、mixsystem/(hns-maps.ini、
-                  skins.cfg、mode/ 各模式 cfg、mapcfg)、openhns-prefixes.ini、HNSgtr/txt/players.txt
+- plugins/        10-04 编译产物(HnsAISignup v1.19 等 39 个 amxx) + plugins.ini 加载顺序
+- configs/        hns_language.txt(四语, 菜单标题统一为 Hide'And'Seek)、mixsystem/(hns-maps.ini、
+                  skins.cfg、hns_ads.cfg、hnsmatch-sql.cfg、knife_skins.cfg、matchsystem.cfg、
+                  nade_skins.cfg、player_models.ini、mode/ 各模式 cfg、mapcfg)、openhns-prefixes.ini、
+                  plugins/custom_player_models.cfg、uq_jumpstats/config.cfg、KnifeModels.ini
 - data/lang/      比赛文本语言文件(match_additons.txt、mixsystem.txt)
 - lang/           HnsSkin.txt(皮肤语言)
 
-三、v1.19 相比 v1.18 的改动(升级必读)
+三、10-04 相比 10-03 部署版的改动(升级必读)
+1. 新增插件(HnsAds 广告轮播 / HnsConnectInfo 进服提示 / HnsModeVote 模式投票 /
+   HnsSatchelTeleport 烟雾传送已在 plugins.ini 启用, crx_knife_models 刀皮引擎启用),
+   以及可选插件 speclist / flash-notifier / grenade_trail / uq_jumpstats / yj_prefog / cameraview。
+2. 皮肤系统大改版: HnsMatchSkin v1.0 商店版, 主菜单改版为皮肤商店, 新增子商店
+   (人物/刀模/投掷物)、每日签到、在线时长奖励、GBIC 金币购买, 语言键 SKIN_* 已同步四语。
+3. HnsLanguage v1.3.0 nvault 版: 每个玩家语言按 SteamID/IP 单独记忆, 换图后自动恢复。
+4. HnsMatchSystem v2.0.5 1004 版: AI 开赛前再套一次报名选的赛制, 防止换图 delayed_mode
+   把回合制盖回 MR; 移除 afk 数据数组清零逻辑。
+5. HnsAISignup v1.19 1004 版: PDS 赛制同步加固、换图 pending 不清报名、空名单保存保护、
+   日志去隐私。
+6. hns_language.txt 全量同步新语言键(CONNECT_/HUD_/RTS_/SKIN_ 商店系列)。
+7. hnsmenu.inc / hns_matchsystem.inc 等 include 同步为新版。
+
+四、v1.19 菜单更名(10-03 已发布)
 1. 主菜单更名: 菜单标题由「GTR 游戏菜单」统一改为 Hide'And'Seek(捉迷藏比赛系统英文名),
    hns_language.txt 四个语言区(简中/繁中/English/Русский)同步修改; hnsmenu.inc 兜底文本同步更新。
 2. 其余功能与 v1.18 一致(见下方 v1.18 改动)。
 
-四、v1.18 相比 v1.17 的改动(升级必读)
+五、v1.18 相比 v1.17 的改动(历史)
 1. wintime 胜负判定修复: HnsAISignup 结算改为按"逻辑比赛队伍"判胜负
    (依赖 HnsMatchSystem 新增 native hns_get_player_match_team), 换边/换图后积分不再加错人。
 2. 换图后赛制自动恢复: 换图重载插件后从 PDS 恢复上一把赛制(ai_match_rules),
@@ -33,23 +49,23 @@ GTR HNS 插件部署包 —— 10-03 部署版 v1.19
    普通玩家菜单干净; cmdReshuffle 命令层同样校验权限。
 4. 菜单点完不关: 报名主菜单可连续操作(menu_display 末参 0)。
 5. 赛制状态单一来源: AI 菜单选完立即同步 MatchSystem, 杜绝两套状态分叉。
-6. 升级说明: 本次 4 个核心插件(HnsAISignup / HnsMatchSystem / HnsMatchSkin /
-   HnsMatchWatcher)均已重新编译, 直接覆盖 plugins/ 下对应 .amxx 即可, 配置文件无变化。
 
-五、注意事项
-1. 官方基础插件(admin.amxx / adminhelp.amxx / admincmd.amxx 等 20 个)不属于本包,
+六、注意事项
+1. 官方基础插件(admin.amxx / adminhelp.amxx / admincmd.amxx 等 18 个)不属于本包,
    由服务器已有 AMXX 1.10 安装提供; plugins.ini 中对应行勿删。若服务器缺 admin.amxx
    等文件, 插件加载会报错但不影响其余插件, 请自行补齐。
 2. HnsAISignupBots.amxx 是 AI 报名测试人机, 正式服请在 plugins.ini 注释该行。
-3. HnsSatchelTeleport.amxx / SemiclipSystem.amxx / rockthevote_custom.amxx 已随包放入,
-   但 plugins.ini 未启用(当前分别用 hns_semiclip.amxx 与 rockthevote.amxx), 无需处理。
+3. uq_jumpstats / yj_prefog / cameraview 为可选插件, 不需要可直接注释 plugins.ini 对应行。
 4. 菜单标题: 语言文件优先, 换图/重载 HnsLanguage 后游戏内显示 Hide'And'Seek。
 5. 加载顺序(plugins.ini 已排好): HnsLanguage -> HnsPersistentDataStorage -> HnsSponsorLocal
    -> HnsMatchSystem -> ... -> HnsAISignup(在 MatchSystem 之后) -> CustomPlayerModelsApi
-   -> HnsMatchSkin -> rockthevote
+   -> crx_knife_models -> HnsMatchSkin -> HnsAds -> HnsSatchelTeleport -> HnsModeVote
+   -> rockthevote
 6. 比赛地图池: configs/mixsystem/hns-maps.ini 的 [skill] 段由 HnsAISignup 读取。
+7. 皮肤商店: 金币单位 GBIC, 首次部署需执行 05_皮肤系统_v1.0完整版/sql/hns_skins.sql 建表。
 
-六、验证
+七、验证
 - 换图后控制台: amxx plugins 应列出全部 HNS 插件且无 failed
 - 玩家 /menu 主菜单标题应为 Hide'And'Seek
-- 皮肤: /skin 与 /cpm 管理员菜单可用(需 MySQL 正常)
+- 皮肤: /skin 打开皮肤商店, /cpm 管理员菜单可用(需 MySQL 正常)
+- 广告: 聊天栏按 hns_ads.cfg 轮播

@@ -57,45 +57,135 @@ stock chat_print_send(const id, const msgFormated[]) {
 		client_print_color(id, print_team_blue, "[^3%s^1] %s", g_iSettings[PREFIX], msgFormated);
 }
 
-stock set_semiclip(opt, bool:enemy = false) {
-	switch(opt) {
-		case SEMICLIP_ON: {
-			server_cmd("semiclip_option semiclip 1");
-			server_cmd("semiclip_option team %d", enemy ? 3 : 0);
+stock chat_lang_print(const id, const szKey[], const szFallback[], any:...) {
+	new szFmt[191], szOut[191];
+	if (id == 0) {
+		new iPlayers[MAX_PLAYERS], iNum;
+		get_players(iPlayers, iNum, "ch");
+		for (new i; i < iNum; i++) {
+			hns_lang_get(iPlayers[i], szKey, szFmt, charsmax(szFmt), szFallback);
+			vformat(szOut, charsmax(szOut), szFmt, 4);
+			chat_print_send(iPlayers[i], szOut);
 		}
-		case SEMICLIP_OFF: {
-			server_cmd("semiclip_option semiclip 0");
-			server_cmd("semiclip_option team 0");
-		}
+		return;
 	}
-	server_cmd("semiclip_option time 0");
+
+	hns_lang_get(id, szKey, szFmt, charsmax(szFmt), szFallback);
+	vformat(szOut, charsmax(szOut), szFmt, 4);
+	chat_print_send(id, szOut);
 }
 
-stock apply_hns_semiclip() {
-	if (g_iSemiclipForceMode == 0) {
-		set_semiclip(SEMICLIP_OFF);
-	} else {
-		set_semiclip((g_iSemiclipForceMode == 1 || !g_iSettings[HNSBOOST]) ? SEMICLIP_ON : SEMICLIP_OFF);
+stock get_match_type_name(id, szOut[], iLen) {
+	switch (g_eMatchType) {
+		case MATCH_TYPE_SPONSOR: hns_lang_get(id, "MATCH_TYPE_NAME_SPONSOR", szOut, iLen, "赞助");
+		case MATCH_TYPE_CASUAL: hns_lang_get(id, "MATCH_TYPE_NAME_CASUAL", szOut, iLen, "娱乐");
+		case MATCH_TYPE_RANKED: hns_lang_get(id, "MATCH_TYPE_NAME_RANKED", szOut, iLen, "个人");
+		default: hns_lang_get(id, "MATCH_TYPE_NAME_UNKNOWN", szOut, iLen, "未知");
 	}
 }
 
-stock bool:hns_semiclip_menu_set(iMode) {
-	new iPlugin = find_plugin_byfile("hns_semiclip.amxx");
+stock get_match_rule_name(id, szOut[], iLen) {
+	switch (g_iCurrentRules) {
+		case RULES_MR: hns_lang_get(id, "STATUS_RULE_MR", szOut, iLen, "MR");
+		case RULES_TIMER: hns_lang_get(id, "STATUS_RULE_TIMER", szOut, iLen, "Wintime");
+		case RULES_DUEL: hns_lang_get(id, "STATUS_RULE_DUEL", szOut, iLen, "Duel");
+		case RULES_ROUNDS: hns_lang_get(id, "STATUS_RULE_ROUNDS", szOut, iLen, "回合制");
+		case RULES_POINTSCAP: hns_lang_get(id, "STATUS_RULE_POINTSCAP", szOut, iLen, "积分上限");
+		case RULES_VAMP: hns_lang_get(id, "STATUS_RULE_VAMP", szOut, iLen, "吸血");
+		default: hns_lang_get(id, "STATUS_RULE_ROUNDS", szOut, iLen, "回合制");
+	}
+}
+
+stock print_match_start_chat() {
+	new iTT, iCT, iOnline;
+	get_match_side_counts(iTT, iCT);
+
+	new iPlayers[MAX_PLAYERS], iNum;
+	get_players(iPlayers, iNum, "ch");
+	iOnline = iNum;
+
+	for (new i; i < iNum; i++) {
+		new id = iPlayers[i];
+		new szType[16], szRules[16], szFmt[191], szOut[191];
+		get_match_type_name(id, szType, charsmax(szType));
+		get_match_rule_name(id, szRules, charsmax(szRules));
+
+		hns_lang_get(id, "MATCH_CHAT_FORMAT", szFmt, charsmax(szFmt), "本场对阵: ^3%dv%d^1");
+		formatex(szOut, charsmax(szOut), szFmt, iTT, iCT);
+		chat_print_send(id, szOut);
+
+		hns_lang_get(id, "MATCH_CHAT_INFO", szFmt, charsmax(szFmt), "类型: ^4%s局^1  |  规则: ^3%s^1  |  地图: ^4%s");
+		formatex(szOut, charsmax(szOut), szFmt, szType, szRules, g_szMapName);
+		chat_print_send(id, szOut);
+
+		hns_lang_get(id, "MATCH_CHAT_PLAYERS", szFmt, charsmax(szFmt), "人数: T ^3%d^1  |  CT ^3%d^1  |  在线 ^4%d");
+		formatex(szOut, charsmax(szOut), szFmt, iTT, iCT, iOnline);
+		chat_print_send(id, szOut);
+
+		hns_lang_get(id, "MATCH_CHAT_READY", szFmt, charsmax(szFmt), "比赛即将开始, ^3祝你好运^1!");
+		chat_print_send(id, szFmt);
+	}
+}
+
+stock print_match_format_chat(id = 0) {
+	new iTT, iCT;
+	get_match_side_counts(iTT, iCT);
+	chat_lang_print(id, "MATCH_CHAT_ANNOUNCE", "当前对阵: ^3%dv%d^1  |  T ^3%d^1  |  CT ^3%d^1", iTT, iCT, iTT, iCT);
+}
+
+stock hns_team_semiclip_plugin() {
+	new iPlugin = find_plugin_byfile("team-semiclip.amxx");
+	if (iPlugin == -1)
+		iPlugin = find_plugin_byfile("hns_semiclip.amxx");
+	return iPlugin;
+}
+
+stock bool:hns_team_semiclip_call(const szFunc[], iArg = 0, bool:bPush = true) {
+	new iPlugin = hns_team_semiclip_plugin();
 	if (iPlugin == -1)
 		return false;
 
-	new iFunc = get_func_id("HnsSemiclipMenuSet", iPlugin);
+	new iFunc = get_func_id(szFunc, iPlugin);
 	if (iFunc == -1)
 		return false;
 
 	callfunc_begin_i(iFunc, iPlugin);
-	callfunc_push_int(iMode);
+	if (bPush)
+		callfunc_push_int(iArg);
 	callfunc_end();
 	return true;
 }
 
+stock set_semiclip(opt, bool:enemy = false) {
+	#pragma unused enemy
+	// 只用 team-semiclip，永远只穿队友，不走 Rulzy 全员穿透。
+	if (!hns_team_semiclip_call("HnsSemiclipApply", opt == SEMICLIP_ON ? 1 : 0)) {
+		set_cvar_num("semiclip_enabled", opt == SEMICLIP_ON ? 1 : 0);
+		set_cvar_num("semiclip_teamclip", 1);
+	}
+}
+
+stock apply_hns_semiclip() {
+	new iMenuMode = 0;
+	if (g_iSemiclipForceMode == 1)
+		iMenuMode = 1;
+	else if (g_iSemiclipForceMode == 0)
+		iMenuMode = 2;
+
+	if (!hns_semiclip_menu_set(iMenuMode)) {
+		if (g_iSemiclipForceMode == 0)
+			set_semiclip(SEMICLIP_OFF);
+		else
+			set_semiclip((g_iSemiclipForceMode == 1 || !g_iSettings[HNSBOOST]) ? SEMICLIP_ON : SEMICLIP_OFF);
+	}
+}
+
+stock bool:hns_semiclip_menu_set(iMode) {
+	return hns_team_semiclip_call("HnsSemiclipMenuSet", iMode);
+}
+
 stock hns_semiclip_menu_get_mode() {
-	new iPlugin = find_plugin_byfile("hns_semiclip.amxx");
+	new iPlugin = hns_team_semiclip_plugin();
 	if (iPlugin == -1)
 		return 0;
 
@@ -108,7 +198,7 @@ stock hns_semiclip_menu_get_mode() {
 }
 
 stock bool:hns_semiclip_menu_get_enabled() {
-	new iPlugin = find_plugin_byfile("hns_semiclip.amxx");
+	new iPlugin = hns_team_semiclip_plugin();
 	if (iPlugin == -1)
 		return false;
 
@@ -158,21 +248,29 @@ stock hns_lang_get(id, const szKey[], szOut[], iLen, const szFallback[]) {
 
 // 按每个玩家 /lang 取词, 不要用 setTaskHud(0) 否则全员同一句英文
 stock showLangDhud(id, const szKey[], const szFallback[], Red, Green, Blue, Float:HoldTime) {
-	if (!id) {
-		new iPlayers[MAX_PLAYERS], iNum;
+	showLangDhudFmt(id, 0.0, Red, Green, Blue, HoldTime, szKey, szFallback);
+}
+
+// 全员广播也按每人自己的 /lang 格式化, 可带延迟和参数
+stock showLangDhudFmt(id, Float:Delay, Red, Green, Blue, Float:HoldTime, const szKey[], const szFallback[], any:...) {
+	new iPlayers[MAX_PLAYERS], iNum;
+	if (id) {
+		iPlayers[0] = id;
+		iNum = 1;
+	} else {
 		get_players(iPlayers, iNum, "ch");
-		for (new i; i < iNum; i++)
-			showLangDhud(iPlayers[i], szKey, szFallback, Red, Green, Blue, HoldTime);
-		return;
 	}
 
-	if (!is_user_connected(id))
-		return;
+	for (new i; i < iNum; i++) {
+		new iPlayer = iPlayers[i];
+		if (!is_user_connected(iPlayer))
+			continue;
 
-	new szText[128];
-	hns_lang_get(id, szKey, szText, charsmax(szText), szFallback);
-	set_dhudmessage(Red, Green, Blue, -1.0, 0.12, 0, 0.0, HoldTime, 0.1, 0.1);
-	show_dhudmessage(id, szText);
+		new szFmt[128], szText[128];
+		hns_lang_get(iPlayer, szKey, szFmt, charsmax(szFmt), szFallback);
+		vformat(szText, charsmax(szText), szFmt, 9);
+		setTaskHud(iPlayer, Delay, 1, Red, Green, Blue, HoldTime, "%s", szText);
+	}
 }
 
 stock chat_print_lang(const id, const szKey[], const szFallback[], any:...) {
@@ -204,7 +302,7 @@ stock setTaskHud(id, Float:Time, Dhud, Red, Green, Blue, Float:HoldTime, const T
 	szArgs[5] = Dhud;
 	szArgs[6] = _:HoldTime;
 	if (Time > 0.0)
-		set_task(Time, "taskHudMessage", 89000, szArgs, 7);
+		set_task(Time, "taskHudMessage", 89000 + id, szArgs, 7);
 	else
 		taskHudMessage(szArgs);
 }

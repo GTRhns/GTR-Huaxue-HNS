@@ -4,90 +4,444 @@
 
 #define _hnsmenu_included
 
+// 可选原生 (HnsSatchelTeleport / frostnades 提供, 缺失时由 api filter 过滤)
+native hns_satchel_get_force();
+native hns_satchel_set_force(iMode);
+native hns_satchel_get_state();
+native hns_frost_get_force();
+native hns_frost_set_force(iMode);
+
+// 提供方插件 (用 LibraryExists 保护可选原生调用, 避免 runtime error 14)
+stock bool:hnsSatchelAvailable() {
+	return bool:LibraryExists("hns_satchel", LibType_Library);
+}
+
+stock bool:hnsFrostAvailable() {
+	return bool:LibraryExists("hns_frost", LibType_Library);
+}
+
 new Float:g_flTimeToVoteMode;
+
+new bool:g_bMinModels[MAX_PLAYERS + 1];
+new bool:g_bMinModelsKnown[MAX_PLAYERS + 1];
+new g_iMinModelsAction[MAX_PLAYERS + 1];
+new g_iPersonalPage[MAX_PLAYERS + 1];
+new g_iSettingsPage[MAX_PLAYERS + 1];
+
+stock gtrMenuInit() {
+	register_menucmd(register_menuid("GTRMainMenu"), 1023, "gtrMainMenuHandler");
+	register_menucmd(register_menuid("GTRStatusMenu"), 1023, "gtrInfoMenuHandler");
+	register_menucmd(register_menuid("GTRGuideMenu"), 1023, "gtrInfoMenuHandler");
+	register_menucmd(register_menuid("GTRMatchMenu"), 1023, "gtrMatchMenuHandler");
+	register_menucmd(register_menuid("GTRPersonalMenu"), 1023, "gtrPersonalMenuHandler");
+	register_menucmd(register_menuid("GTRMatchAdmin"), 1023, "mainMatchMenuHandler");
+	register_menucmd(register_menuid("GTRCustomMenu"), 1023, "customMenuHandler");
+	register_menucmd(register_menuid("GTRSettingsMenu"), 1023, "settingsMatchMenuHandler");
+}
+
+stock gtrShowFixedMenu(id, const szId[], const szMenu[], iKeys) {
+	show_menu(id, iKeys | MENU_KEY_0, szMenu, -1, szId);
+}
+
+stock gtrMenuText(id, const szKey[], szOut[], iLen, const szFallback[]) {
+	hns_lang_get(id, szKey, szOut, iLen, szFallback);
+}
+
+stock gtrMenuOnOff(id, const szKeyOn[], const szKeyOff[], const szOn[], const szOff[], bool:bOn, szOut[], iLen) {
+	gtrMenuText(id, bOn ? szKeyOn : szKeyOff, szOut, iLen, bOn ? szOn : szOff);
+}
+
+public gtrMainMenu(id) {
+	if (!is_user_connected(id))
+		return PLUGIN_HANDLED;
+
+	new szMenu[512], szText[128], iLen;
+	gtrMenuText(id, "MENU_MAIN_TITLE", szText, charsmax(szText), "GTR游戏菜单");
+	iLen = formatex(szMenu, charsmax(szMenu), "\r%s^n ^n", szText);
+	gtrMenuText(id, "MENU_MAIN_MATCH", szText, charsmax(szText), "比赛菜单");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r1. \w%s^n", szText);
+	gtrMenuText(id, "MENU_MAIN_SKIN", szText, charsmax(szText), "皮肤系统");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r2. \w%s^n ^n", szText);
+	gtrMenuText(id, "MENU_MAIN_SPEC", szText, charsmax(szText), "观战休息 / Spec");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r3. \w%s^n", szText);
+	gtrMenuText(id, "MENU_MAIN_PERSONAL", szText, charsmax(szText), "个人设置");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r4. \w%s^n", szText);
+	gtrMenuText(id, "MENU_MAIN_STATUS", szText, charsmax(szText), "比赛状态");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r5. \w%s^n ^n", szText);
+	gtrMenuText(id, "MENU_MAIN_GUIDE", szText, charsmax(szText), "玩家指南");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r6. \w%s^n", szText);
+	gtrMenuText(id, "MENU_MAIN_ADMIN", szText, charsmax(szText), "管理员设置");
+	if (isUserAdmin(id))
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r7. \r%s^n", szText);
+	else
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r7. \d%s^n", szText);
+	gtrMenuText(id, "MENU_EXIT", szText, charsmax(szText), "退出");
+	formatex(szMenu[iLen], charsmax(szMenu) - iLen, "^n\r0. \w%s", szText);
+
+	gtrShowFixedMenu(id, "GTRMainMenu", szMenu, MENU_KEY_1|MENU_KEY_2|MENU_KEY_3|MENU_KEY_4|MENU_KEY_5|MENU_KEY_6|MENU_KEY_7);
+	return PLUGIN_HANDLED;
+}
+
+public gtrMainMenuHandler(id, key) {
+	if (!is_user_connected(id) || key == 9)
+		return PLUGIN_HANDLED;
+
+	switch (key) {
+		case 0: gtrMatchMenu(id);
+		case 1: client_cmd(id, "say /skin");
+		case 2: client_cmd(id, "say /spec");
+		case 3: gtrPersonalMenu(id);
+		case 4: gtrShowStatusMenu(id);
+		case 5: gtrShowGuideMenu(id);
+		case 6: if (isUserAdmin(id)) client_cmd(id, "adminmenu");
+	}
+	return PLUGIN_HANDLED;
+}
+
+stock gtrShowStatusMenu(id) {
+	new szMenu[512], szText[128], szMode[48], szStage[48], szRule[48], szPause[32];
+	new iPlayers[MAX_PLAYERS], iNum;
+	get_players(iPlayers, iNum, "ch");
+
+	switch (g_iCurrentMode) {
+		case MODE_TRAINING: gtrMenuText(id, "STATUS_MODE_TRAINING", szMode, charsmax(szMode), "训练");
+		case MODE_LOBBY: gtrMenuText(id, "STATUS_MODE_LOBBY", szMode, charsmax(szMode), "大厅");
+		case MODE_KNIFE: gtrMenuText(id, "STATUS_MODE_KNIFE", szMode, charsmax(szMode), "刀局");
+		case MODE_PUB: gtrMenuText(id, "STATUS_MODE_PUBLIC", szMode, charsmax(szMode), "娱乐");
+		case MODE_DM: gtrMenuText(id, "STATUS_MODE_DM", szMode, charsmax(szMode), "死亡竞赛");
+		case MODE_ZM: gtrMenuText(id, "STATUS_MODE_ZM", szMode, charsmax(szMode), "僵尸");
+		case MODE_MIX: gtrMenuText(id, "STATUS_MODE_MATCH", szMode, charsmax(szMode), "比赛");
+		default: copy(szMode, charsmax(szMode), "-");
+	}
+
+	switch (g_iMatchStatus) {
+		case MATCH_NONE: gtrMenuText(id, "STATUS_STAGE_IDLE", szStage, charsmax(szStage), "未开赛");
+		case MATCH_CAPTAINPICK, MATCH_CAPTAINKNIFE, MATCH_TEAMPICK: gtrMenuText(id, "STATUS_STAGE_PICK", szStage, charsmax(szStage), "选人中");
+		case MATCH_TEAMKNIFE: gtrMenuText(id, "STATUS_STAGE_KNIFE", szStage, charsmax(szStage), "刀局中");
+		case MATCH_MAPPICK: gtrMenuText(id, "STATUS_STAGE_MAP", szStage, charsmax(szStage), "选图中");
+		case MATCH_WAITCONNECT: gtrMenuText(id, "STATUS_STAGE_WAIT", szStage, charsmax(szStage), "等待玩家");
+		case MATCH_STARTED: gtrMenuText(id, "STATUS_STAGE_STARTED", szStage, charsmax(szStage), "比赛进行中");
+		default: copy(szStage, charsmax(szStage), "-");
+	}
+
+	switch (g_iCurrentRules) {
+		case RULES_MR: gtrMenuText(id, "STATUS_RULE_MR", szRule, charsmax(szRule), "MR");
+		case RULES_TIMER: gtrMenuText(id, "STATUS_RULE_TIMER", szRule, charsmax(szRule), "Wintime");
+		case RULES_DUEL: gtrMenuText(id, "STATUS_RULE_DUEL", szRule, charsmax(szRule), "Duel");
+		case RULES_ROUNDS: gtrMenuText(id, "STATUS_RULE_ROUNDS", szRule, charsmax(szRule), "回合制");
+		case RULES_POINTSCAP: gtrMenuText(id, "STATUS_RULE_POINTSCAP", szRule, charsmax(szRule), "积分上限");
+		case RULES_VAMP: gtrMenuText(id, "STATUS_RULE_VAMP", szRule, charsmax(szRule), "吸血");
+		default: copy(szRule, charsmax(szRule), "-");
+	}
+	gtrMenuText(id, g_eMatchState == STATE_PAUSED ? "STATUS_PAUSED" : "STATUS_ACTIVE", szPause, charsmax(szPause), g_eMatchState == STATE_PAUSED ? "已暂停" : "进行中");
+	gtrMenuText(id, "STATUS_TITLE", szText, charsmax(szText), "当前比赛状态");
+	new iLen = formatex(szMenu, charsmax(szMenu), "\r%s^n ^n", szText);
+	gtrMenuText(id, "STATUS_MODE_LABEL", szText, charsmax(szText), "模式");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%s: \y%s^n", szText, szMode);
+	gtrMenuText(id, "STATUS_STAGE_LABEL", szText, charsmax(szText), "阶段");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%s: \y%s^n", szText, szStage);
+	gtrMenuText(id, "STATUS_RULE_LABEL", szText, charsmax(szText), "规则");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%s: \y%s^n", szText, szRule);
+	new iTT, iCT, szFormat[16];
+	get_match_side_counts(iTT, iCT);
+	get_match_format_text(szFormat, charsmax(szFormat));
+	gtrMenuText(id, "STATUS_FORMAT_LABEL", szText, charsmax(szText), "对阵");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%s: \y%s \d(T %d / CT %d)^n ^n", szText, szFormat, iTT, iCT);
+	gtrMenuText(id, "STATUS_STATE_LABEL", szText, charsmax(szText), "状态");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%s: \y%s^n", szText, szPause);
+	gtrMenuText(id, "STATUS_PLAYERS_LABEL", szText, charsmax(szText), "在线玩家");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%s: \y%d^n ^n", szText, iNum);
+	gtrMenuText(id, "MENU_EXIT", szText, charsmax(szText), "退出");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r0. \w%s", szText);
+	gtrShowFixedMenu(id, "GTRStatusMenu", szMenu, 0);
+}
+
+stock gtrShowGuideMenu(id) {
+	new szMenu[512], szText[128], szCommand[128], iLen;
+	gtrMenuText(id, "GUIDE_TITLE", szText, charsmax(szText), "玩家指南");
+	iLen = formatex(szMenu, charsmax(szMenu), "\r%s^n ^n", szText);
+	gtrMenuText(id, "GUIDE_SIGNUP", szText, charsmax(szText), "报名比赛");
+	gtrMenuText(id, "GUIDE_CMD_SIGNUP", szCommand, charsmax(szCommand), "/signup");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%s: \y%s^n", szText, szCommand);
+	gtrMenuText(id, "GUIDE_QUERY", szText, charsmax(szText), "比赛数据");
+	gtrMenuText(id, "GUIDE_CMD_QUERY", szCommand, charsmax(szCommand), "/hnsquery");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%s: \y%s^n", szText, szCommand);
+	gtrMenuText(id, "GUIDE_SURRENDER", szText, charsmax(szText), "投降认输");
+	gtrMenuText(id, "GUIDE_CMD_SURRENDER", szCommand, charsmax(szCommand), "/surrender");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%s: \y%s^n", szText, szCommand);
+	gtrMenuText(id, "GUIDE_TRAINING", szText, charsmax(szText), "热身训练");
+	gtrMenuText(id, "GUIDE_CMD_TRAINING", szCommand, charsmax(szCommand), "/training");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%s: \y%s^n", szText, szCommand);
+	gtrMenuText(id, "GUIDE_SKIN", szText, charsmax(szText), "皮肤菜单");
+	gtrMenuText(id, "GUIDE_CMD_SKIN", szCommand, charsmax(szCommand), "/skin");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%s: \y%s^n", szText, szCommand);
+	gtrMenuText(id, "GUIDE_CHECKIN", szText, charsmax(szText), "每日签到");
+	gtrMenuText(id, "GUIDE_CMD_CHECKIN", szCommand, charsmax(szCommand), "/sign");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\w%s: \y%s^n ^n", szText, szCommand);
+	gtrMenuText(id, "MENU_EXIT", szText, charsmax(szText), "退出");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r0. \w%s", szText);
+	gtrShowFixedMenu(id, "GTRGuideMenu", szMenu, 0);
+}
+
+public gtrInfoMenuHandler(id, key) {
+	if (is_user_connected(id) && key == 9)
+		gtrMainMenu(id);
+	return PLUGIN_HANDLED;
+}
+
+public gtrMatchMenu(id) {
+	if (!is_user_connected(id))
+		return PLUGIN_HANDLED;
+
+	new szMenu[512], szText[128], iLen;
+	gtrMenuText(id, "MENU_MATCH_TITLE", szText, charsmax(szText), "比赛菜单");
+	iLen = formatex(szMenu, charsmax(szMenu), "\r%s^n ^n", szText);
+	gtrMenuText(id, "MENU_MATCH_SIGNUP", szText, charsmax(szText), "报名比赛");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r1. \w%s^n", szText);
+	gtrMenuText(id, "MENU_MATCH_SURRENDER", szText, charsmax(szText), "投降认输");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r2. \w%s^n ^n", szText);
+	gtrMenuText(id, "MENU_MATCH_TRAINING", szText, charsmax(szText), "热身训练");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r3. \w%s^n", szText);
+	gtrMenuText(id, "MENU_MATCH_QUERY", szText, charsmax(szText), "HNS比赛查询");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r4. \y%s^n", szText);
+	gtrMenuText(id, "MENU_MATCH_CHECK", szText, charsmax(szText), "检测对阵人数");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r5. \y%s^n ^n", szText);
+	gtrMenuText(id, "MENU_MATCH_RULES", szText, charsmax(szText), "比赛规则");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r6. \w%s^n", szText);
+	gtrMenuText(id, "MENU_MATCH_ADMIN", szText, charsmax(szText), "比赛管理");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r7. %s%s^n", isUserWatcher(id) ? "\r" : "\d", szText);
+	gtrMenuText(id, "MENU_EXIT", szText, charsmax(szText), "退出");
+	formatex(szMenu[iLen], charsmax(szMenu) - iLen, "^n\r0. \w%s", szText);
+
+	gtrShowFixedMenu(id, "GTRMatchMenu", szMenu, MENU_KEY_1|MENU_KEY_2|MENU_KEY_3|MENU_KEY_4|MENU_KEY_5|MENU_KEY_6|MENU_KEY_7);
+	return PLUGIN_HANDLED;
+}
+
+public gtrMatchMenuHandler(id, key) {
+	if (!is_user_connected(id) || key == 9)
+		return PLUGIN_HANDLED;
+
+	switch (key) {
+		case 0: client_cmd(id, "say /signup");
+		case 1: client_cmd(id, "say /surrender");
+		case 2: client_cmd(id, "say /training");
+		case 3: client_cmd(id, "say /hnsquery");
+		case 4: print_match_format_chat(0);
+		case 5: {
+			new szFormat[16], szType[16], szRules[16];
+			get_match_format_text(szFormat, charsmax(szFormat));
+			get_match_type_name(id, szType, charsmax(szType));
+			get_match_rule_name(id, szRules, charsmax(szRules));
+			chat_lang_print(id, "MATCH_CHAT_RULES", "当前规则: ^4%s局^1  |  ^3%s^1  |  对阵 ^3%s", szType, szRules, szFormat);
+		}
+		case 6: if (isUserWatcher(id)) mainMatchMenu(id);
+	}
+	return PLUGIN_HANDLED;
+}
+
+public gtrPersonalMenu(id) {
+	if (!is_user_connected(id))
+		return PLUGIN_HANDLED;
+
+	g_iPersonalPage[id] = 0;
+
+	if (!g_bMinModelsKnown[id]) {
+		gtrMinModelsQuery(id, 1);
+		return PLUGIN_HANDLED;
+	}
+
+	ShowPersonalMenu(id);
+	gtrMinModelsQuery(id, 0);
+	return PLUGIN_HANDLED;
+}
+
+ShowPersonalMenu(id) {
+	new szMenu[768], szText[128], iLen, iKeys;
+	gtrMenuText(id, "MENU_PERSONAL_TITLE", szText, charsmax(szText), "个人设置");
+	iLen = formatex(szMenu, charsmax(szMenu), "\r%s \d[%d/2]^n ^n", szText, g_iPersonalPage[id] + 1);
+
+	if (g_iPersonalPage[id] <= 0) {
+		iKeys = MENU_KEY_1|MENU_KEY_2|MENU_KEY_3|MENU_KEY_4|MENU_KEY_5|MENU_KEY_6|MENU_KEY_9;
+		gtrMenuText(id, "MENU_PERSONAL_HUD", szText, charsmax(szText), "HUD设置");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r1. \w%s^n", szText);
+		gtrMenuOnOff(id, "MENU_PERSONAL_MODELS_ON", "MENU_PERSONAL_MODELS_OFF", "模型屏蔽 [ON]", "模型屏蔽 [OFF]", g_bMinModels[id], szText, charsmax(szText));
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r2. %s%s^n ^n", g_bMinModels[id] ? "\y" : "\r", szText);
+		gtrMenuText(id, "MENU_PERSONAL_PTS", szText, charsmax(szText), "PTS查询分数");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r3. \y%s^n", szText);
+		gtrMenuText(id, "MENU_PERSONAL_SPEED", szText, charsmax(szText), "Speed颜色修改");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r4. \w%s^n ^n", szText);
+		gtrMenuText(id, "MENU_PERSONAL_LANGUAGE", szText, charsmax(szText), "语言设置");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r5. \w%s^n", szText);
+		gtrMenuText(id, "MENU_PERSONAL_CHECKIN", szText, charsmax(szText), "每日签到");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r6. \y%s^n ^n", szText);
+		gtrMenuText(id, "MENU_NEXT_PAGE", szText, charsmax(szText), "下一页");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r9. \w%s^n", szText);
+	} else {
+		iKeys = MENU_KEY_1|MENU_KEY_2|MENU_KEY_3|MENU_KEY_4|MENU_KEY_5|MENU_KEY_6|MENU_KEY_8;
+		gtrMenuText(id, "MENU_PERSONAL_ROUNDINFO", szText, charsmax(szText), "回合信息 HUD");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r1. \w%s^n", szText);
+		gtrMenuText(id, "MENU_PERSONAL_SPECLIST", szText, charsmax(szText), "观战列表");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r2. \w%s^n ^n", szText);
+		gtrMenuText(id, "MENU_PERSONAL_SPECHIDE", szText, charsmax(szText), "隐藏观战者");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r3. \w%s^n", szText);
+		gtrMenuText(id, "MENU_PERSONAL_SCORE", szText, charsmax(szText), "查看比分");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r4. \y%s^n ^n", szText);
+		gtrMenuText(id, "MENU_PERSONAL_RANK", szText, charsmax(szText), "查看段位");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r5. \y%s^n", szText);
+		gtrMenuText(id, "MENU_MATCH_QUERY", szText, charsmax(szText), "HNS比赛查询");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r6. \y%s^n ^n", szText);
+		gtrMenuText(id, "MENU_PREV_PAGE", szText, charsmax(szText), "上一页");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r8. \w%s^n", szText);
+	}
+
+	gtrMenuText(id, "MENU_EXIT", szText, charsmax(szText), "退出");
+	formatex(szMenu[iLen], charsmax(szMenu) - iLen, "^n\r0. \w%s", szText);
+	gtrShowFixedMenu(id, "GTRPersonalMenu", szMenu, iKeys);
+}
+
+public gtrPersonalMenuHandler(id, key) {
+	if (!is_user_connected(id) || key == 9)
+		return PLUGIN_HANDLED;
+
+	if (g_iPersonalPage[id] <= 0) {
+		switch (key) {
+			case 0: client_cmd(id, "say /hud");
+			case 1: gtrMinModelsQuery(id, 2);
+			case 2: client_cmd(id, "say /pts");
+			case 3: client_cmd(id, "say /speed");
+			case 4: client_cmd(id, "say /lang");
+			case 5: client_cmd(id, "say /sign");
+			case 8: {
+				g_iPersonalPage[id] = 1;
+				ShowPersonalMenu(id);
+			}
+		}
+		return PLUGIN_HANDLED;
+	}
+
+	switch (key) {
+		case 0: client_cmd(id, "say /ri");
+		case 1: client_cmd(id, "say /showspec");
+		case 2: client_cmd(id, "say /spechide");
+		case 3: client_cmd(id, "say /score");
+		case 4: client_cmd(id, "say /rank");
+		case 5: client_cmd(id, "say /hnsquery");
+		case 7: {
+			g_iPersonalPage[id] = 0;
+			ShowPersonalMenu(id);
+		}
+	}
+	return PLUGIN_HANDLED;
+}
+
+stock gtrMinModelsReset(id) {
+	g_bMinModels[id] = false;
+	g_bMinModelsKnown[id] = false;
+	g_iMinModelsAction[id] = 0;
+}
+
+stock gtrMinModelsQuery(id, iAction) {
+	if (!is_user_connected(id))
+		return;
+
+	g_iMinModelsAction[id] = iAction;
+	query_client_cvar(id, "cl_minmodels", "MinModelsCvarHandler");
+}
+
+public MinModelsCvarHandler(id, const cvar[], const value[]) {
+	if (!is_user_connected(id))
+		return;
+
+	new bool:bOn = (str_to_num(value) != 0);
+	g_bMinModels[id] = bOn;
+	g_bMinModelsKnown[id] = true;
+
+	new iAction = g_iMinModelsAction[id];
+	g_iMinModelsAction[id] = 0;
+
+	if (iAction == 2) {
+		bOn = !bOn;
+		g_bMinModels[id] = bOn;
+		client_cmd(id, "cl_minmodels %d", bOn ? 1 : 0);
+		if (bOn)
+			client_print_color(id, print_team_red, "^4[HNS]^1 当前模型屏蔽设置: ^1开");
+		else
+			client_print_color(id, print_team_red, "^4[HNS]^1 当前模型屏蔽设置: ^3关");
+		ShowPersonalMenu(id);
+	} else if (iAction == 1) {
+		ShowPersonalMenu(id);
+	}
+}
+
+stock bool:matchMenu_isActive() {
+	if (g_iCurrentMode == MODE_MIX || g_iCurrentMode == MODE_KNIFE)
+		return true;
+	if (g_iCurrentMode == MODE_PUB || g_iCurrentMode == MODE_DM || g_iCurrentMode == MODE_ZM)
+		return true;
+	if (g_iMatchStatus == MATCH_CAPTAINPICK || g_iMatchStatus == MATCH_CAPTAINKNIFE || g_iMatchStatus == MATCH_TEAMPICK)
+		return true;
+	return false;
+}
+
+stock bool:matchMenu_canCustom() {
+	return (g_iCurrentMode == MODE_TRAINING || g_iCurrentMode == MODE_LOBBY
+		|| g_iCurrentMode == MODE_PUB || g_iCurrentMode == MODE_DM || g_iCurrentMode == MODE_ZM);
+}
+
+stock bool:matchMenu_canPause() {
+	return (g_iCurrentMode == MODE_MIX || g_iCurrentMode == MODE_KNIFE);
+}
+
+public matchMenuDisabled(id, menu, item) {
+	return ITEM_DISABLED;
+}
 
 public mainMatchMenu(id) {
 	if (!is_user_connected(id) || !isUserWatcher(id))
 		return PLUGIN_HANDLED;
 
-	static szMsg[128];
-
-	formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MIX_TITLE");
-	new hMenu = menu_create(szMsg, "mainMatchMenuHandler");
-
-	if (hns_is_knife_map()) {
-		if (g_iCurrentMode == MODE_TRAINING && g_iMatchStatus == MATCH_NONE)
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_CAP");
-		else if (g_iCurrentMode == MODE_KNIFE && g_iMatchStatus == MATCH_TEAMKNIFE && g_eMatchState == STATE_PAUSED)
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_UNPAUSEKF");
-		else if (g_iMatchStatus == MATCH_CAPTAINPICK || g_iMatchStatus == MATCH_CAPTAINKNIFE || g_iMatchStatus == MATCH_TEAMPICK)
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_STOPCAP");
-		else
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_NOTCAP");
+	new szMenu[512], szText[128], iLen, iKeys;
+	iKeys = MENU_KEY_1|MENU_KEY_3|MENU_KEY_5|MENU_KEY_6|MENU_KEY_7|MENU_KEY_8;
+	gtrMenuText(id, "MENU_ADMIN_MATCH_TITLE", szText, charsmax(szText), "比赛管理");
+	iLen = formatex(szMenu, charsmax(szMenu), "\r%s^n ^n", szText);
+	gtrMenuText(id, matchMenu_isActive() ? "MENU_ADMIN_MATCH_STOP" : "MENU_ADMIN_MATCH_START", szText, charsmax(szText), matchMenu_isActive() ? "取消比赛" : "开启比赛");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r1. \r%s^n", szText);
+	gtrMenuText(id, "MENU_ADMIN_MATCH_CUSTOM", szText, charsmax(szText), "娱乐模式");
+	if (matchMenu_canCustom()) {
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r2. \w%s^n ^n", szText);
+		iKeys |= MENU_KEY_2;
 	} else {
-		if (g_iCurrentMode == MODE_PUB || g_iCurrentMode == MODE_DM || g_iCurrentMode == MODE_ZM)
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_STOPCUSTOM");
-		else if ((g_iCurrentMode == MODE_TRAINING || g_iCurrentMode == MODE_LOBBY) && g_iMatchStatus <= MATCH_WAITCONNECT)
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_MIX");
-		else {
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_STOPMIX");
-		}
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r2. \d%s^n ^n", szText);
 	}
-
-	menu_additem(hMenu, szMsg, "1");
-
-
-	if (hns_is_knife_map()) {
-		if (g_iMatchStatus == MATCH_CAPTAINPICK || g_iMatchStatus == MATCH_CAPTAINKNIFE || g_iMatchStatus == MATCH_TEAMPICK)
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_NOTSTARTKF");
-		else if (g_iCurrentMode == MODE_KNIFE)
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_STOPKF");
-		else
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_STARTKF");
+	gtrMenuText(id, "MENU_ADMIN_MATCH_SETTINGS", szText, charsmax(szText), "比赛设置");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r3. \w%s^n", szText);
+	gtrMenuText(id, "MENU_ADMIN_MATCH_PAUSE", szText, charsmax(szText), "暂停比赛");
+	if (!matchMenu_canPause()) {
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r4. \d%s \r[NO]^n ^n", szText);
+	} else if (g_eMatchState == STATE_PAUSED) {
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r4. \r%s \r[OFF]^n ^n", szText);
+		iKeys |= MENU_KEY_4;
 	} else {
-		if (g_iCurrentMode == MODE_TRAINING || g_iCurrentMode == MODE_LOBBY)
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_CUSTOM");
-		else if (g_iCurrentMode == MODE_PUB || g_iCurrentMode == MODE_DM || g_iCurrentMode == MODE_ZM)
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_BLEND");
-		else {
-			if (g_eMatchState != STATE_PAUSED)
-				formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_PAUSE");
-			else
-				formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_UNPAUSE");
-		}
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r4. \y%s \r[NO]^n ^n", szText);
+		iKeys |= MENU_KEY_4;
 	}
-	
-	menu_additem(hMenu, szMsg, "2");
-
-	formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_SETTINGS");
-	menu_additem(hMenu, szMsg, "3");
-
-	formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_RESTART");
-	menu_additem(hMenu, szMsg, "4");
-
-	formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_SWAP");
-	menu_additem(hMenu, szMsg, "5");
-
-	formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_WTRMENU");
-	menu_additem(hMenu, szMsg, "6");
-
-	if (g_eMatchType == MATCH_TYPE_SPONSOR) {
-		formatex(szMsg, charsmax(szMsg), "GBIC金币数量: \y%d", g_iSponsorGC);
-		menu_additem(hMenu, szMsg, "7", _, menu_makecallback("icgbItemCallback"));
+	gtrMenuText(id, "MENU_ADMIN_MATCH_RESTART", szText, charsmax(szText), "重启回合");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r5. \w%s^n", szText);
+	gtrMenuText(id, "MENU_ADMIN_MATCH_SWAP", szText, charsmax(szText), "互换阵营");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r6. \w%s^n ^n", szText);
+	gtrMenuText(id, "MENU_ADMIN_MATCH_BANS", szText, charsmax(szText), "封禁菜单 [比赛]");
+	if (isUserFullWatcher(id)) {
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r7. \w%s^n", szText);
+		iKeys |= MENU_KEY_7;
 	} else {
-		formatex(szMsg, charsmax(szMsg), "\dGBIC金币数量");
-		menu_additem(hMenu, szMsg, "7", _, menu_makecallback("icgbItemCallback"));
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r7. \d%s^n", szText);
 	}
+	gtrMenuText(id, "MENU_ADMIN_MATCH_TEAMS", szText, charsmax(szText), "调整队伍");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r8. \w%s^n", szText);
+	gtrMenuText(id, "MENU_EXIT", szText, charsmax(szText), "退出");
+	formatex(szMenu[iLen], charsmax(szMenu) - iLen, "^n\r0. \w%s", szText);
 
-	if (isUserAdmin(id)) {
-		formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MAIN_ADMMENU");
-	} else {
-		formatex(szMsg, charsmax(szMsg), "\d%L", id, "MENU_MAIN_ADMMENU");
-	}
-	menu_additem(hMenu, szMsg, "8");
-
-	menu_display(id, hMenu, 0);
-
+	gtrShowFixedMenu(id, "GTRMatchAdmin", szMenu, iKeys);
 	return PLUGIN_HANDLED;
 }
 
@@ -162,84 +516,58 @@ stock set_sponsor_gc(id, iNewGC) {
 		chat_print(0, "[^3HNS^1] 本场 GBIC 奖金设为 ^3%d^1", iNewGC);
 }
 
-public mainMatchMenuHandler(id, hMenu, item) {
-	if (item == MENU_EXIT) {
-		menu_destroy(hMenu);
+public mainMatchMenuHandler(id, key) {
+	if (!is_user_connected(id) || !isUserWatcher(id) || key == 9)
 		return PLUGIN_HANDLED;
-	}
 
-	new szData[6], szName[64], iAccess, iCallback;
-	menu_item_getinfo(hMenu, item, iAccess, szData, charsmax(szData), szName, charsmax(szName), iCallback);
-	menu_destroy(hMenu);
-	
-	new iKey = str_to_num(szData);
-	
-	switch (iKey) {
-		case 1: {
-			if (hns_is_knife_map()) {
-				if (g_iCurrentMode == MODE_TRAINING && g_iMatchStatus == MATCH_NONE)
-					cmdCaptain(id);
-				else if (g_iCurrentMode == MODE_KNIFE && g_iMatchStatus == MATCH_TEAMKNIFE && g_eMatchState == STATE_PAUSED)
-					cmdStopPause(id);
-				else if (g_iMatchStatus == MATCH_CAPTAINPICK || g_iMatchStatus == MATCH_CAPTAINKNIFE|| g_iMatchStatus == MATCH_TEAMPICK)
-					cmdStop(id);
-				else
-					mainMatchMenu(id);
-			} else {
-				if (g_iCurrentMode == MODE_PUB || g_iCurrentMode == MODE_DM || g_iCurrentMode == MODE_ZM || g_iMatchStatus == MATCH_WAITCONNECT) { // beta
-					cmdStop(id);
-				}
-				else if ((g_iCurrentMode == MODE_TRAINING || g_iCurrentMode == MODE_LOBBY) && g_iMatchStatus <= MATCH_WAITCONNECT)
-					cmdStartMatch(id);
-				else {
+	switch (key) {
+		case 0: {
+			if (matchMenu_isActive()) {
+				if (g_iCurrentMode == MODE_MIX)
 					verifMenu(id);
-				}
+				else
+					cmdStop(id);
+			} else {
+				cmdStartMatch(id);
 			}
+		}
+		case 1: {
+			if (matchMenu_canCustom())
+				customMenu(id);
+			else
+				mainMatchMenu(id);
 		}
 		case 2: {
-			if (hns_is_knife_map()) {
-				if (g_iMatchStatus == MATCH_CAPTAINPICK || g_iMatchStatus == MATCH_CAPTAINKNIFE || g_iMatchStatus == MATCH_TEAMPICK)
-					mainMatchMenu(id);
-				else if (g_iCurrentMode == MODE_KNIFE)
-					cmdStop(id);
-				else
-					cmdKnifeRound(id);
-			} else {
-				if (g_iCurrentMode == MODE_TRAINING || g_iCurrentMode == MODE_LOBBY)
-					customMenu(id);
-				else if ((g_iCurrentMode == MODE_DM || g_iCurrentMode == MODE_PUB || g_iCurrentMode == MODE_ZM))
-					cmdBlend(id);
-				else {
-					if (g_eMatchState != STATE_PAUSED)
-						cmdStartPause(id);
-					else
-						cmdStopPause(id);
-				}
-			}
+			g_iSettingsPage[id] = 0;
+			settingsMatchMenu(id);
 		}
 		case 3: {
-			settingsMatchMenu(id);
+			if (!matchMenu_canPause()) {
+				mainMatchMenu(id);
+			} else if (g_eMatchState == STATE_PAUSED) {
+				cmdStopPause(id);
+				mainMatchMenu(id);
+			} else {
+				cmdStartPause(id);
+				mainMatchMenu(id);
+			}
 		}
 		case 4: {
 			cmdRestartRound(id);
+			mainMatchMenu(id);
 		}
 		case 5: {
 			cmdSwapTeams(id);
+			mainMatchMenu(id);
 		}
 		case 6: {
-			client_cmd(id, "watcher");
+			if (isUserFullWatcher(id))
+				client_cmd(id, "hns_bans_menu");
+			else
+				mainMatchMenu(id);
 		}
 		case 7: {
-			if (g_eMatchType == MATCH_TYPE_SPONSOR)
-				gcAdjustMenu(id);
-			else
-				mainMatchMenu(id);
-		}
-		case 8: {
-			if (isUserAdmin(id))
-				client_cmd(id, "amxmodmenu");
-			else
-				mainMatchMenu(id);
+			client_cmd(id, "amx_teammenu");
 		}
 	}
 
@@ -250,45 +578,42 @@ public customMenu(id) {
 	if (!is_user_connected(id))
 		return PLUGIN_HANDLED;
 
-	new szMsg[64];
-
-	formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MIX_TITLE");
-	new hMenu = menu_create(szMsg, "customMenuHandler");
-
+	new szMenu[512], szMsg[64], szText[128], iLen, iKeys;
+	iKeys = MENU_KEY_1|MENU_KEY_2|MENU_KEY_3;
+	gtrMenuText(id, "MENU_CUSTOM_TITLE", szText, charsmax(szText), "娱乐模式");
+	iLen = formatex(szMenu, charsmax(szMenu), "\r%s^n ^n", szText);
 	formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_CUSTOM_PUB");
-	menu_additem(hMenu, szMsg, "1");
-
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r1. \w%s^n", szMsg);
 	formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_CUSTOM_DM");
-	menu_additem(hMenu, szMsg, "2");
-
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r2. \w%s^n", szMsg);
 	formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_CUSTOM_ZM");
-	menu_additem(hMenu, szMsg, "3");
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r3. \w%s^n ^n", szMsg);
+	if (g_iCurrentMode == MODE_PUB || g_iCurrentMode == MODE_DM || g_iCurrentMode == MODE_ZM) {
+		gtrMenuText(id, "MENU_CUSTOM_STOP", szText, charsmax(szText), "停止自定义模式");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r4. \r%s^n", szText);
+		iKeys |= MENU_KEY_4;
+	} else {
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "^n");
+	}
+	gtrMenuText(id, "MENU_BACK", szText, charsmax(szText), "返回");
+	formatex(szMenu[iLen], charsmax(szMenu) - iLen, "^n\r0. \w%s", szText);
 
-	menu_display(id, hMenu, 0);
+	gtrShowFixedMenu(id, "GTRCustomMenu", szMenu, iKeys);
 	return PLUGIN_HANDLED;
 }
 
-public customMenuHandler(id, hMenu, item) {
-	if (item == MENU_EXIT) {
-		menu_destroy(hMenu);
+public customMenuHandler(id, key) {
+	if (!is_user_connected(id) || key == 9) {
+		if (is_user_connected(id) && key == 9)
+			mainMatchMenu(id);
 		return PLUGIN_HANDLED;
 	}
 
-	new szData[6], szName[64], iAccess, iCallback;
-	menu_item_getinfo(hMenu, item, iAccess, szData, charsmax(szData), szName, charsmax(szName), iCallback);
-	menu_destroy(hMenu);
-	new iKey = str_to_num(szData);
-
-	switch (iKey) {
-		case 1: {
-			cmdPubMode(id);
-		}
-		case 2: {
-			cmdDMMode(id);
-		}
-		case 3: {
-			cmdZMMode(id);
-		}
+	switch (key) {
+		case 0: cmdPubMode(id);
+		case 1: cmdDMMode(id);
+		case 2: cmdZMMode(id);
+		case 3: cmdStop(id);
 	}
 	return PLUGIN_HANDLED;
 }
@@ -297,73 +622,149 @@ public settingsMatchMenu(id) {
 	if (!is_user_connected(id) || !isUserWatcher(id))
 		return PLUGIN_HANDLED;
 
-	new szMsg[64];
+	new szMenu[768], szMsg[96], szText[128], iLen, iKeys;
+	gtrMenuText(id, "MENU_SETTINGS_TITLE", szText, charsmax(szText), "比赛设置");
+	iLen = formatex(szMenu, charsmax(szMenu), "\r%s \d[%d/2]^n ^n", szText, g_iSettingsPage[id] + 1);
 
-	formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_MIX_TITLE");
-	new hMenu = menu_create(szMsg, "settingsMatchMenuHandler");
-
-	if (g_iCurrentMode == MODE_TRAINING || g_iCurrentMode == MODE_LOBBY)
-		formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_ROUNDTIME_TRNG");
-	else
-		formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_ROUNDTIME", get_cvar_float("mp_roundtime"));
-
-	menu_additem(hMenu, szMsg, "1");
-
-	formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_FREEZETIME", get_cvar_num("mp_freezetime"));
-	menu_additem(hMenu, szMsg, "2");
-
-	switch (g_iCurrentRules) {
-		case RULES_MR: {
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_MAXROUND", g_iSettings[MAXROUNDS], g_iSettings[MAXROUNDS] * 2);
+	if (g_iSettingsPage[id] <= 0) {
+		iKeys = MENU_KEY_1|MENU_KEY_2|MENU_KEY_3|MENU_KEY_4|MENU_KEY_5|MENU_KEY_6|MENU_KEY_7|MENU_KEY_8|MENU_KEY_9;
+		if (g_iCurrentMode == MODE_TRAINING || g_iCurrentMode == MODE_LOBBY)
+			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_ROUNDTIME_TRNG");
+		else
+			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_ROUNDTIME", get_cvar_float("mp_roundtime"));
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r1. \w%s^n", szMsg);
+		formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_FREEZETIME", get_cvar_num("mp_freezetime"));
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r2. \w%s^n", szMsg);
+		switch (g_iCurrentRules) {
+			case RULES_MR: {
+				formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_MAXROUND", g_iSettings[MAXROUNDS], g_iSettings[MAXROUNDS] * 2);
+			}
+			case RULES_TIMER: {
+				formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_WINTIME", g_iSettings[WINTIME]);
+			}
+			case RULES_DUEL: {
+				formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_DUEL", g_iSettings[DUELROUNDS]);
+			}
+			case RULES_ROUNDS: {
+				formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_ROUNDS", g_iSettings[MAXROUNDS]);
+			}
 		}
-		case RULES_TIMER: {
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_WINTIME", g_iSettings[WINTIME]);
+		replace_all(szMsg, charsmax(szMsg), "^n", "");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r3. \w%s^n ^n", szMsg);
+		if (g_iSettings[ONEHPMODE] == 0)
+			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_ONEHP_ON");
+		else
+			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_ONEHP_OFF");
+		replace_all(szMsg, charsmax(szMsg), "^n", "");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r4. \w%s^n", szMsg);
+		formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_FLASH", g_iSettings[FLASH]);
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r5. \w%s^n", szMsg);
+		formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_SMOKE", g_iSettings[SMOKE]);
+		replace_all(szMsg, charsmax(szMsg), "^n", "");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r6. \w%s^n ^n", szMsg);
+		new semiclipColor[4], szState[32];
+		if (g_iSemiclipForceMode == 1) {
+			copy(semiclipColor, charsmax(semiclipColor), "\y");
+			gtrMenuText(id, "MENU_STNGS_ON", szState, charsmax(szState), "开");
+		} else if (g_iSemiclipForceMode == 0) {
+			copy(semiclipColor, charsmax(semiclipColor), "\r");
+			gtrMenuText(id, "MENU_STNGS_OFF", szState, charsmax(szState), "关");
+		} else {
+			copy(semiclipColor, charsmax(semiclipColor), "\w");
+			gtrMenuText(id, "MENU_STNGS_AUTO", szState, charsmax(szState), "自动");
 		}
-		case RULES_DUEL: {
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_DUEL", g_iSettings[DUELROUNDS]);
+		gtrMenuText(id, "MENU_STNGS_SEMICLIP", szText, charsmax(szText), "穿透模式 [%s]");
+		formatex(szMsg, charsmax(szMsg), szText, szState);
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "%s7. %s%s^n ^n", semiclipColor, semiclipColor, szMsg);
+		new flyColor[4], szFlyState[32];
+		switch (get_fly_force_mode()) {
+			case 1: {
+				copy(flyColor, charsmax(flyColor), "\y");
+				gtrMenuText(id, "MENU_STNGS_ON", szFlyState, charsmax(szFlyState), "开");
+			}
+			case 0: {
+				copy(flyColor, charsmax(flyColor), "\r");
+				gtrMenuText(id, "MENU_STNGS_OFF", szFlyState, charsmax(szFlyState), "关");
+			}
+			default: {
+				copy(flyColor, charsmax(flyColor), "\w");
+				gtrMenuText(id, "MENU_STNGS_AUTO", szFlyState, charsmax(szFlyState), "自动");
+			}
 		}
-		case RULES_ROUNDS: {
-			formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_ROUNDS", g_iSettings[MAXROUNDS]);
+		gtrMenuText(id, "MENU_STNGS_FLY", szText, charsmax(szText), "遥控传送 [%s]");
+		formatex(szMsg, charsmax(szMsg), szText, szFlyState);
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "%s8. %s%s^n ^n", flyColor, flyColor, szMsg);
+		gtrMenuText(id, "MENU_NEXT_PAGE", szText, charsmax(szText), "下一页");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r9. \w%s^n", szText);
+	} else {
+		iKeys = MENU_KEY_1|MENU_KEY_2|MENU_KEY_3|MENU_KEY_4|MENU_KEY_5|MENU_KEY_6|MENU_KEY_7|MENU_KEY_8;
+		new szFormat[16];
+		get_match_format_text(szFormat, charsmax(szFormat));
+		gtrMenuText(id, "MENU_STNGS_FORMAT", szText, charsmax(szText), "检测对阵");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r1. \y%s \d[%s]^n", szText, szFormat);
+		gtrMenuText(id, "MENU_STNGS_SKILL", szText, charsmax(szText), "技巧模式");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r2. %s%s^n", g_iSettings[HNSBOOST] ? "\w" : "\y", szText);
+		gtrMenuText(id, "MENU_STNGS_BOOST", szText, charsmax(szText), "Boost模式");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r3. %s%s^n ^n", g_iSettings[HNSBOOST] ? "\y" : "\w", szText);
+		gtrMenuText(id, "MENU_ADMIN_MATCH_TEAMS", szText, charsmax(szText), "调整队伍");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r4. \w%s^n", szText);
+		gtrMenuText(id, "MENU_ADMIN_MATCH_SWAP", szText, charsmax(szText), "互换阵营");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r5. \w%s^n", szText);
+		gtrMenuText(id, "MENU_ADMIN_MATCH_RESTART", szText, charsmax(szText), "重启回合");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r6. \w%s^n ^n", szText);
+		new frostColor[4], szFrostState[32];
+		switch (get_frost_force_mode()) {
+			case 1: {
+				copy(frostColor, charsmax(frostColor), "\y");
+				gtrMenuText(id, "MENU_STNGS_ON", szFrostState, charsmax(szFrostState), "开");
+			}
+			case 0: {
+				copy(frostColor, charsmax(frostColor), "\r");
+				gtrMenuText(id, "MENU_STNGS_OFF", szFrostState, charsmax(szFrostState), "关");
+			}
+			default: {
+				copy(frostColor, charsmax(frostColor), "\w");
+				gtrMenuText(id, "MENU_STNGS_AUTO", szFrostState, charsmax(szFrostState), "自动");
+			}
 		}
+		gtrMenuText(id, "MENU_STNGS_FROST", szText, charsmax(szText), "冰冻烟雾 [%s]");
+		formatex(szMsg, charsmax(szMsg), szText, szFrostState);
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "%s7. %s%s^n ^n", frostColor, frostColor, szMsg);
+		gtrMenuText(id, "MENU_PREV_PAGE", szText, charsmax(szText), "上一页");
+		iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r8. \w%s^n", szText);
 	}
-	
-	menu_additem(hMenu, szMsg, "3");
 
-	if (g_iSettings[ONEHPMODE] == 0)
-		formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_ONEHP_ON");
-	else
-		formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_ONEHP_OFF");
-	
-	menu_additem(hMenu, szMsg, "4");
-
-	formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_FLASH", g_iSettings[FLASH]);
-	menu_additem(hMenu, szMsg, "5");
-
-	formatex(szMsg, charsmax(szMsg), "%L", id, "MENU_STNGS_SMOKE", g_iSettings[SMOKE]);
-	menu_additem(hMenu, szMsg, "6");
-
-	menu_display(id, hMenu, 0);
+	gtrMenuText(id, "MENU_BACK", szText, charsmax(szText), "返回");
+	formatex(szMenu[iLen], charsmax(szMenu) - iLen, "^n\r0. \w%s", szText);
+	gtrShowFixedMenu(id, "GTRSettingsMenu", szMenu, iKeys);
 	return PLUGIN_HANDLED;
 }
 
-public settingsMatchMenuHandler(id, hMenu, item) {
-	if (!is_user_connected(id)) {
-		menu_destroy(hMenu);
+public settingsMatchMenuHandler(id, key) {
+	if (!is_user_connected(id) || !isUserWatcher(id) || key == 9) {
+		if (is_user_connected(id) && isUserWatcher(id) && key == 9)
+			mainMatchMenu(id);
 		return PLUGIN_HANDLED;
 	}
 
-	if (item == MENU_EXIT) {
-		menu_destroy(hMenu);
-		mainMatchMenu(id);
+	if (g_iSettingsPage[id] > 0) {
+		switch (key) {
+			case 0: print_match_format_chat(0);
+			case 1: cmdSkillMode(id);
+			case 2: cmdBoostMode(id);
+			case 3: client_cmd(id, "amx_teammenu");
+			case 4: cmdSwapTeams(id);
+			case 5: cmdRestartRound(id);
+			case 6: cycle_frost_force();
+			case 7: g_iSettingsPage[id] = 0;
+		}
+		if (key != 3)
+			settingsMatchMenu(id);
+		return PLUGIN_HANDLED;
 	}
 
-	new szData[6], szName[64], iAccess, iCallback;
-	menu_item_getinfo(hMenu, item, iAccess, szData, charsmax(szData), szName, charsmax(szName), iCallback);
-	menu_destroy(hMenu);
-
-	new iKey = str_to_num(szData);
-	switch (iKey) {
-		case 1: {
+	switch (key) {
+		case 0: {
 			new Float:roundtime = get_cvar_float("mp_roundtime");
 			if (roundtime < 2.5)
 				roundtime = 2.5;
@@ -382,10 +783,9 @@ public settingsMatchMenuHandler(id, hMenu, item) {
 
 			set_cvar_float("mp_roundtime", roundtime);
 			chat_print(0, "%l", "SET_ROUNDTIME_MENU", id, roundtime);
-
 			settingsMatchMenu(id);
 		}
-		case 2: {
+		case 1: {
 			new freezetime = get_cvar_num("mp_freezetime");
 			if (freezetime < 5)
 				freezetime = 5;
@@ -404,17 +804,15 @@ public settingsMatchMenuHandler(id, hMenu, item) {
 
 			set_cvar_num("mp_freezetime", freezetime);
 			chat_print(0, "%l", "SET_FREEZETIME", id, freezetime);
-
 			settingsMatchMenu(id);
 		}
-		case 3: {
+		case 2: {
 			switch (g_iCurrentRules) {
 				case RULES_MR: {
 					if (g_iSettings[MAXROUNDS] < 5 || g_iSettings[MAXROUNDS] >= 11)
 						g_iSettings[MAXROUNDS] = 5;
 					else
 						g_iSettings[MAXROUNDS]++;
-
 					chat_print(0, "%l", "SET_MAXROUNDS_MENU", id, g_iSettings[MAXROUNDS]);
 				}
 				case RULES_TIMER: {
@@ -442,7 +840,6 @@ public settingsMatchMenuHandler(id, hMenu, item) {
 						g_iSettings[WINTIME] = 60.0;
 					else
 						g_iSettings[WINTIME] = 10.0;
-
 					chat_print(0, "%l", "SET_WINTIME_MENU", id, g_iSettings[WINTIME]);
 				}
 				case RULES_DUEL: {
@@ -458,22 +855,19 @@ public settingsMatchMenuHandler(id, hMenu, item) {
 						g_iSettings[MAXROUNDS] = 5;
 					else
 						g_iSettings[MAXROUNDS]++;
-
 					chat_print(0, "%l", "SET_ROUNDS", id, g_iSettings[MAXROUNDS]);
 				}
 			}
-
 			settingsMatchMenu(id);
 		}
-		case 4: {
+		case 3: {
 			if (!g_iSettings[ONEHPMODE])
 				g_iSettings[ONEHPMODE] = 1;
 			else
 				g_iSettings[ONEHPMODE] = 0;
-
 			settingsMatchMenu(id);
 		}
-		case 5: {
+		case 4: {
 			if (g_iSettings[FLASH] == 0)
 				g_iSettings[FLASH] = 1;
 			else if (g_iSettings[FLASH] <= 1)
@@ -482,21 +876,110 @@ public settingsMatchMenuHandler(id, hMenu, item) {
 				g_iSettings[FLASH] = 3;
 			else if (g_iSettings[FLASH] >= 3)
 				g_iSettings[FLASH] = 0;
-
+			settingsMatchMenu(id);
+		}
+		case 5: {
+			if (g_iSettings[SMOKE] <= 1)
+				g_iSettings[SMOKE] = 2;
+			else
+				g_iSettings[SMOKE] = 1;
 			settingsMatchMenu(id);
 		}
 		case 6: {
-			if (g_iSettings[SMOKE] <= 1)
-				g_iSettings[SMOKE] = 2;
-			else if (g_iSettings[SMOKE] >= 2)
-				g_iSettings[SMOKE] = 1;
-
+			if (g_iSemiclipForceMode == -1)
+				g_iSemiclipForceMode = 1;
+			else if (g_iSemiclipForceMode == 1)
+				g_iSemiclipForceMode = 0;
+			else
+				g_iSemiclipForceMode = -1;
+			apply_hns_semiclip();
+			printSemiclipState();
+			settingsMatchMenu(id);
+		}
+		case 7: cycle_fly_force();
+		case 8: {
+			g_iSettingsPage[id] = 1;
 			settingsMatchMenu(id);
 		}
 	}
 	return PLUGIN_HANDLED;
 }
 
+/* 遥控传送 (/fly) 强制开关: 自动 -> 强制开 -> 强制关 */
+stock get_fly_force_mode() {
+	if (!hnsSatchelAvailable())
+		return -1;
+	return get_cvar_num("hns_satchel_force");
+}
+
+stock cycle_fly_force() {
+	if (!hnsSatchelAvailable())
+		return;
+
+	new iMode = get_cvar_num("hns_satchel_force");
+	if (iMode == -1)
+		iMode = 1;
+	else if (iMode == 1)
+		iMode = 0;
+	else
+		iMode = -1;
+
+	hns_satchel_set_force(iMode);
+	printFlyState();
+}
+
+stock printFlyState() {
+	if (!hnsSatchelAvailable())
+		return;
+
+	switch (get_cvar_num("hns_satchel_force")) {
+		case 1: chat_lang_print(0, "FLY_CHAT_ON", "遥控传送: 开");
+		case 0: chat_lang_print(0, "FLY_CHAT_OFF", "遥控传送: 关");
+		default: chat_lang_print(0, "FLY_CHAT_AUTO", "遥控传送: 自动");
+	}
+}
+
+/* 冰冻烟雾 强制开关: 自动 -> 强制开 -> 强制关 */
+stock get_frost_force_mode() {
+	if (!hnsFrostAvailable())
+		return -1;
+	return get_cvar_num("fn_force_mode");
+}
+
+stock cycle_frost_force() {
+	if (!hnsFrostAvailable())
+		return;
+
+	new iMode = get_cvar_num("fn_force_mode");
+	if (iMode == -1)
+		iMode = 1;
+	else if (iMode == 1)
+		iMode = 0;
+	else
+		iMode = -1;
+
+	hns_frost_set_force(iMode);
+	printFrostState();
+}
+
+stock printFrostState() {
+	if (!hnsFrostAvailable())
+		return;
+
+	switch (get_cvar_num("fn_force_mode")) {
+		case 1: chat_lang_print(0, "FROST_CHAT_ON", "冰冻烟雾: 开");
+		case 0: chat_lang_print(0, "FROST_CHAT_OFF", "冰冻烟雾: 关");
+		default: chat_lang_print(0, "FROST_CHAT_AUTO", "冰冻烟雾: 自动");
+	}
+}
+
+stock printSemiclipState() {
+	switch (g_iSemiclipForceMode) {
+		case 1: chat_lang_print(0, "SEMICLIP_CHAT_ON", "^3[HNS] 穿透模式: 开");
+		case 0: chat_lang_print(0, "SEMICLIP_CHAT_OFF", "^3[HNS] 穿透模式: 关");
+		default: chat_lang_print(0, "SEMICLIP_CHAT_AUTO", "^1[HNS] 穿透模式: 自动");
+	}
+}
 
 public verifMenu(id) {
 	if (!is_user_connected(id))

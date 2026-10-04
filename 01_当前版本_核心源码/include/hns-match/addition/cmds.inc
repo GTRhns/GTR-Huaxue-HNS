@@ -6,6 +6,8 @@
 
 stock cmds_init() {
 	register_clcmd("say", "sayHandle");
+	register_clcmd("say /menu", "gtrMainMenu");
+	register_clcmd("say_team /menu", "gtrMainMenu");
 
 	register_clcmd("nightvision", "gtrMainMenu");
 
@@ -13,11 +15,9 @@ stock cmds_init() {
 	register_clcmd("jointeam", 		"blockCmd");
 	register_clcmd("joinclass", 	"blockCmd");
 
-	new iWatcherAccess = read_flags(g_iSettings[FULL_WATCHER_FLAG]);
+	new iWatcherAccess = read_flags(g_iSettings[WATCHER_FLAG]);
 
-	RegisterSayCmd("menu", "gtr", "gtrMainMenu", 0, "GTR game menu");
-
-	RegisterSayCmd("mix", 	"mix", 	"mainMatchMenu",	iWatcherAccess, "Main menu admin");
+	RegisterSayCmd("mix", 	"mix", 	"gtrMainMenu",	iWatcherAccess, "Main menu admin");
 	RegisterSayCmd("mode", 	"type", "menuSelectMode",	iWatcherAccess, "Mode match menu");
 
 	RegisterSayCmd("mr", 		"maxround", 	"cmdMrMode",		iWatcherAccess, "Choose MR mode");
@@ -39,6 +39,8 @@ stock cmds_init() {
 	RegisterSayCmd("boost", 	"boost", 		"cmdBoostMode", 	iWatcherAccess, "Boost mode");
 	RegisterSayCmd("rr", 		"restart", 		"cmdRestartRound", 	iWatcherAccess, "Restart round");
 	RegisterSayCmd("swap", 		"swap", 		"cmdSwapTeams", 	iWatcherAccess, "Swap Teams");
+	RegisterSayCmd("pause", 	"ps", 			"cmdStartPause", 	iWatcherAccess, "Start pause");
+	RegisterSayCmd("live", 		"unpause", 		"cmdStopPause",		iWatcherAccess, "Unpause");
 	RegisterSayCmd("surrender", "sur", 			"cmdSurrender", 	0, "Surrender vote");
 	RegisterSayCmd("score", 	"s", 			"cmdShowTimers", 	0, "Score");
 	RegisterSayCmd("back", 		"spec", 		"cmdTeamSpec", 		0, "Spec/Back player");
@@ -154,6 +156,8 @@ public cmdMrMode(id) {
 
 	chat_print(0, "%l", "MODE_SET_MR", id);
 	g_iCurrentRules = RULES_MR;
+	PDS_SetCell("match_rules", _:RULES_MR);
+	PDS_SetCell("ai_match_rules", _:RULES_MR);
 
 	return PLUGIN_HANDLED;
 }
@@ -175,6 +179,8 @@ public cmdWintimeMode(id) {
 
 	chat_print(0, "%l", "MODE_SET_WT", id);
 	g_iCurrentRules = RULES_TIMER;
+	PDS_SetCell("match_rules", _:RULES_TIMER);
+	PDS_SetCell("ai_match_rules", _:RULES_TIMER);
 
 	return PLUGIN_HANDLED;
 }
@@ -199,6 +205,8 @@ public cmdDuelMode(id) {
 		return PLUGIN_HANDLED;
 	}
 
+	PDS_SetCell("match_rules", _:RULES_DUEL);
+	PDS_SetCell("ai_match_rules", _:RULES_DUEL);
 	chat_print(0, "%l", "MODE_SET_DUEL", id);
 	g_iCurrentRules = RULES_DUEL;
 
@@ -214,6 +222,8 @@ public cmdRoundsMode(id) {
 		return PLUGIN_HANDLED;
 	}
 
+	PDS_SetCell("match_rules", _:RULES_ROUNDS);
+	PDS_SetCell("ai_match_rules", _:RULES_ROUNDS);
 	g_iCurrentRules = RULES_ROUNDS;
 	g_iSettings[MAXROUNDS] = 7;
 	chat_print(0, "%l", "MODE_SET_ROUNDS", id);
@@ -383,7 +393,7 @@ public cmdStartMatch(id) {
 	if (!isUserWatcher(id))
 		return PLUGIN_HANDLED;
 
-	if (g_iCurrentMode != MODE_TRAINING && g_iCurrentMode != MODE_LOBBY) {
+	if (g_iCurrentMode != MODE_TRAINING) {
 		chat_print(id, "%L", id, "NOT_START_MIX");
 		return PLUGIN_HANDLED;
 	}
@@ -394,15 +404,10 @@ public cmdStartMatch(id) {
 	}
 
 	// 第一步: 选择比赛类型 (赞助局 / 娱乐局 / 个人局暂未开放)
-	new szText[128];
-	hns_lang_get(id, "MATCH_TYPE_TITLE", szText, charsmax(szText), "选择比赛类型");
-	new menu = menu_create(szText, "MatchTypeMenuHandler");
-	hns_lang_get(id, "MATCH_TYPE_SPONSOR", szText, charsmax(szText), "赞助局");
-	menu_additem(menu, szText, "1");
-	hns_lang_get(id, "MATCH_TYPE_CASUAL", szText, charsmax(szText), "娱乐局");
-	menu_additem(menu, szText, "2");
-	hns_lang_get(id, "MATCH_TYPE_RANKED_DISABLED", szText, charsmax(szText), "个人局 (暂未开放)");
-	menu_additem(menu, szText, "3", _, menu_makecallback("rankedItemDisabled"));
+	new menu = menu_create("\r选择比赛类型", "MatchTypeMenuHandler");
+	menu_additem(menu, "\y赞助局\y^n", "1");
+	menu_additem(menu, "\r娱乐局\y^n", "2");
+	menu_additem(menu, "\d个人局 (暂未开放)\y^n", "3", _, menu_makecallback("rankedItemDisabled"));
 	menu_display(id, menu);
 	return PLUGIN_HANDLED;
 }
@@ -434,7 +439,7 @@ public MatchTypeMenuHandler(id, menu, item) {
 
 			// 首次选择赞助局: 需先填写赞助者名字
 			if (!g_szSponsorName[0]) {
-				chat_print_lang(id, "MATCH_SPONSOR_NAME_PROMPT", "请输入赞助者玩家名字 (在聊天框输入, /取消)");
+				chat_print(id, "[^3HNS^1] 请输入赞助者玩家名字 (在聊天框输入, /取消)");
 				g_bSponsorNameInput[id] = true;
 				client_cmd(id, "messagemode");
 				return PLUGIN_HANDLED;
@@ -459,7 +464,7 @@ stock sponsor_name_captured(id, szName[]) {
 	replace_all(g_szSponsorName, charsmax(g_szSponsorName), "%", "");	// 防止格式化注入
 
 	if (!g_szSponsorName[0]) {
-		chat_print_lang(id, "MATCH_SPONSOR_NAME_INVALID", "赞助者名字无效, 请重新开始比赛。");
+		chat_print(id, "[^3HNS^1] 赞助者名字无效, 请重新开始比赛。");
 		cmdStartMatch(id);
 		return;
 	}
@@ -480,7 +485,7 @@ stock sponsor_name_captured(id, szName[]) {
 	g_bPersistentSponsor = true;
 	if (g_iSponsorGC < 5)
 		g_iSponsorGC = 5;
-	chat_print_lang(0, "MATCH_SPONSOR_SELECTED", "赞助者: ^3%s^1, 请选择 GBIC 金币数量", g_szSponsorName);
+	chat_print(0, "[^3HNS^1] 赞助者: ^3%s^1, 请选择 GBIC 金币数量", g_szSponsorName);
 
 	g_bSponsorGcSetup = true;
 	gcAdjustMenu(id);
@@ -488,14 +493,11 @@ stock sponsor_name_captured(id, szName[]) {
 
 // 第二步: 选择比赛规则 (MR / Wintime / Duel / 回合制)
 stock start_rules_menu(id) {
-	new szText[128];
-	hns_lang_get(id, "MATCH_RULES_TITLE", szText, charsmax(szText), "选择比赛模式");
-	new menu = menu_create(szText, "StartMatchMenuHandler");
+	new menu = menu_create("\r选择比赛模式", "StartMatchMenuHandler");
 	menu_additem(menu, "MR", "0");
 	menu_additem(menu, "Wintime", "1");
 	menu_additem(menu, "Duel", "2");
-	hns_lang_get(id, "MATCH_RULE_ROUNDS", szText, charsmax(szText), "回合制");
-	menu_additem(menu, szText, "3");
+	menu_additem(menu, "回合制", "3");
 	menu_display(id, menu);
 }
 
@@ -508,7 +510,9 @@ public StartMatchMenuHandler(id, menu, item) {
 	new data[4], name[32], access, callback;
 	menu_item_getinfo(menu, item, access, data, charsmax(data), name, charsmax(name), callback);
 	menu_destroy(menu);
-
+PDS_SetCell("match_rules", _:g_iCurrentRules);
+	PDS_SetCell("ai_match_rules", _:g_iCurrentRules);
+	
 	g_iCurrentRules = NATCH_RULES:str_to_num(data);
 	if (g_iCurrentRules == RULES_ROUNDS)
 		g_iSettings[MAXROUNDS] = 7;
@@ -654,12 +658,8 @@ public cmdSkillMode(id) {
 	}
 
 	g_iSettings[HNSBOOST] = 0;
-	if (!hns_semiclip_menu_set(1)) {
-		if (g_iCurrentMode == MODE_TRAINING)
-			set_semiclip(SEMICLIP_ON);
-		else
-			set_semiclip(SEMICLIP_ON, true);
-	}
+	g_iSemiclipForceMode = -1;
+	apply_hns_semiclip();
 
 	return PLUGIN_HANDLED;
 }
@@ -678,8 +678,8 @@ public cmdBoostMode(id) {
 	}
 
 	g_iSettings[HNSBOOST] = 1;
-	if (!hns_semiclip_menu_set(2))
-		set_semiclip(SEMICLIP_OFF);
+	g_iSemiclipForceMode = -1;
+	apply_hns_semiclip();
 
 	return PLUGIN_HANDLED;
 }

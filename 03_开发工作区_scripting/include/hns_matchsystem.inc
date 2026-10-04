@@ -91,6 +91,43 @@ native hns_get_flag_admin();
 native hns_get_mode();
 
 /*
+* 遥控传送 (/fly) 强制开关 (可选原生, 由 HnsSatchelTeleport 提供)
+*
+* @return -1 自动, 0 强制关, 1 强制开
+*/
+native hns_satchel_get_force();
+
+/*
+* 设置遥控传送强制开关
+*
+* @param iMode  -1 自动, 0 强制关, 1 强制开
+* @noreturn
+*/
+native hns_satchel_set_force(iMode);
+
+/*
+* 遥控传送状态 (可选原生)
+*
+* @return 0 关, 1 开, 2 管理员强制开
+*/
+native hns_satchel_get_state();
+
+/*
+* 冰冻烟雾 强制开关 (可选原生, 由 frostnades 提供)
+*
+* @return -1 自动, 0 强制关, 1 强制开
+*/
+native hns_frost_get_force();
+
+/*
+* 设置冰冻烟雾强制开关
+*
+* @param iMode  -1 自动, 0 强制关, 1 强制开
+* @noreturn
+*/
+native hns_frost_set_force(iMode);
+
+/*
 * Set mode system.
 *
 * @noreturn
@@ -131,6 +168,8 @@ native MODE_STATES:hns_get_state();
 * @return type NATCH_RULES
 */
 native NATCH_RULES:hns_get_rules();
+native TeamName:hns_get_match_team_cs(iMatchTeam);
+native hns_get_player_match_team(id);
 
 /* 
 * Gets score in match (For RULES_DUEL)

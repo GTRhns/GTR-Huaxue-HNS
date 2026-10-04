@@ -30,6 +30,10 @@ public hns_optional_native_filter(const szName[], index, trap) {
 		return PLUGIN_HANDLED;
 	if (contain(szName, "HnsLang_") == 0)
 		return PLUGIN_HANDLED;
+	if (contain(szName, "hns_satchel_") == 0)
+		return PLUGIN_HANDLED;
+	if (contain(szName, "hns_frost_") == 0)
+		return PLUGIN_HANDLED;
 	if (contain(szName, "SQL_") == 0)
 		return PLUGIN_HANDLED;
 

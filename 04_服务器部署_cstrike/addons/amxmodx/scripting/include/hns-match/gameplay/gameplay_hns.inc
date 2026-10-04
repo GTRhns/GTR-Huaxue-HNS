@@ -23,11 +23,7 @@ public hns_enable_rules()
 {
 	g_iCurrentGameplay = GAMEPLAY_HNS;
 
-	if (g_iSettings[HNSBOOST]) {
-		set_semiclip(SEMICLIP_OFF);
-	} else {
-		set_semiclip(SEMICLIP_ON, true);
-	}
+	apply_hns_semiclip();
 
 	if (!fwdDisableKnife)
 	{

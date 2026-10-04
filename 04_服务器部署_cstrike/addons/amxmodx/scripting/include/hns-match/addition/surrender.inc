@@ -138,6 +138,6 @@ resetSurrenderData() {
 autoLose(TeamName:iTeam) {
 	chat_print(0, "%L", LANG_PLAYER, "SUR_END", iTeam == TEAM_TERRORIST ? "TERRORISTS" : "CTS");
 
-	setTaskHud(0, 0.0, 1, 255, 255, 255, 4.0, "%L", LANG_SERVER, "HUD_GAMEOVER");
+	showLangDhudFmt(0, 0.0, 255, 255, 255, 4.0, "HUD_GAMEOVER", "比赛结束");
 	MixFinishedMR(iTeam == TEAM_TERRORIST ? 2 : 1);
 }

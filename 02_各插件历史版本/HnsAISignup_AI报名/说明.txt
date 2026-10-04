@@ -24,10 +24,9 @@ HnsAISignup.sma —— AI 报名系统 版本历史说明
    - 79463 字节, 2026-09-27 22:07
    - 状态: "第19项改动"前的备份, 文件明显增大
 
-5. v1.17_当前部署版 —— 在 01_当前版本_核心源码/HnsAISignup.sma
-   - 92766 字节, 2026-09-30 23:00
+5. v1.17_部署版(历史) —— 92766 字节, 2026-09-30 23:00
    - 与 cstrike/scripting/、cstrike/addons/amxmodx/scripting/ 副本 md5 一致
-   - 上一部署版 (v1.18 发布后被替代, 见第7条)
+   - 上一部署版, 已被 v1.18 / v1.19 替代(完整源码归档于 v1.18 发布包)
 
 6. v1.17_scripting最新_1001-0213/
    - 原文件: scripting/HnsAISignup.sma
@@ -35,8 +34,7 @@ HnsAISignup.sma —— AI 报名系统 版本历史说明
    - 在部署版基础上新增 taskRestorePendingRules（换图后延迟恢复比赛模式）
    - 注意: 未确认是否已部署, 属最新开发版
 
-7. v1.18_当前部署版 —— 在 01_当前版本_核心源码/HnsAISignup.sma
-   - 版本号 1.18, 2026-10-01 版（本次发布整理上线）
+7. v1.18_1001版(历史部署版) —— 版本号 1.18, 2026-10-01 版(已发布 v1.18 发行版)
    - v1.17 基础上主要改动:
      a. wintime 胜负判定修复: 改用 hns_get_player_match_team(id) 取逻辑比赛队伍
         (1=TT/2=CT) 判定胜队积分, 不再按物理队伍(T/CT)判断, 换边/换图后积分正确
@@ -47,15 +45,26 @@ HnsAISignup.sma —— AI 报名系统 版本历史说明
      d. 菜单点完不关: 报名主菜单 menu_display(id, menu, 0) 可连续操作
      e. 赛制状态单一来源: AI 菜单选完立即同步 MatchSystem, 含 pending 一律不再分叉
    - 依赖 HnsMatchSystem 新增 native: hns_get_player_match_team / hns_get_match_team_cs
-   - 当前服务器部署使用的版本 (04_服务器部署_cstrike 已同步 .amxx)
+   - 已被 v1.19_1004 替代
 
-8. v1.19_当前部署版 —— 在 01_当前版本_核心源码/HnsAISignup.sma
-   - 版本号 1.19, 2026-10-03 整理发布
+8. v1.19_1003菜单更名版 —— 见 v1.19_1003菜单更名版/ 目录
+   - 版本号 1.19, 2026-10-03 整理发布, 已发布 v1.19 发行版
    - v1.18 基础上主要改动:
      a. 主菜单更名: 菜单标题由「GTR 游戏菜单」统一改为 Hide'And'Seek(捉迷藏比赛系统英文名)
      b. hns_language.txt 四个语言区(简中/繁中/English/Русский)同步修改
      c. hnsmenu.inc 兜底文本同步更新为 Hide'And'Seek
    - 其余功能与 v1.18 一致(胜负判定修复/换图恢复赛制/权限收敛等全部继承)
+
+9. v1.19_1004最新版 —— 在 01_当前版本_核心源码/HnsAISignup.sma 与 v1.19_1004/ 目录
+   - 94154 字节, 2026-10-04 11:46 编译(当前服务器部署版本, 版本号仍为 1.19)
+   - 在 v1.19(10-03) 基础上新增改动:
+     a. PDS 赛制同步加固: 报名选赛制/收团等多处补 PDS_SetCell("match_rules"/
+        "ai_match_rules"), 换图后比赛规则不再被 delayed_mode 盖回 MR
+     b. 换图 pending 不清报名: 换图等待开赛期间玩家掉线不把报名状态清成 IDLE,
+        避免 PDS_Save 用空名单覆盖换图前分组
+     c. PDS_Save 空名单保护: 卸载时若已报名玩家全部掉线则跳过保存
+     d. 日志去隐私: 确认/保存日志移除 IP 记录, IP 比对改 equali(不区分大小写)
+     e. 收团保持分组提示: 保留分组收团时输出 AI_CHAT_CLOSE_KEEP 提示
 
 关键背景（详见 10_交接与文档/插件修改记录.txt）:
 - 换图会重载插件, 跨图状态靠 PDS 恢复（ai_pending_start 等键）

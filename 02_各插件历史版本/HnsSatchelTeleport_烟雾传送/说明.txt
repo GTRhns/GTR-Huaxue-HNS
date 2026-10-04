@@ -1,0 +1,13 @@
+HnsSatchelTeleport.sma —— 遥控传送(烟雾弹/遥控炸弹) 版本说明
+============================================================
+插件名: HNS Satchel Teleport  v2.1.0  作者: GTR/OpenHNS 系
+功能: 最后一名 CT 使用烟雾弹/遥控炸弹实现定点传送(常用 HNS 娱乐玩法), 不改变刀皮手模
+来源: gtr (3).zip —— cstrike/addons/amxmodx/scripting/HnsSatchelTeleport.sma (14650 字节, 2026-10-04 06:45)
+
+命令:
+- say /fly /satchel /st —— 遥控传送菜单
+- say /satcheladmin —— 管理员菜单
+- 控制台 hns_satchel (ADMIN_CFG)
+
+cvar: hns_satchel_version
+编译产物: HnsSatchelTeleport.amxx(已在 04 部署包 plugins/)

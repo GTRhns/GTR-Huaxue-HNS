@@ -13,7 +13,7 @@
 //
 //  流程:
 //   报名中(5分钟倒计时) -> 收团(只分一次队, 换图前不拉观战) -> 选模式/地图
-//   -> 换图后等 30 秒核对 ID/IP/名字 -> 确认报名玩家后拉观战 -> 按换图前分组上场 -> 开赛
+//   -> 换图后等 30 秒核对 SteamID -> 确认报名玩家后拉观战 -> 按换图前分组上场 -> 开赛
 //   比赛结束 -> 清除报名 + 20 秒报名 CD
 //   比赛终止 -> 清除报名
 // ============================================================
@@ -30,7 +30,7 @@
 #include <hns_language>
 #include <PersistentDataStorage>
 
-#define PLUGIN_VERSION "1.18"
+#define PLUGIN_VERSION "1.19"
 
 // ---------------- 常量 ----------------
 #define SIGNUP_MIN         6        // 最少 6 人 (3v3)
@@ -227,6 +227,7 @@ public plugin_cfg() {
 	new iRules;
 	if (PDS_GetCell("ai_match_rules", iRules) && iRules >= 0 && iRules < RULE_COUNT) {
 		g_iMatchRules = NATCH_RULES:iRules;
+		PDS_SetCell("match_rules", iRules);
 		// 换图后 HnsMatchSystem 会重新初始化，必须把持久化的赛制同步回真正的 MatchSystem。
 		hns_external_set_match_mode(_:g_iMatchRules);
 	}
@@ -785,6 +786,7 @@ public RulesMenuHandler(id, menu, item) {
 stock applyMatchRules(iRule) {
 	g_iMatchRules = NATCH_RULES:iRule;
 	PDS_SetCell("ai_match_rules", iRule);
+	PDS_SetCell("match_rules", iRule);
 	// 赛制状态只有一份：AI 菜单选择后立即同步到 MatchSystem。
 	// 无论是否 pending、是否正在比赛，都不再允许两套状态分叉。
 	hns_external_set_match_mode(_:g_iMatchRules);
@@ -1169,8 +1171,9 @@ public client_disconnected(id) {
 		}
 		g_bSignedUp[id] = false;
 		// 队伍记忆保留, 掉线重连/下张图仍可恢复
+		// 换图 pending 时人会先掉线, 不要把报名状态清成 IDLE, 否则 PDS_Save 会用空名单覆盖分组
 
-		if (stopSignupIfEmpty())
+		if (!g_bPendingMatchStart && stopSignupIfEmpty())
 			return;
 	}
 }
@@ -1269,6 +1272,7 @@ public closeSignup() {
 		ai_print_lang(0, "AI_CHAT_CLOSE_SETUP", "收团! 先记分组, 换图前不拉观战, 先选模式和地图");
 		shuffleTeamsNow();
 	}
+	saveSignupTeams();
 	buildPlaceQueue(g_iPlaceTeamSize);
 
 	// ★ 人数达标 -> 聊天框播报当前分组 (蓝 CT / 红 TT)
@@ -1653,6 +1657,7 @@ public onMapChange() {
 		new iRules, iSponsor, iForce, iSize;
 		if (PDS_GetCell("ai_match_rules", iRules) && iRules >= 0 && iRules < RULE_COUNT) {
 			g_iMatchRules = NATCH_RULES:iRules;
+			PDS_SetCell("match_rules", iRules);
 			hns_external_set_match_mode(_:g_iMatchRules);
 		}
 		if (PDS_GetCell("ai_sponsor_match", iSponsor))
@@ -1729,7 +1734,9 @@ public taskPendingResume() {
 	if (g_iPlaceTeamSize < 1)
 		g_iPlaceTeamSize = getEffectiveTeamSize();
 	ai_print_lang(0, "AI_CHAT_MAP_CONFIRMED", "已确认报名玩家 ^3%d^1 人, 先拉观战, 等 5 秒再 1 秒 1 人上场", g_iSignupCount);
-	if (!g_bKeepSavedTeams) {
+	if (g_bKeepSavedTeams) {
+		ai_print_lang(0, "AI_CHAT_CLOSE_KEEP", "收团! 按换图前分组上场, 不再重新随机");
+	} else {
 		ai_print_lang(0, "AI_CHAT_MAP_RESHUFFLE", "没对上换图前名单, 只能重新分一次");
 		shuffleTeamsNow();
 	}
@@ -1771,11 +1778,10 @@ stock rebuildSignupFromOnline() {
 		if (iTeam == TEAM_T || iTeam == TEAM_CT)
 			g_bKeepSavedTeams = true;
 
-		new szName[32], szAuth[32], szIp[32];
+		new szName[32], szAuth[32];
 		get_user_name(id, szName, charsmax(szName));
 		get_user_authid(id, szAuth, charsmax(szAuth));
-		get_user_ip(id, szIp, charsmax(szIp), 1);
-		log_amx("[HNSai] confirm %s | %s | %s | %s", szName, szAuth, szIp, (iTeam == TEAM_T) ? "T" : "CT");
+		log_amx("[HNSai] confirm %s | %s | %s", szName, szAuth, (iTeam == TEAM_T) ? "T" : "CT");
 	}
 }
 
@@ -1862,10 +1868,14 @@ public taskAfterMapCooldown() {
 
 	public PDS_Save() {
 	if (!g_bPendingMatchStart)
-	return;
+		return;
 
 	savePendingMatch();
-	saveSignupTeams();
+	// 换图卸载时玩家已经掉线, 不要用空名单覆盖换图前刚存好的 T/CT
+	if (countConnectedSignedWithTeam() > 0)
+		saveSignupTeams();
+	else
+		log_amx("[HNSai] PDS_Save skip empty team overwrite");
 	}
 
 	stock savePendingMatch() {
@@ -1902,6 +1912,18 @@ public taskAfterMapCooldown() {
 	copy(szOut, iLen, szAuth);
 	}
 
+	stock countConnectedSignedWithTeam() {
+	new iCount;
+	for (new i = 0; i < g_iSignupCount; i++) {
+		new id = g_iSignupList[i];
+		if (!is_user_connected(id))
+			continue;
+		if (g_iSignupTeam[id] == TEAM_T || g_iSignupTeam[id] == TEAM_CT)
+			iCount++;
+	}
+	return iCount;
+	}
+
 	stock saveSignupTeams() {
 	new iCount;
 	for (new i = 0; i < g_iSignupCount; i++) {
@@ -1920,17 +1942,14 @@ public taskAfterMapCooldown() {
 	if (iTeam != TEAM_T && iTeam != TEAM_CT)
 	continue;
 
-	new szKey[32], szId[48], szName[32], szIp[32];
+	new szKey[32], szId[48], szName[32];
 	getPlayerPersistId(id, szId, charsmax(szId));
 	get_user_name(id, szName, charsmax(szName));
-	get_user_ip(id, szIp, charsmax(szIp), 1);
 
 	formatex(szKey, charsmax(szKey), "ai_saved_k%d", iCount);
 	PDS_SetString(szKey, szId);
 	formatex(szKey, charsmax(szKey), "ai_saved_nm%d", iCount);
 	PDS_SetString(szKey, szName);
-	formatex(szKey, charsmax(szKey), "ai_saved_i%d", iCount);
-	PDS_SetString(szKey, szIp);
 	formatex(szKey, charsmax(szKey), "ai_saved_t%d", iCount);
 	PDS_SetCell(szKey, iTeam);
 	iCount++;
@@ -1945,21 +1964,14 @@ public taskAfterMapCooldown() {
 	formatex(szKey, charsmax(szKey), "ai_saved_k%d", iSlot);
 	if (PDS_GetString(szKey, szSaved, charsmax(szSaved)) && szSaved[0]) {
 		getPlayerPersistId(id, szCur, charsmax(szCur));
-		if (equal(szCur, szSaved))
-			return true;
-	}
-
-	formatex(szKey, charsmax(szKey), "ai_saved_i%d", iSlot);
-	if (PDS_GetString(szKey, szSaved, charsmax(szSaved)) && szSaved[0] && !equal(szSaved, "loopback") && !equal(szSaved, "127.0.0.1")) {
-		get_user_ip(id, szCur, charsmax(szCur), 1);
-		if (equal(szCur, szSaved))
+		if (equali(szCur, szSaved))
 			return true;
 	}
 
 	formatex(szKey, charsmax(szKey), "ai_saved_nm%d", iSlot);
 	if (PDS_GetString(szKey, szSaved, charsmax(szSaved)) && szSaved[0]) {
 		get_user_name(id, szCur, charsmax(szCur));
-		if (equal(szCur, szSaved))
+		if (equali(szCur, szSaved))
 			return true;
 	}
 

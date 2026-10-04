@@ -1,0 +1,11 @@
+HnsModeVote.sma —— 模式投票 /rts 版本说明
+==========================================
+插件名: HNS Mode Vote  v1.1.0  作者: GTR(自研)
+功能: 玩家 /rts 发起模式投票, 达到 60% 同意后切换公共/死斗/僵尸/训练模式; 比赛中禁用
+来源: gtr (3).zip —— cstrike/addons/amxmodx/scripting/HnsModeVote.sma (12539 字节, 2026-10-04 07:00)
+
+命令:
+- say /rts  或 say_team /rts  或 /modevote —— 发起/参与模式投票
+
+语言键: hns_language.txt 中 RTS_* (RTS_MENU_* / RTS_VOTED / RTS_SWITCHED / RTS_MODE_* / RTS_COUNTDOWN 等, 四语言区)
+依赖: HnsMatchSystem(native 切换模式) + HnsLanguage

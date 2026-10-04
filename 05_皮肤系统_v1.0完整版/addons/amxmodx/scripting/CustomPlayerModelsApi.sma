@@ -271,21 +271,17 @@ public bool:NativeRegister(const plugin, const argc) {
 	}
 
 	new model[CPM_MAX_MODEL_LENGTH];
-	new model_ct[CPM_MAX_MODEL_LENGTH];
 	get_string(arg_model_tt, model, charsmax(model));
-	get_string(arg_model_ct, model_ct, charsmax(model_ct));
 
 	if (!loadModel(model, MODEL_INDEX_TT, MODEL_TT)) {
 		log_error(AMX_ERR_NATIVE, "Error precache %s", model);
 		return false;
 	}
 
-	// T/CT 同一路径时复用已预缓存的模型, 避免换图时每个皮肤 precache 两次
-	if (equal(model, model_ct)) {
-		Model[MODEL_INDEX_CT] = Model[MODEL_INDEX_TT];
-		copy(Model[MODEL_CT], CPM_MAX_MODEL_LENGTH - 1, model);
-	} else if (!loadModel(model_ct, MODEL_INDEX_CT, MODEL_CT)) {
-		log_error(AMX_ERR_NATIVE, "Error precache %s", model_ct);
+	get_string(arg_model_ct, model, charsmax(model));
+
+	if (!loadModel(model, MODEL_INDEX_CT, MODEL_CT)) {
+		log_error(AMX_ERR_NATIVE, "Error precache %s", model);
 		return false;
 	}
 

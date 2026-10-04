@@ -156,6 +156,8 @@ public cmdMrMode(id) {
 
 	chat_print(0, "%l", "MODE_SET_MR", id);
 	g_iCurrentRules = RULES_MR;
+	PDS_SetCell("match_rules", _:RULES_MR);
+	PDS_SetCell("ai_match_rules", _:RULES_MR);
 
 	return PLUGIN_HANDLED;
 }
@@ -177,6 +179,8 @@ public cmdWintimeMode(id) {
 
 	chat_print(0, "%l", "MODE_SET_WT", id);
 	g_iCurrentRules = RULES_TIMER;
+	PDS_SetCell("match_rules", _:RULES_TIMER);
+	PDS_SetCell("ai_match_rules", _:RULES_TIMER);
 
 	return PLUGIN_HANDLED;
 }
@@ -201,6 +205,8 @@ public cmdDuelMode(id) {
 		return PLUGIN_HANDLED;
 	}
 
+	PDS_SetCell("match_rules", _:RULES_DUEL);
+	PDS_SetCell("ai_match_rules", _:RULES_DUEL);
 	chat_print(0, "%l", "MODE_SET_DUEL", id);
 	g_iCurrentRules = RULES_DUEL;
 
@@ -216,6 +222,8 @@ public cmdRoundsMode(id) {
 		return PLUGIN_HANDLED;
 	}
 
+	PDS_SetCell("match_rules", _:RULES_ROUNDS);
+	PDS_SetCell("ai_match_rules", _:RULES_ROUNDS);
 	g_iCurrentRules = RULES_ROUNDS;
 	g_iSettings[MAXROUNDS] = 7;
 	chat_print(0, "%l", "MODE_SET_ROUNDS", id);
@@ -502,7 +510,9 @@ public StartMatchMenuHandler(id, menu, item) {
 	new data[4], name[32], access, callback;
 	menu_item_getinfo(menu, item, access, data, charsmax(data), name, charsmax(name), callback);
 	menu_destroy(menu);
-
+PDS_SetCell("match_rules", _:g_iCurrentRules);
+	PDS_SetCell("ai_match_rules", _:g_iCurrentRules);
+	
 	g_iCurrentRules = NATCH_RULES:str_to_num(data);
 	if (g_iCurrentRules == RULES_ROUNDS)
 		g_iSettings[MAXROUNDS] = 7;
@@ -648,13 +658,8 @@ public cmdSkillMode(id) {
 	}
 
 	g_iSettings[HNSBOOST] = 0;
-
-	if (!hns_semiclip_menu_set(0)) {
-		if (g_iCurrentMode == MODE_TRAINING)
-			set_semiclip(SEMICLIP_ON);
-		else
-			set_semiclip(SEMICLIP_ON, true);
-	}
+	g_iSemiclipForceMode = -1;
+	apply_hns_semiclip();
 
 	return PLUGIN_HANDLED;
 }
@@ -673,9 +678,8 @@ public cmdBoostMode(id) {
 	}
 
 	g_iSettings[HNSBOOST] = 1;
-
-	if (!hns_semiclip_menu_set(0))
-		set_semiclip(SEMICLIP_OFF);
+	g_iSemiclipForceMode = -1;
+	apply_hns_semiclip();
 
 	return PLUGIN_HANDLED;
 }

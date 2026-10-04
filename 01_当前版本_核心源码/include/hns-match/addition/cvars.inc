@@ -75,7 +75,7 @@ stock cvars_init() {
 	pCvar[KNIFEMAP] = create_cvar("hns_knifemap", "35hp_2", FCVAR_NONE, "Knife map");
 	bind_pcvar_string(pCvar[KNIFEMAP], g_iSettings[KNIFEMAP], charsmax(g_iSettings[KNIFEMAP]));
 
-	pCvar[PREFIX] = create_cvar("hns_prefix", "HNS", FCVAR_NONE, "System prefix");
+	pCvar[PREFIX] = create_cvar("hns_prefix", "Match", FCVAR_NONE, "System prefix");
 	bind_pcvar_string(pCvar[PREFIX], g_iSettings[PREFIX], charsmax(g_iSettings[PREFIX]));
 
 	pCvar[GAMENAME] = create_cvar("hns_gamename", "Hide'n'Seek", FCVAR_NONE, "Game name");

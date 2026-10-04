@@ -1,0 +1,12 @@
+HnsConnectInfo.sma —— 进服信息提示 版本说明
+============================================
+插件名: HNS Connect Info  v1.2.5  作者: GTR(自研)
+功能: 玩家进服时显示提示信息(名字/PTS/地区/身份), 支持声音提示, 文案走 /lang
+来源: gtr (3).zip —— cstrike/addons/amxmodx/scripting/HnsConnectInfo.sma (7812 字节, 2026-10-04 11:45)
+
+配置:
+- hns_connect_info    1 开 / 0 关
+- hns_connect_sound   1 播放提示音 / 0 静音
+
+语言键: hns_language.txt 中 CONNECT_* (CONNECT_INFO / CONNECT_JOIN / CONNECT_LOC_* / CONNECT_ROLE_* / CONNECT_STEAM 等, 四语言区)
+依赖: HnsLanguage + HnsMatchSql(取 PTS) + GeoIP(地区, 需 modules.ini 启用 geoip)

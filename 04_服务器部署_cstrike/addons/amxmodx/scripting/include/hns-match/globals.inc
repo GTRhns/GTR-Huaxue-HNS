@@ -179,6 +179,7 @@ new bool:g_bGcSqlConnected;
 #define TASK_LOADING_DONE	24002	// C4进度条走满后进入回合刷新
 #define TASK_REFRESH_WAVE	24003	// 回合刷新
 #define TASK_MATCH_ACTIVATE	24004	// 缓冲期结束, 正式激活比赛
+#define TASK_ROUNDS_SCORE	24005	// 回合制换边后同步引擎记分板
 
 new bool:g_bMatchLoading;	// 正在执行开场加载流程 (进度条/回合刷新/缓冲期)
 new g_iRefreshWave;			// 已执行的回合刷新次数

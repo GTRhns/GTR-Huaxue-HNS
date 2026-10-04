@@ -8,7 +8,7 @@
 
 [![AMX Mod X](https://img.shields.io/badge/AMX_Mod_X-1.10-blue)]()
 [![ReGameDLL](https://img.shields.io/badge/ReGameDLL-5.x-orange)]()
-[![Version](https://img.shields.io/badge/Version-v1.19-green)]()
+[![Version](https://img.shields.io/badge/Version-v1.19.3-green)]()
 [![Storage](https://img.shields.io/badge/Storage-PDS_%2B_MySQL-9cf)]()
 [![Language](https://img.shields.io/badge/Language-4_Languages-ff69b4)]()
 [![License](https://img.shields.io/badge/License-GPLv3-success)]()
@@ -19,7 +19,7 @@
 
 > **基于 OpenHNS 比赛引擎二次开发，融合 GTR 团队大量自研功能**
 > 适用：CS 1.6 / ReHLDS / AMX Mod X 1.10
-> 当前版本：**华雪版 v1.19**（tag: `huaxue-v1.19`）· 2026-10-01 版
+> 当前版本：**华雪版 v1.19.3**（tag: `huaxue-v1.19.3`）· 2026-10-05 版
 
 ---
 
@@ -27,14 +27,14 @@
 
 | 语言 | 简介 |
 |---|---|
-| 🇨🇳 简体中文 | 一套完整的 CS 1.6 HNS（Hide 'n' Seek，捉迷藏）比赛服务器插件系统。基于 OpenHNS 比赛引擎二次开发，融合 GTR 团队大量自研功能（AI 报名、皮肤、赞助、跨图持久化、多语言本地化）。适用：CS 1.6 / ReHLDS / AMX Mod X 1.10。当前版本：华雪版 v1.19。 |
-| 🇹🇼 繁體中文 | 一套完整的 CS 1.6 HNS（Hide 'n' Seek，捉迷藏）比賽伺服器插件系統。基於 OpenHNS 比賽引擎二次開發，融合 GTR 團隊大量自研功能（AI 報名、皮膚、贊助、跨圖持久化、多語言本地化）。適用：CS 1.6 / ReHLDS / AMX Mod X 1.10。目前版本：華雪版 v1.19。 |
-| 🇬🇧 English | A complete CS 1.6 HNS (Hide 'n' Seek) match server plugin system. Built on the OpenHNS match engine and extended with extensive self-developed features by the GTR team (AI signup, skins, sponsorship, cross-map persistence, multi-language localization). Requires: CS 1.6 / ReHLDS / AMX Mod X 1.10. Current version: Huaxue Edition v1.19. |
-| 🇩🇪 Deutsch | Ein vollständiges Plugin-System für CS 1.6 HNS (Hide 'n' Seek) Match-Server. Basierend auf der OpenHNS-Engine und erweitert mit vielen selbst entwickelten Funktionen des GTR-Teams (AI-Anmeldung, Skins, Sponsoring, kartenübergreifende Persistenz, Mehrsprachigkeit). Voraussetzung: CS 1.6 / ReHLDS / AMX Mod X 1.10. Aktuelle Version: Huaxue Edition v1.19. |
-| 🇷🇺 Русский | Полная система плагинов для HNS-матчей (Hide 'n' Seek) в CS 1.6. Основана на движке OpenHNS и дополнена собственными разработками команды GTR (AI-регистрация, скины, спонсорство, межкартовая персистентность, многоязычность). Требования: CS 1.6 / ReHLDS / AMX Mod X 1.10. Текущая версия: Huaxue Edition v1.19. |
-| 🇮🇹 Italiano | Un sistema completo di plugin per server di match HNS (Hide 'n' Seek) su CS 1.6. Basato sul motore OpenHNS ed esteso con numerose funzioni sviluppate dal team GTR (iscrizione AI, skin, sponsorizzazioni, persistenza tra le mappe, localizzazione multilingue). Requisiti: CS 1.6 / ReHLDS / AMX Mod X 1.10. Versione attuale: Huaxue Edition v1.19. |
-| 🇹🇷 Türkçe | CS 1.6 HNS (Hide 'n' Seek) maç sunucuları için eksiksiz bir eklenti sistemi. OpenHNS motoruna dayalı olup GTR ekibinin kendi geliştirdiği birçok özellikle genişletilmiştir (AI kayıt, skinler, sponsorluk, haritalar arası kalıcılık, çok dilli yerelleştirme). Gereksinimler: CS 1.6 / ReHLDS / AMX Mod X 1.10. Güncel sürüm: Huaxue Sürümü v1.19. |
-| 🇫🇷 Français | Un système complet de plugins pour serveurs de matchs HNS (Hide 'n' Seek) sur CS 1.6. Basé sur le moteur OpenHNS et enrichi de nombreuses fonctionnalités développées par l'équipe GTR (inscription IA, skins, parrainage, persistance entre les cartes, localisation multilingue). Prérequis : CS 1.6 / ReHLDS / AMX Mod X 1.10. Version actuelle : Huaxue Edition v1.19. |
+| 🇨🇳 简体中文 | 一套完整的 CS 1.6 HNS（Hide 'n' Seek，捉迷藏）比赛服务器插件系统。基于 OpenHNS 比赛引擎二次开发，融合 GTR 团队大量自研功能（AI 报名、皮肤、赞助、跨图持久化、多语言本地化）。适用：CS 1.6 / ReHLDS / AMX Mod X 1.10。当前版本：华雪版 v1.19.3。 |
+| 🇹🇼 繁體中文 | 一套完整的 CS 1.6 HNS（Hide 'n' Seek，捉迷藏）比賽伺服器插件系統。基於 OpenHNS 比賽引擎二次開發，融合 GTR 團隊大量自研功能（AI 報名、皮膚、贊助、跨圖持久化、多語言本地化）。適用：CS 1.6 / ReHLDS / AMX Mod X 1.10。目前版本：華雪版 v1.19.3。 |
+| 🇬🇧 English | A complete CS 1.6 HNS (Hide 'n' Seek) match server plugin system. Built on the OpenHNS match engine and extended with extensive self-developed features by the GTR team (AI signup, skins, sponsorship, cross-map persistence, multi-language localization). Requires: CS 1.6 / ReHLDS / AMX Mod X 1.10. Current version: Huaxue Edition v1.19.3. |
+| 🇩🇪 Deutsch | Ein vollständiges Plugin-System für CS 1.6 HNS (Hide 'n' Seek) Match-Server. Basierend auf der OpenHNS-Engine und erweitert mit vielen selbst entwickelten Funktionen des GTR-Teams (AI-Anmeldung, Skins, Sponsoring, kartenübergreifende Persistenz, Mehrsprachigkeit). Voraussetzung: CS 1.6 / ReHLDS / AMX Mod X 1.10. Aktuelle Version: Huaxue Edition v1.19.3. |
+| 🇷🇺 Русский | Полная система плагинов для HNS-матчей (Hide 'n' Seek) в CS 1.6. Основана на движке OpenHNS и дополнена собственными разработками команды GTR (AI-регистрация, скины, спонсорство, межкартовая персистентность, многоязычность). Требования: CS 1.6 / ReHLDS / AMX Mod X 1.10. Текущая версия: Huaxue Edition v1.19.3. |
+| 🇮🇹 Italiano | Un sistema completo di plugin per server di match HNS (Hide 'n' Seek) su CS 1.6. Basato sul motore OpenHNS ed esteso con numerose funzioni sviluppate dal team GTR (iscrizione AI, skin, sponsorizzazioni, persistenza tra le mappe, localizzazione multilingue). Requisiti: CS 1.6 / ReHLDS / AMX Mod X 1.10. Versione attuale: Huaxue Edition v1.19.3. |
+| 🇹🇷 Türkçe | CS 1.6 HNS (Hide 'n' Seek) maç sunucuları için eksiksiz bir eklenti sistemi. OpenHNS motoruna dayalı olup GTR ekibinin kendi geliştirdiği birçok özellikle genişletilmiştir (AI kayıt, skinler, sponsorluk, haritalar arası kalıcılık, çok dilli yerelleştirme). Gereksinimler: CS 1.6 / ReHLDS / AMX Mod X 1.10. Güncel sürüm: Huaxue Sürümü v1.19.3. |
+| 🇫🇷 Français | Un système complet de plugins pour serveurs de matchs HNS (Hide 'n' Seek) sur CS 1.6. Basé sur le moteur OpenHNS et enrichi de nombreuses fonctionnalités développées par l'équipe GTR (inscription IA, skins, parrainage, persistance entre les cartes, localisation multilingue). Prérequis : CS 1.6 / ReHLDS / AMX Mod X 1.10. Version actuelle : Huaxue Edition v1.19.3. |
 
 ---
 

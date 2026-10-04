@@ -1,0 +1,22 @@
+frostnades.sma —— 冰冻烟雾 版本说明
+============================================================
+插件名: HNS Frost Smoke  v1.0.0  作者: GTR (原 Avalanche FrostNades 2.14 改造)
+功能: T 扔出的烟雾弹可将 CT 冰冻/减速, 支持 /frost 投票开关与管理员比赛设置菜单强制控制
+来源: gtr (4).zip —— cstrike/addons/amxmodx/scripting/frostnades.sma (2026-10-05)
+模型: cstrike/models/frostnova.mdl (冰冻人模型, 已在 04 部署包 models/)
+
+规则:
+- 公共/死斗/僵尸 模式默认开启, 其他模式默认关闭
+- 只有烟雾弹触发冰冻 (手雷/闪光无效), 只有 T 扔出的烟生效
+- 只有 CT 会被冻住, T 不受影响; CT 遥控传送用的烟雾弹不会被冰冻
+- 死斗换队/僵尸感染/复活/死亡 后立即解除冰冻, 不会卡死
+
+命令:
+- say /frost —— 玩家发起投票关闭/开启冰冻烟雾 (2/3 人数, 5 秒倒计时, 7 秒计票)
+- 管理员 比赛管理 -> 比赛设置 第 2 页第 7 项: 自动 / 开 / 关 强制控制
+
+native (由 hns_matchsystem.inc / hnsmenu.inc 声明, hns_optional_sql.inc 过滤):
+- hns_frost_get_force() / hns_frost_set_force(iMode) / hns_frost_is_active()
+
+多语言: 简中/繁中/English/Русский, 语言键 FROST_* / MENU_STNGS_FROST (hns_language.txt)
+编译产物: frostnades.amxx (已在 04 部署包 plugins/)

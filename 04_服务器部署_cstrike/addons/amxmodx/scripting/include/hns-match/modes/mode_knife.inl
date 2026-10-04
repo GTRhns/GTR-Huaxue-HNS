@@ -48,7 +48,7 @@ public kniferound_unpause() {
 public kniferound_roundstart() {
 	switch (g_iMatchStatus) {
 		case MATCH_CAPTAINKNIFE: {
-			setTaskHud(0, 2.0, 1, 255, 255, 255, 3.0, "%L", LANG_PLAYER, "HUD_START_CAPKF");
+			showLangDhudFmt(0, 2.0, 255, 255, 255, 3.0, "HUD_START_CAPKF", "队长刀局开始");
 			
 			chat_print(0, "%L", LANG_PLAYER, "START_KNIFE");
 
@@ -57,7 +57,7 @@ public kniferound_roundstart() {
 			ChangeGameplay(GAMEPLAY_KNIFE);
 		}
 		case MATCH_TEAMKNIFE: {
-			setTaskHud(0, 2.0, 1, 255, 255, 255, 3.0, "%L", LANG_PLAYER, "HUD_STARTKNIFE");
+			showLangDhudFmt(0, 2.0, 255, 255, 255, 3.0, "HUD_STARTKNIFE", "刀局开始");
 			
 			chat_print(0, "%L", LANG_PLAYER, "START_KNIFE");
 
@@ -72,9 +72,6 @@ public kniferound_roundstart() {
 			}
 
 			//check_players_set_role();
-
-			ResetAfkData();
-			set_task(2.0, "taskSaveAfk");
 		}
 		default: {
 			ChangeGameplay(GAMEPLAY_TRAINING);
@@ -87,7 +84,12 @@ public kniferound_roundend(bool:win_ct) {
 		case MATCH_CAPTAINKNIFE: {
 			g_iCaptainPick = win_ct ? g_iCaptainSecond : g_iCaptainFirst;
 
-			setTaskHud(0, 2.0, 1, 255, 255, 255, 3.0, fmt("%L", LANG_SERVER, "HUD_CAPWIN", g_iCaptainPick));
+			new szCapName[32];
+			if (is_user_connected(g_iCaptainPick))
+				get_user_name(g_iCaptainPick, szCapName, charsmax(szCapName));
+			else
+				copy(szCapName, charsmax(szCapName), "-");
+			showLangDhudFmt(0, 2.0, 255, 255, 255, 3.0, "HUD_CAPWIN", "队长 %s 获胜", szCapName);
 
 			training_start();
 
@@ -103,9 +105,9 @@ public kniferound_roundend(bool:win_ct) {
 		}
 		case MATCH_TEAMKNIFE: {
 			if (win_ct) {
-				setTaskHud(0, 2.0, 1, 255, 255, 255, 3.0, "%L", LANG_SERVER, "HUD_KF_WIN_CT");
+				showLangDhudFmt(0, 2.0, 255, 255, 255, 3.0, "HUD_KF_WIN_CT", "CT 获胜");
 			} else {
-				setTaskHud(0, 2.0, 1, 255, 255, 255, 3.0, "%L", LANG_SERVER, "HUD_KF_WIN_TT");
+				showLangDhudFmt(0, 2.0, 255, 255, 255, 3.0, "HUD_KF_WIN_TT", "TT 获胜");
 			}
 
 			training_start();

@@ -18,10 +18,17 @@
      - rent_days        租期天数, 默认 30, 填 0 = 直接永久
      - upgrade_price    升级永久价格, 默认 2000
    玩家菜单: /skin
-     1.角色皮肤  2.刀皮  3.投掷物皮肤  4.GBIC金币  5.管理员设置(A)  6.SQL调试(A/B)
-     皮肤行: 名字  [价格] / [已选择](红) / 已拥有则只显示选择情况
-   投掷物菜单: 先进分类页(烟雾弹/闪光弹), 再进对应列表, 不再混在一起
-   管理菜单: 从主菜单「管理员设置」进入, 不再在皮肤列表里显示发放入口
+     1.人物皮肤商店 [总数红] -> CT皮肤 / TT皮肤
+     2.刀模商店 [数量红]
+     3.投掷物商店 [数量红]
+     (空行)
+     4.GBIC点数 [余额红]
+     5.购买点数
+     (空行)
+     6.MySQL管理 (黄, 需管理员 A/B)
+     7.管理员设置 (红, 需 A)
+   投掷物菜单: 先进分类页(烟雾弹/闪光弹), 再进对应列表
+   管理菜单: /cpm 或主菜单第7项 (A权限)
    本地/盗版: 与金币一样用 get_user_authid() 写 MySQL
      盗版模拟器通常也会给 STEAM_0:x:x, 买皮肤能跨图保留
      真 LAN / PENDING 才退回 LAN:IP (不绑名字, 改名不丢皮肤)
@@ -37,6 +44,7 @@
 #include <amxmodx>
 #include <amxmisc>
 #include <sqlx>
+#include <nvault>
 #include <fakemeta>
 #include <reapi>
 #include <newmenus>
@@ -84,6 +92,17 @@
 #define KNIFE_CFG_FILE "mixsystem/knife_skins.cfg"
 
 #define ADMIN_FLAG ADMIN_BAN
+#define TASK_REAPPLY_KNIFE 26000
+#define TASK_AUTH_RETRY 27000
+#define TASK_PLAYTIME 28000
+#define TASK_APPLY_NADE 29000
+#define TASK_MENU_SHOP 30000
+#define PLAYTIME_TICK 60.0
+
+#define SHOP_MENU_SKIN 1
+#define SHOP_MENU_NADE_CAT 2
+#define SHOP_MENU_NADE_KIND 3
+#define SHOP_MENU_KNIFE 4
 
 // 阵营字符
 #define TEAM_CHAR_T 'T'
@@ -94,6 +113,11 @@ new g_iRentDays = 30;       // 金币购买获得的租期天数, 0 = 直接永�
 new g_iUpgradePrice = 2000; // 限时皮肤升级为永久的价格 (ICGB金币)
 new g_iKnifeFree = 1;       // 刀皮前 N 把免费, 其余按 KnifeModels.ini 的 PRICE 花 GBIC 购买
 new g_iNadeFree = 1;        // 烟雾/闪光弹皮肤前 N 个免费, 其余按 GBIC 购买
+new g_iCheckinBonus = 10;   // 每日签到奖励 GBIC
+new g_iPlaytimeBonus = 5;   // 在线满 1 小时奖励 GBIC
+new g_iPlaytimeNeed = 3600; // 在线奖励所需秒数
+new g_szBuyGoldText[160] = "请联系管理员购买 GBIC 点数";
+new g_szBuyGoldUrl[128];
 
 // CS1.6 引擎模型预缓存池 (MAX_MODELS) 只有 512 个, 且和地图自身的 *刷子模型共享。
 // 重型 HNS 地图本身可能吃掉 290+ 个名额; 本插件若不限量预缓存全部皮肤模型,
@@ -158,9 +182,13 @@ new g_iPoolSize;
 new g_CurT[MAX_PLAYERS + 1][SKIN_KEY_MAX];   // 恐怖分子款
 new g_CurC[MAX_PLAYERS + 1][SKIN_KEY_MAX];   // 反恐精英款
 new g_iCurKnife[MAX_PLAYERS + 1];             // 当前刀皮编号, 0 = 默认 kf
+new g_iKnifeRetry[MAX_PLAYERS + 1];           // 换图后覆盖 crxknives nVault 的重试次数
+new g_iAuthRetry[MAX_PLAYERS + 1];            // 等 SteamID 就绪再读皮肤, 避免 LAN:IP 把拥有列表冲空
+new bool:g_bApplyingKnife[MAX_PLAYERS + 1];   // 正在强制套刀, 避免 knife_updated 递归重置
 new Array:g_Owned[MAX_PLAYERS + 1];
 new Trie:g_OwnedExpire[MAX_PLAYERS + 1];   // key -> 到期时间戳(UNIX秒), 0 = 永久
 new g_szAuth[MAX_PLAYERS + 1][MAX_AUTHID_LENGTH];
+new Trie:g_tAuthByIp = Invalid_Trie;        // 换图瞬间 PENDING 时用 IP 找回上次 SteamID
 new g_iLoadGen[MAX_PLAYERS + 1];
 new bool:g_bOwnedLoaded[MAX_PLAYERS + 1];   // 该玩家的拥有列表是否已从MySQL加载完毕
 new g_iLastTeam[MAX_PLAYERS + 1];
@@ -187,9 +215,20 @@ new g_legacyPendingAdmin[MAX_PLAYERS + 1]; // 兼容旧 callfunc 接口：按目
 // 各菜单当前页 (选中/翻页后重建时停在同一页, 不再跳回第一页)
 new g_iKnifePage[MAX_PLAYERS + 1];
 new g_iBrowsePage[MAX_PLAYERS + 1];
+
+// 每日签到 / 在线时长奖励 (nVault 跨图保存)
+new g_iVaultReward = INVALID_HANDLE;
+new g_iLastCheckin[MAX_PLAYERS + 1];
+new g_iPlayRemain[MAX_PLAYERS + 1];
+new Float:g_flPlayStart[MAX_PLAYERS + 1];
+new bool:g_bRewardLoaded[MAX_PLAYERS + 1];
 new g_iNadePage[MAX_PLAYERS + 1];
 // 投掷物皮肤: 当前停留的分类 (-1 = 分类选择页; 0 = 烟雾; 1 = 闪光)
 new g_iNadeKindPage[MAX_PLAYERS + 1];
+new g_iShopMenu[MAX_PLAYERS + 1];
+new g_iShopPage[MAX_PLAYERS + 1];
+new g_iShopKind[MAX_PLAYERS + 1];
+new Float:g_flShopKeep[MAX_PLAYERS + 1];
 
 // ---- 投掷物皮肤池 ----
 enum _:nade_e {
@@ -228,19 +267,63 @@ bool:CanSkinTarget(admin, target) {
 	return IsSkinOwner(admin) || admin == target;
 }
 
+bool:IsPendingAuth(const szAuth[]) {
+	if (!szAuth[0])
+		return true;
+	return equal(szAuth, "STEAM_ID_PENDING")
+		|| equal(szAuth, "VALVE_ID_PENDING")
+		|| equal(szAuth, "STEAM_ID_LAN")
+		|| equal(szAuth, "VALVE_ID_LAN")
+		|| equal(szAuth, "BOT")
+		|| equali(szAuth, "LAN:", 4);
+}
+
+bool:IsSteamAuth(const szAuth[]) {
+	return !IsPendingAuth(szAuth);
+}
+
+RememberAuthByIp(id, const szAuth[]) {
+	if (!g_tAuthByIp || !IsSteamAuth(szAuth))
+		return;
+	new szIp[32];
+	get_user_ip(id, szIp, charsmax(szIp), 1);
+	if (szIp[0])
+		TrieSetString(g_tAuthByIp, szIp, szAuth);
+}
+
+LookupAuthByIp(id, dest[], len) {
+	dest[0] = EOS;
+	if (!g_tAuthByIp)
+		return;
+	new szIp[32];
+	get_user_ip(id, szIp, charsmax(szIp), 1);
+	if (szIp[0])
+		TrieGetString(g_tAuthByIp, szIp, dest, len);
+}
+
 GetPlayerAuth(id, dest[], len) {
 	new szAuth[MAX_AUTHID_LENGTH];
 	get_user_authid(id, szAuth, charsmax(szAuth));
 
 	// 正版 Steam / 盗版模拟器的 STEAM_0:x:x / VALVE_x:x:x, 与金币 SQL 同一把钥
-	if (szAuth[0]
-		&& !equal(szAuth, "STEAM_ID_PENDING")
-		&& !equal(szAuth, "VALVE_ID_PENDING")
-		&& !equal(szAuth, "STEAM_ID_LAN")
-		&& !equal(szAuth, "VALVE_ID_LAN")
-		&& !equal(szAuth, "BOT")) {
+	if (!IsPendingAuth(szAuth)) {
 		copy(dest, len, szAuth);
 		copy(g_szAuth[id], charsmax(g_szAuth[]), szAuth);
+		RememberAuthByIp(id, szAuth);
+		return;
+	}
+
+	// 换图时常先拿到 PENDING, 不要用 LAN:IP 覆盖已经拿到的 SteamID
+	if (IsSteamAuth(g_szAuth[id])) {
+		copy(dest, len, g_szAuth[id]);
+		return;
+	}
+
+	new szCached[MAX_AUTHID_LENGTH];
+	LookupAuthByIp(id, szCached, charsmax(szCached));
+	if (IsSteamAuth(szCached)) {
+		copy(dest, len, szCached);
+		copy(g_szAuth[id], charsmax(g_szAuth[]), szCached);
 		return;
 	}
 
@@ -251,7 +334,152 @@ GetPlayerAuth(id, dest[], len) {
 		copy(szIp, charsmax(szIp), "0.0.0.0");
 
 	formatex(dest, len, "LAN:%s", szIp);
-	copy(g_szAuth[id], charsmax(g_szAuth[]), dest);
+	if (!g_szAuth[id][0])
+		copy(g_szAuth[id], charsmax(g_szAuth[]), dest);
+}
+
+TodayYmd() {
+	new szDay[12];
+	get_time("%Y%m%d", szDay, charsmax(szDay));
+	return str_to_num(szDay);
+}
+
+LoadRewardState(id) {
+	if (g_bRewardLoaded[id])
+		return;
+
+	g_iLastCheckin[id] = 0;
+	g_iPlayRemain[id] = g_iPlaytimeNeed;
+	g_flPlayStart[id] = get_gametime();
+	if (g_iVaultReward == INVALID_HANDLE)
+		return;
+
+	new szAuth[MAX_AUTHID_LENGTH], szKey[64], szVal[32];
+	GetPlayerAuth(id, szAuth, charsmax(szAuth));
+	if (!szAuth[0])
+		return;
+
+	formatex(szKey, charsmax(szKey), "chk_%s", szAuth);
+	if (nvault_get(g_iVaultReward, szKey, szVal, charsmax(szVal)))
+		g_iLastCheckin[id] = str_to_num(szVal);
+
+	formatex(szKey, charsmax(szKey), "play_%s", szAuth);
+	if (nvault_get(g_iVaultReward, szKey, szVal, charsmax(szVal))) {
+		new iRemain = str_to_num(szVal);
+		if (iRemain > 0)
+			g_iPlayRemain[id] = iRemain;
+	}
+	g_bRewardLoaded[id] = true;
+}
+
+SaveRewardState(id) {
+	if (g_iVaultReward == INVALID_HANDLE)
+		return;
+
+	new szAuth[MAX_AUTHID_LENGTH], szKey[64], szVal[32];
+	GetPlayerAuth(id, szAuth, charsmax(szAuth));
+	if (!szAuth[0])
+		return;
+
+	formatex(szKey, charsmax(szKey), "chk_%s", szAuth);
+	num_to_str(g_iLastCheckin[id], szVal, charsmax(szVal));
+	nvault_set(g_iVaultReward, szKey, szVal);
+
+	formatex(szKey, charsmax(szKey), "play_%s", szAuth);
+	num_to_str(GetPlayRemain(id), szVal, charsmax(szVal));
+	nvault_set(g_iVaultReward, szKey, szVal);
+}
+
+HasCheckedInToday(id) {
+	LoadRewardState(id);
+	return g_iLastCheckin[id] == TodayYmd();
+}
+
+GetPlayRemain(id) {
+	LoadRewardState(id);
+	new iRemain = g_iPlayRemain[id] - floatround(get_gametime() - g_flPlayStart[id], floatround_floor);
+	if (iRemain < 0)
+		iRemain = 0;
+	return iRemain;
+}
+
+FlushPlaytime(id) {
+	LoadRewardState(id);
+	new Float:flNow = get_gametime();
+	new iElapsed = floatround(flNow - g_flPlayStart[id], floatround_floor);
+	if (iElapsed < 0)
+		iElapsed = 0;
+	g_iPlayRemain[id] -= iElapsed;
+	g_flPlayStart[id] = flNow;
+}
+
+GivePlaytimeRewards(id) {
+	if (!is_user_connected(id) || is_user_bot(id) || is_user_hltv(id))
+		return;
+
+	FlushPlaytime(id);
+	if (!g_bRewardLoaded[id])
+		return;
+
+	new iNeed = g_iPlaytimeNeed;
+	if (iNeed < 60)
+		iNeed = 3600;
+
+	new bool:bGave = false;
+	while (g_iPlayRemain[id] <= 0) {
+		new iBal = hns_gc_add_player(id, g_iPlaytimeBonus);
+		g_iPlayRemain[id] += iNeed;
+		bGave = true;
+		SkinChat(id, print_team_default, "SKIN_CHAT_PLAYTIME_OK", "在线满1小时, 获得 ^3%d^1 GBIC, 余额 ^3%d", g_iPlaytimeBonus, iBal);
+	}
+	if (bGave)
+		SaveRewardState(id);
+}
+
+StartPlaytimeTrack(id) {
+	if (!is_user_connected(id) || is_user_bot(id) || is_user_hltv(id))
+		return;
+	LoadRewardState(id);
+	g_flPlayStart[id] = get_gametime();
+	remove_task(id + TASK_PLAYTIME);
+	set_task(PLAYTIME_TICK, "TaskPlaytimeTick", id + TASK_PLAYTIME, _, _, "b");
+}
+
+StopPlaytimeTrack(id, bool:bSave) {
+	remove_task(id + TASK_PLAYTIME);
+	if (!bSave || !g_bRewardLoaded[id])
+		return;
+	GivePlaytimeRewards(id);
+	SaveRewardState(id);
+}
+
+public TaskPlaytimeTick(taskid) {
+	new id = taskid - TASK_PLAYTIME;
+	if (!is_user_connected(id)) {
+		remove_task(taskid);
+		return;
+	}
+	GivePlaytimeRewards(id);
+	SaveRewardState(id);
+}
+
+DoDailyCheckin(id) {
+	if (!is_user_connected(id) || is_user_bot(id) || is_user_hltv(id))
+		return;
+	LoadRewardState(id);
+	if (HasCheckedInToday(id)) {
+		SkinChat(id, print_team_red, "SKIN_CHAT_CHECKIN_DONE", "今天已经签到过了");
+		return;
+	}
+	g_iLastCheckin[id] = TodayYmd();
+	new iBal = hns_gc_add_player(id, g_iCheckinBonus);
+	SaveRewardState(id);
+	SkinChat(id, print_team_default, "SKIN_CHAT_CHECKIN_OK", "签到成功, 获得 ^3%d^1 GBIC, 余额 ^3%d", g_iCheckinBonus, iBal);
+}
+
+public CmdCheckin(id) {
+	DoDailyCheckin(id);
+	return PLUGIN_HANDLED;
 }
 
 /* ---- HnsLanguage: /lang 简体/繁体/英语/俄语 ---- */
@@ -337,15 +565,33 @@ SkinMenuStyle(id, menu) {
 	menu_setprop(menu, MPROP_BACKNAME, szBack);
 	menu_setprop(menu, MPROP_NEXTNAME, szNext);
 	menu_setprop(menu, MPROP_EXITNAME, szExit);
-	// Match the old menu: white labels and yellow status or price text.
-	menu_setprop(menu, MPROP_NUMBER_COLOR, "\y");
+	menu_setprop(menu, MPROP_NUMBER_COLOR, "\r");
 	menu_setprop(menu, MPROP_NOCOLORS, 0);
+}
+
+FormatShopItem(id, dest[], len, const name[], bool:owned, price, bool:selected = false) {
+	if (selected) {
+		new szSel[32];
+		SkinLang(id, "SKIN_TAG_SELECTED", szSel, charsmax(szSel), "  \r[已选择]");
+		formatex(dest, len, "\w%s%s", name, szSel);
+	} else if (owned)
+		formatex(dest, len, "\w%s", name);
+	else
+		formatex(dest, len, "\d%s  [%d]", name, price);
 }
 
 SkinMenuReturn(id, menu) {
 	new szBack[32];
 	SkinLang(id, "SKIN_MENU_RETURN", szBack, charsmax(szBack), "返回");
 	menu_setprop(menu, MPROP_EXITNAME, szBack);
+}
+
+MarkShopKeep(id) {
+	g_flShopKeep[id] = get_gametime() + 0.40;
+}
+
+bool:KeepShopMenu(id) {
+	return get_gametime() < g_flShopKeep[id];
 }
 
 bool:HasSkin(id, const key[]) {
@@ -493,10 +739,176 @@ bool:IsNadeOwned(id, idx) {
 }
 
 NadeFullPath(const model[], dest[], len) {
-	if (equali(model, "models/", 7))
+	if (equali(model, "models/", 7)) {
 		copy(dest, len, model);
+		return;
+	}
+	new iLen = strlen(model);
+	if (iLen > 4 && equali(model[iLen - 4], ".mdl"))
+		formatex(dest, len, "models/%s", model);
 	else
 		formatex(dest, len, "models/%s.mdl", model);
+}
+
+NadeFileName(const path[], dest[], len) {
+	new i = strlen(path);
+	while (i > 0 && path[i - 1] != '/' && path[i - 1] != 92)
+		i--;
+	copy(dest, len, path[i]);
+}
+
+bool:NadeResolvePath(const model[], dest[], len) {
+	new szTry[PLATFORM_MAX_PATH], szFile[64];
+	NadeFullPath(model, szTry, charsmax(szTry));
+	if (file_exists(szTry)) {
+		copy(dest, len, szTry);
+		return true;
+	}
+	NadeFileName(szTry, szFile, charsmax(szFile));
+	if (szFile[0]) {
+		formatex(szTry, charsmax(szTry), "models/%s", szFile);
+		if (file_exists(szTry)) {
+			copy(dest, len, szTry);
+			return true;
+		}
+	}
+	NadeFullPath(model, dest, len);
+	return false;
+}
+
+bool:NadeWorldPath(const view[], dest[], len) {
+	copy(dest, len, view);
+	if (contain(dest, "/v_") != -1)
+		replace(dest, len, "/v_", "/w_");
+	else if (contain(dest, "v_") != -1)
+		replace(dest, len, "v_", "w_");
+	else
+		return false;
+	return dest[0] && !equal(dest, view) && file_exists(dest);
+}
+
+bool:NadePlayerPath(const view[], dest[], len) {
+	copy(dest, len, view);
+	if (contain(dest, "/v_") != -1)
+		replace(dest, len, "/v_", "/p_");
+	else if (contain(dest, "v_") != -1)
+		replace(dest, len, "v_", "p_");
+	else
+		return false;
+	return dest[0] && !equal(dest, view) && file_exists(dest);
+}
+
+NadeKindOfWeapon(weapon) {
+	if (is_nullent(weapon))
+		return -1;
+	new WeaponIdType:wid = WeaponIdType:get_member(weapon, m_iId);
+	if (wid == WEAPON_SMOKEGRENADE)
+		return NADE_KIND_SMOKE;
+	if (wid == WEAPON_FLASHBANG)
+		return NADE_KIND_FLASH;
+	return -1;
+}
+
+ApplyNadeViewTo(id, weapon, const szView[]) {
+	if (!is_user_connected(id) || !szView[0])
+		return;
+	set_entvar(id, var_viewmodel, szView);
+	if (!is_nullent(weapon)) {
+		set_entvar(weapon, var_viewmodel, szView);
+		new szP[PLATFORM_MAX_PATH];
+		if (NadePlayerPath(szView, szP, charsmax(szP)))
+			set_entvar(weapon, var_weaponmodel, szP);
+	}
+}
+
+bool:SkinMenuBusy(id) {
+	if (!is_user_connected(id))
+		return false;
+	if (task_exists(id + TASK_MENU_SHOP))
+		return true;
+	new iOld, iNew;
+	player_menu_info(id, iOld, iNew);
+	return iNew != -1 || iOld > 0;
+}
+
+ApplyHeldNadeSkin(id) {
+	if (!is_user_alive(id))
+		return;
+	if (SkinMenuBusy(id)) {
+		remove_task(id + TASK_APPLY_NADE);
+		set_task(0.20, "TaskApplyHeldNade", id + TASK_APPLY_NADE);
+		return;
+	}
+	new weapon = get_member(id, m_pActiveItem);
+	new kind = NadeKindOfWeapon(weapon);
+	if (kind < 0)
+		return;
+	new szPath[PLATFORM_MAX_PATH];
+	if (!GetNadeCurrentModel(id, kind, szPath, charsmax(szPath)))
+		return;
+	ApplyNadeViewTo(id, weapon, szPath);
+}
+
+public TaskApplyHeldNade(taskid) {
+	ApplyHeldNadeSkin(taskid - TASK_APPLY_NADE);
+}
+
+ScheduleHeldNadeApply(id) {
+	if (!is_user_connected(id))
+		return;
+	remove_task(id + TASK_APPLY_NADE);
+	set_task(0.05, "TaskApplyHeldNade", id + TASK_APPLY_NADE);
+}
+
+public OnNadeDeployPre(const weapon) {
+	new kind = NadeKindOfWeapon(weapon);
+	if (kind < 0)
+		return HC_CONTINUE;
+	new id = get_member(weapon, m_pPlayer);
+	if (id < 1 || id > MaxClients || !is_user_connected(id))
+		return HC_CONTINUE;
+	new szPath[PLATFORM_MAX_PATH];
+	if (!GetNadeCurrentModel(id, kind, szPath, charsmax(szPath)))
+		return HC_CONTINUE;
+	SetHookChainArg(2, ATYPE_STRING, szPath);
+	new szP[PLATFORM_MAX_PATH];
+	if (NadePlayerPath(szPath, szP, charsmax(szP)))
+		SetHookChainArg(3, ATYPE_STRING, szP);
+	return HC_CONTINUE;
+}
+
+public OnNadeDeployPost(const weapon) {
+	new kind = NadeKindOfWeapon(weapon);
+	if (kind < 0)
+		return HC_CONTINUE;
+	new id = get_member(weapon, m_pPlayer);
+	if (id < 1 || id > MaxClients)
+		return HC_CONTINUE;
+	ScheduleHeldNadeApply(id);
+	return HC_CONTINUE;
+}
+
+OpenShopLater(id, which, page = 0, kind = -1) {
+	if (!is_user_connected(id))
+		return;
+	g_iShopMenu[id] = which;
+	g_iShopPage[id] = page;
+	g_iShopKind[id] = kind;
+	MarkShopKeep(id);
+	remove_task(id + TASK_MENU_SHOP);
+	set_task(0.05, "TaskOpenShop", id + TASK_MENU_SHOP);
+}
+
+public TaskOpenShop(taskid) {
+	new id = taskid - TASK_MENU_SHOP;
+	if (!is_user_connected(id))
+		return;
+	switch (g_iShopMenu[id]) {
+		case SHOP_MENU_SKIN: MenuSkin(id, g_iShopPage[id]);
+		case SHOP_MENU_NADE_CAT: MenuNades(id);
+		case SHOP_MENU_NADE_KIND: MenuNadeKind(id, g_iShopKind[id], g_iShopPage[id]);
+		case SHOP_MENU_KNIFE: MenuKnives(id, g_iShopPage[id]);
+	}
 }
 
 // 读取 nade_skins.cfg 并预缓存模型: 名字 模型 价格 类型
@@ -538,9 +950,13 @@ LoadNadeCfg() {
 			row[nade_price] = 0;
 		row[nade_kind] = equali(szKind, "flash") ? NADE_KIND_FLASH : NADE_KIND_SMOKE;
 
-		new szPath[PLATFORM_MAX_PATH];
-		NadeFullPath(row[nade_model], szPath, charsmax(szPath));
+		new szPath[PLATFORM_MAX_PATH], szExtra[PLATFORM_MAX_PATH];
+		NadeResolvePath(row[nade_model], szPath, charsmax(szPath));
 		precache_model(szPath);
+		if (NadeWorldPath(szPath, szExtra, charsmax(szExtra)))
+			precache_model(szExtra);
+		if (NadePlayerPath(szPath, szExtra, charsmax(szExtra)))
+			precache_model(szExtra);
 
 		ArrayPushArray(g_pNade, row, sizeof row);
 		g_iNadeSize++;
@@ -603,11 +1019,11 @@ LoadKnifeCfg() {
 	fclose(file);
 }
 
-NadePoolIndex(const key[]) {
+NadePoolIndex(const key[], kind = -1) {
 	for (new i = 0; i < g_iNadeSize; i++) {
 		new row[nade_e];
 		ArrayGetArray(g_pNade, i, row, sizeof row);
-		if (equal(row[nade_key], key))
+		if (equal(row[nade_key], key) && (kind < 0 || row[nade_kind] == kind))
 			return i;
 	}
 	return -1;
@@ -620,12 +1036,12 @@ bool:GetNadeCurrentModel(id, kind, dest[], len) {
 	NadeCurSlot(id, kind, key, charsmax(key));
 	if (!key[0])
 		return false;
-	new idx = NadePoolIndex(key);
+	new idx = NadePoolIndex(key, kind);
 	if (idx == -1)
 		return false;
 	new row[nade_e];
 	ArrayGetArray(g_pNade, idx, row, sizeof row);
-	NadeFullPath(row[nade_model], dest, len);
+	NadeResolvePath(row[nade_model], dest, len);
 	return dest[0] != EOS;
 }
 
@@ -691,6 +1107,7 @@ SelectNade(id, idx) {
 }
 
 MenuNades(id) {
+	g_iNadeKindPage[id] = -1;
 	// 分类选择页: 先进这里, 再选 烟雾弹 / 闪光弹
 	new szTitle[160], szItem[160];
 	SkinLangF(id, "SKIN_NADE_TITLE", "\y投掷物皮肤^n\w金币: \y%d  \w免费名额: \y%d",
@@ -698,11 +1115,11 @@ MenuNades(id) {
 	new menu = menu_create(szTitle, "NadeHandler");
 
 	new szCat[96];
-	SkinLangF(id, "SKIN_NADE_CAT_SMOKE", "\w烟雾弹皮肤  \d%d款", szCat, charsmax(szCat), CountNadesOfKind(NADE_KIND_SMOKE));
-	formatex(szItem, charsmax(szItem), "%s", szCat);
+	SkinLangF(id, "SKIN_NADE_CAT_SMOKE", "烟雾弹皮肤  [%d款]", szCat, charsmax(szCat), CountNadesOfKind(NADE_KIND_SMOKE));
+	formatex(szItem, charsmax(szItem), "\y%s", szCat);
 	menu_additem(menu, szItem, "catS");
-	SkinLangF(id, "SKIN_NADE_CAT_FLASH", "\w闪光弹皮肤  \d%d款", szCat, charsmax(szCat), CountNadesOfKind(NADE_KIND_FLASH));
-	formatex(szItem, charsmax(szItem), "%s", szCat);
+	SkinLangF(id, "SKIN_NADE_CAT_FLASH", "闪光弹皮肤  [%d款]", szCat, charsmax(szCat), CountNadesOfKind(NADE_KIND_FLASH));
+	formatex(szItem, charsmax(szItem), "\y%s", szCat);
 	menu_additem(menu, szItem, "catF");
 
 	SkinMenuStyle(id, menu);
@@ -724,6 +1141,8 @@ CountNadesOfKind(kind) {
 
 // 单类投掷物皮肤列表 (只显示 kind 这一类), -1 = 全部分类
 MenuNadeKind(id, kind, page = 0) {
+	g_iNadeKindPage[id] = kind;
+	g_iNadePage[id] = page;
 	new szTitle[160], szItem[160], szInfo[12];
 	new szKindName[16];
 	SkinLang(id, kind == NADE_KIND_FLASH ? "SKIN_NADE_KIND_FLASH" : "SKIN_NADE_KIND_SMOKE",
@@ -732,31 +1151,15 @@ MenuNadeKind(id, kind, page = 0) {
 		szTitle, charsmax(szTitle), szKindName, hns_gc_get_player(id), g_iNadeFree);
 	new menu = menu_create(szTitle, "NadeHandler");
 
-	new added;
+	new added, curNade[SKIN_KEY_MAX];
+	NadeCurSlot(id, kind, curNade, charsmax(curNade));
 	for (new i = 0; i < g_iNadeSize; i++) {
 		new row[nade_e];
 		ArrayGetArray(g_pNade, i, row, sizeof row);
 		if (row[nade_kind] != kind)
 			continue;
 
-		new cur[NADE_KEY_MAX];
-		NadeCurSlot(id, row[nade_kind], cur, charsmax(cur));
-
-		if (cur[0] && equal(cur, row[nade_key]) && IsNadeOwned(id, i)) {
-			formatex(szItem, charsmax(szItem), "\w%s  \y[使用中]", row[nade_key]);
-		} else if (IsNadeOwned(id, i)) {
-			new szOwnedKey[SKIN_KEY_MAX];
-			NadeOwnedKey(row[nade_key], szOwnedKey, charsmax(szOwnedKey));
-			if (IsNadeFree(i))
-				formatex(szItem, charsmax(szItem), "\w%s  \y[免费]", row[nade_key]);
-			else if (SkinExpire(id, szOwnedKey) == 0)
-					formatex(szItem, charsmax(szItem), "\w%s  \y[永久]", row[nade_key]);
-			else
-					formatex(szItem, charsmax(szItem), "\w%s  \y[剩%d天]", row[nade_key], DaysLeft(id, szOwnedKey));
-		} else {
-			formatex(szItem, charsmax(szItem), "\w%s  \y%d金币", row[nade_key], row[nade_price]);
-		}
-
+		FormatShopItem(id, szItem, charsmax(szItem), row[nade_key], IsNadeOwned(id, i), row[nade_price], equal(curNade, row[nade_key]) != 0);
 		num_to_str(i, szInfo, charsmax(szInfo));
 		menu_additem(menu, szItem, szInfo);
 		added++;
@@ -777,67 +1180,108 @@ MenuConfirmNadeBuy(id, idx, kind = -1, page = 0) {
 	g_iNadePage[id] = page;
 	if (row[nade_price] == 0 || IsNadeFree(idx)) {
 		DoBuyNade(id, idx);
-		MenuNadeKind(id, kind >= 0 ? kind : row[nade_kind], page);
+		OpenShopLater(id, SHOP_MENU_NADE_KIND, page, kind >= 0 ? kind : row[nade_kind]);
 		return;
 	}
 
-	new szTitle[160], szItem[96], szInfo[12];
-	formatex(szTitle, charsmax(szTitle), "\y确认购买投掷物皮肤^n\w名称: %s^n\w价格: \y%d 金币  \w永久", row[nade_key], row[nade_price]);
+	new szTitle[160], szItem[96], szInfo[12], szRent[32];
+	SkinLang(id, "SKIN_PERM", szRent, charsmax(szRent), "永久");
+	SkinLangF(id, "SKIN_NADE_BUY_TITLE", "\y确认购买投掷物皮肤^n\w名称: %s^n\w价格: \y%d 金币  \w租期: %s",
+		szTitle, charsmax(szTitle), row[nade_key], row[nade_price], szRent);
 	new menu = menu_create(szTitle, "NadeConfirmHandler");
 	num_to_str(idx, szInfo, charsmax(szInfo));
-	formatex(szItem, charsmax(szItem), "确认购买  \r-%d", row[nade_price]);
+	SkinLangF(id, "SKIN_BUY_OK", "确认购买  \r-%d", szItem, charsmax(szItem), row[nade_price]);
 	menu_additem(menu, szItem, szInfo);
-	menu_additem(menu, "取消", "cancel");
+	SkinLang(id, "SKIN_CANCEL", szItem, charsmax(szItem), "取消");
+	menu_additem(menu, szItem, "cancel");
 	SkinMenuStyle(id, menu);
 	menu_setprop(menu, MPROP_EXIT, MEXIT_NEVER);
 	menu_display(id, menu, 0);
 }
 
+RefreshNadeKindNames(id, menu, kind) {
+	new szItem[160], curNade[SKIN_KEY_MAX], szInfo[12], access, callback, name[2];
+	NadeCurSlot(id, kind, curNade, charsmax(curNade));
+	new count = menu_items(menu);
+	for (new i = 0; i < count; i++) {
+		menu_item_getinfo(menu, i, access, szInfo, charsmax(szInfo), name, charsmax(name), callback);
+		if (!szInfo[0] || equal(szInfo, "none") || equal(szInfo, "catS") || equal(szInfo, "catF"))
+			continue;
+		new idx = str_to_num(szInfo);
+		if (idx < 0 || idx >= g_iNadeSize)
+			continue;
+		new row[nade_e];
+		ArrayGetArray(g_pNade, idx, row, sizeof row);
+		FormatShopItem(id, szItem, charsmax(szItem), row[nade_key], IsNadeOwned(id, idx), row[nade_price], equal(curNade, row[nade_key]) != 0);
+		menu_item_setname(menu, i, szItem);
+	}
+}
+
 public NadeHandler(id, menu, item) {
+	new kind = g_iNadeKindPage[id];
+	new page = g_iNadePage[id];
 	if (item == MENU_EXIT) {
+		if (KeepShopMenu(id) && (kind == NADE_KIND_SMOKE || kind == NADE_KIND_FLASH)) {
+			menu_display(id, menu, page);
+			return PLUGIN_HANDLED;
+		}
 		menu_destroy(menu);
-		MenuSkin(id);
+		if (kind == NADE_KIND_SMOKE || kind == NADE_KIND_FLASH)
+			OpenShopLater(id, SHOP_MENU_NADE_CAT);
+		else {
+			OpenShopLater(id, SHOP_MENU_SKIN);
+			ScheduleHeldNadeApply(id);
+		}
 		return PLUGIN_HANDLED;
 	}
 	new szInfo[12], access, callback;
 	menu_item_getinfo(menu, item, access, szInfo, charsmax(szInfo), _, _, callback);
-	new page = item / SKIN_PER_PAGE;
-	menu_destroy(menu);
+	page = item / SKIN_PER_PAGE;
+	g_iNadePage[id] = page;
 
-	// 分类选择页: szInfo 是 "catS"(烟雾) 或 "catF"(闪光)
 	if (equal(szInfo, "catS")) {
-		g_iNadeKindPage[id] = NADE_KIND_SMOKE;
-		MenuNadeKind(id, NADE_KIND_SMOKE);
+		menu_destroy(menu);
+		OpenShopLater(id, SHOP_MENU_NADE_KIND, 0, NADE_KIND_SMOKE);
 		return PLUGIN_HANDLED;
 	}
 	if (equal(szInfo, "catF")) {
-		g_iNadeKindPage[id] = NADE_KIND_FLASH;
-		MenuNadeKind(id, NADE_KIND_FLASH);
+		menu_destroy(menu);
+		OpenShopLater(id, SHOP_MENU_NADE_KIND, 0, NADE_KIND_FLASH);
 		return PLUGIN_HANDLED;
 	}
 
-	// 单类列表页
-	new kind = g_iNadeKindPage[id];
 	if (equal(szInfo, "none")) {
-		MenuNadeKind(id, kind);
+		MarkShopKeep(id);
+		menu_display(id, menu, 0);
 		return PLUGIN_HANDLED;
 	}
 	new idx = str_to_num(szInfo);
 	if (idx >= 0 && idx < g_iNadeSize) {
-		if (IsNadeOwned(id, idx))
+		if (IsNadeOwned(id, idx)) {
 			SelectNade(id, idx);
-		else
+			MarkShopKeep(id);
+			RefreshNadeKindNames(id, menu, kind);
+			menu_display(id, menu, page);
+		} else {
+			menu_destroy(menu);
 			MenuConfirmNadeBuy(id, idx, kind, page);
+		}
+	} else {
+		MarkShopKeep(id);
+		menu_display(id, menu, page);
 	}
-	MenuNadeKind(id, kind, page);
 	return PLUGIN_HANDLED;
 }
 
 public NadeConfirmHandler(id, menu, item) {
 	new kind = g_iNadeKindPage[id];
 	if (item == MENU_EXIT) {
+		if (KeepShopMenu(id)) {
+			menu_display(id, menu, 0);
+			return PLUGIN_HANDLED;
+		}
 		menu_destroy(menu);
-		MenuNadeKind(id, kind, g_iNadePage[id]);
+		OpenShopLater(id, SHOP_MENU_NADE_KIND, g_iNadePage[id], kind);
 		return PLUGIN_HANDLED;
 	}
 	new szInfo[12], access, callback;
@@ -845,7 +1289,7 @@ public NadeConfirmHandler(id, menu, item) {
 	menu_destroy(menu);
 	if (!equal(szInfo, "cancel"))
 		DoBuyNade(id, str_to_num(szInfo));
-	MenuNadeKind(id, kind, g_iNadePage[id]);
+	OpenShopLater(id, SHOP_MENU_NADE_KIND, g_iNadePage[id], kind);
 	return PLUGIN_HANDLED;
 }
 
@@ -875,11 +1319,13 @@ public fw_SetModel(ent, const model[]) {
 	if (owner < 1 || owner > MaxClients || !is_user_connected(owner))
 		return FMRES_IGNORED;
 
-	new szPath[PLATFORM_MAX_PATH];
-	if (!GetNadeCurrentModel(owner, kind, szPath, charsmax(szPath)))
+	new szView[PLATFORM_MAX_PATH], szWorld[PLATFORM_MAX_PATH];
+	if (!GetNadeCurrentModel(owner, kind, szView, charsmax(szView)))
+		return FMRES_IGNORED;
+	if (!NadeWorldPath(szView, szWorld, charsmax(szWorld)))
 		return FMRES_IGNORED;
 
-	engfunc(EngFunc_SetModel, ent, szPath);
+	engfunc(EngFunc_SetModel, ent, szWorld);
 	return FMRES_SUPERCEDE;
 }
 
@@ -1133,8 +1579,28 @@ ImportSkinsToDb(Handle:conn, const szCfg[]) {
 				g_iKnifeFree = str_to_num(szVal);
 			else if (equali(szHead, "nade_free"))
 				g_iNadeFree = str_to_num(szVal);
+			else if (equali(szHead, "buy_gold_text") || equali(szHead, "buy_gold_url")) {
+				new iPos = strlen(szHead);
+				while (szLine[iPos] == ' ' || szLine[iPos] == '^t')
+					iPos++;
+				if (equali(szHead, "buy_gold_text"))
+					copy(g_szBuyGoldText, charsmax(g_szBuyGoldText), szLine[iPos]);
+				else
+					copy(g_szBuyGoldUrl, charsmax(g_szBuyGoldUrl), szLine[iPos]);
+				StripQuotes(g_szBuyGoldText);
+				StripQuotes(g_szBuyGoldUrl);
+			}
 			else if (equali(szHead, "precache_max"))
 				g_iPrecacheMax = str_to_num(szVal);
+			else if (equali(szHead, "checkin_bonus"))
+				g_iCheckinBonus = str_to_num(szVal);
+			else if (equali(szHead, "playtime_bonus"))
+				g_iPlaytimeBonus = str_to_num(szVal);
+			else if (equali(szHead, "playtime_seconds")) {
+				g_iPlaytimeNeed = str_to_num(szVal);
+				if (g_iPlaytimeNeed < 60)
+					g_iPlaytimeNeed = 3600;
+			}
 			continue;
 		}
 
@@ -1654,7 +2120,6 @@ SelectSkin(id, idx) {
 	new szTeam[48];
 	SkinTeamLong(id, row[pool_team], szTeam, charsmax(szTeam));
 	SkinChat(id, print_team_blue, "SKIN_CHAT_SELECTED", "你已选用%s阵营皮肤: ^3%s", szTeam, row[pool_key]);
-	MenuBrowseSkins(id, row[pool_team], g_iBrowsePage[id]);
 }
 
 DoBuy(id, idx) {
@@ -1785,30 +2250,17 @@ DoBuyKnife(id, knife) {
 }
 
 MenuKnives(id, page = 0) {
-	new szTitle[160], szItem[160], szName[MAX_NAME_LENGTH], szInfo[12], szOwnedKey[SKIN_KEY_MAX], curKnife;
+	new szTitle[160], szItem[160], szName[MAX_NAME_LENGTH], szInfo[12], curKnife;
 	curKnife = crxknives_get_user_knife(id);
 	SkinLangF(id, "SKIN_KNIFE_TITLE", "\y刀皮商店^n\w金币: \y%d  \w当前: \y%d  \w免费名额: \y%d",
 		szTitle, charsmax(szTitle), hns_gc_get_player(id), curKnife, g_iKnifeFree);
 	new menu = menu_create(szTitle, "KnifeHandler");
 
+	new selectedKnife = g_iCurKnife[id] ? g_iCurKnife[id] : curKnife;
 	for (new knife = 0; knife < crxknives_get_knives_num(); knife++) {
 		new price;
 		KnifeInfo(knife, szName, charsmax(szName), price);
-		if (curKnife == knife) {
-			formatex(szItem, charsmax(szItem), "\w%s  \y[使用中]", szName);
-		} else if (knife < g_iKnifeFree || IsKnifeOwned(id, knife)) {
-			if (knife < g_iKnifeFree)
-				formatex(szItem, charsmax(szItem), "\w%s  \y[免费]", szName);
-			else {
-				KnifeOwnedKey(knife, szOwnedKey, charsmax(szOwnedKey));
-				if (SkinExpire(id, szOwnedKey) == 0)
-					formatex(szItem, charsmax(szItem), "\w%s  \y[永久]", szName);
-				else
-					formatex(szItem, charsmax(szItem), "\w%s  \y[剩%d天]", szName, DaysLeft(id, szOwnedKey));
-			}
-		} else {
-			formatex(szItem, charsmax(szItem), "\w%s  \y%d金币", szName, price);
-		}
+		FormatShopItem(id, szItem, charsmax(szItem), szName, (knife < g_iKnifeFree || IsKnifeOwned(id, knife)), price, knife == selectedKnife);
 		num_to_str(knife, szInfo, charsmax(szInfo));
 		menu_additem(menu, szItem, szInfo);
 	}
@@ -1827,20 +2279,22 @@ MenuConfirmKnifeBuy(id, knife, page = 0) {
 	g_iKnifePage[id] = page;
 	if (price == 0 || knife < g_iKnifeFree) {
 		DoBuyKnife(id, knife);
-		MenuKnives(id, page);
+		OpenShopLater(id, SHOP_MENU_KNIFE, page);
 		return;
 	}
 	new szRent[32];
 	if (g_iRentDays > 0)
-		formatex(szRent, charsmax(szRent), "%d天", g_iRentDays);
+		SkinLangF(id, "SKIN_DAYS", "%d天", szRent, charsmax(szRent), g_iRentDays);
 	else
-		copy(szRent, charsmax(szRent), "永久");
-	formatex(szTitle, charsmax(szTitle), "\y确认购买刀皮^n\w名称: %s^n\w价格: \y%d 金币  \w租期: %s", name, price, szRent);
+		SkinLang(id, "SKIN_PERM", szRent, charsmax(szRent), "永久");
+	SkinLangF(id, "SKIN_KNIFE_BUY_TITLE", "\y确认购买刀皮^n\w名称: %s^n\w价格: \y%d 金币  \w租期: %s",
+		szTitle, charsmax(szTitle), name, price, szRent);
 	new menu = menu_create(szTitle, "KnifeConfirmHandler");
 	num_to_str(knife, szInfo, charsmax(szInfo));
-	formatex(szItem, charsmax(szItem), "确认购买  \r-%d", price);
+	SkinLangF(id, "SKIN_BUY_OK", "确认购买  \r-%d", szItem, charsmax(szItem), price);
 	menu_additem(menu, szItem, szInfo);
-	menu_additem(menu, "取消", "cancel");
+	SkinLang(id, "SKIN_CANCEL", szItem, charsmax(szItem), "取消");
+	menu_additem(menu, szItem, "cancel");
 	SkinMenuStyle(id, menu);
 	menu_setprop(menu, MPROP_EXIT, MEXIT_NEVER);
 	menu_display(id, menu, 0);
@@ -1888,20 +2342,20 @@ OnSkinChosen(id, idx, page = 0) {
 	if (idx < 0 || idx >= g_iPoolSize)
 		return;
 
-	g_iBrowsePage[id] = page;
 	new row[pool_e];
 	ArrayGetArray(g_pPool, idx, row, sizeof row);
 
 	// 本图因预缓存上限未加载该模型, 不能购买/应用 (换一张地图即可用)
 	if (!row[pool_precache]) {
 		SkinChat(id, print_team_default, "SKIN_CHAT_MAP_NA", "皮肤 ^3%s^1 本图未加载(模型预缓存上限), 换图后再试", row[pool_key]);
-		MenuBrowseSkins(id, row[pool_team], page);
+		MenuBrowseSkins(id, g_iBrowseTeam[id], page);
 		return;
 	}
 
-	if (IsSkinValid(id, row[pool_key]))
+	if (IsSkinValid(id, row[pool_key])) {
 		SelectSkin(id, idx);
-	else
+		MenuBrowseSkins(id, g_iBrowseTeam[id], page);
+	} else
 		MenuConfirmBuy(id, idx, page);
 }
 
@@ -2135,58 +2589,83 @@ CountTeamSkins(teamChar) {
 	return n;
 }
 
-MenuSkin(id) {
+CountKnifeSkins() {
+	return crxknives_get_knives_num();
+}
+
+CountNadeSkins() {
+	return g_iNadeSize;
+}
+
+MenuSkin(id, page = 0) {
 	if (!is_user_connected(id))
 		return;
 
-	new teamChar = CharOfTeam(get_member(id, m_iTeam));
-	new szTeam[16], szTitle[160], szItem[96];
-	SkinTeamName(id, teamChar, szTeam, charsmax(szTeam));
-	SkinLangF(id, "SKIN_MENU_TITLE", "\y皮肤系统^n\w当前阵营: \y%s  \w| 皮肤池: \y%d  \w| 金币: \y%d",
-		szTitle, charsmax(szTitle), szTeam, g_iPoolSize, hns_gc_get_player(id));
+	new iGold = hns_gc_get_player(id);
+	new iCt = CountTeamSkins(TEAM_CHAR_C);
+	new iTt = CountTeamSkins(TEAM_CHAR_T);
+	new iChar = iCt + iTt;
+	new iKnife = CountKnifeSkins();
+	new iNade = CountNadeSkins();
+	new szTitle[160], szItem[96];
+	SkinLangF(id, "SKIN_MENU_TITLE", "\y皮肤商店^n\w金币: \y%d",
+		szTitle, charsmax(szTitle), iGold);
 	new menu = menu_create(szTitle, "SkinHandler");
 
-	// 固定主菜单顺序: 四个商店、金币、权限菜单。
-	SkinLangF(id, "SKIN_MENU_CT", "\wCT皮肤\y[%d]", szItem, charsmax(szItem), CountTeamSkins(TEAM_CHAR_C));
-	menu_additem(menu, szItem, "ct");
-
-	SkinLangF(id, "SKIN_MENU_TT", "\wTT皮肤\y[%d]", szItem, charsmax(szItem), CountTeamSkins(TEAM_CHAR_T));
-	menu_additem(menu, szItem, "tt");
-
-	SkinLang(id, "SKIN_MENU_KNIFE", szItem, charsmax(szItem), "\w刀模商店");
+	SkinLangF(id, "SKIN_MENU_CHAR", "人物皮肤商店  \r[%d]", szItem, charsmax(szItem), iChar);
+	menu_additem(menu, szItem, "char");
+	SkinLangF(id, "SKIN_MENU_KNIFE", "刀模商店  \r[%d]", szItem, charsmax(szItem), iKnife);
 	menu_additem(menu, szItem, "knife");
-
-	SkinLang(id, "SKIN_MENU_NADE", szItem, charsmax(szItem), "\w投掷物商店");
+	SkinLangF(id, "SKIN_MENU_NADE", "投掷物商店  \r[%d]", szItem, charsmax(szItem), iNade);
 	menu_additem(menu, szItem, "nade");
-
-	menu_addblank(menu, false);
-
+	menu_addblank(menu, 0);
+	SkinLangF(id, "SKIN_MENU_GOLD", "GBIC点数  \r[%d]", szItem, charsmax(szItem), iGold);
+	menu_additem(menu, szItem, "gold");
+	if (HasCheckedInToday(id))
+		SkinLangF(id, "SKIN_MENU_CHECKIN_DONE", "每日签到  \d[已签到 +%d]", szItem, charsmax(szItem), g_iCheckinBonus);
+	else
+		SkinLangF(id, "SKIN_MENU_CHECKIN", "每日签到  \y[+%d GBIC]", szItem, charsmax(szItem), g_iCheckinBonus);
+	menu_additem(menu, szItem, "checkin");
+	SkinLang(id, "SKIN_MENU_BUY", szItem, charsmax(szItem), "购买点数");
+	menu_additem(menu, szItem, "buy");
+	menu_addblank(menu, 0);
 	SkinLang(id, "SKIN_MENU_SQL", szItem, charsmax(szItem), "\yMySQL管理");
 	menu_additem(menu, szItem, "sql");
-
-	// 管理功能只显示给对应权限，管理员项固定为红色。
-	if (IsSkinAdmin(id)) {
-		SkinLang(id, "SKIN_MENU_ADMIN", szItem, charsmax(szItem), "\r管理员设置");
-		menu_additem(menu, szItem, "admin");
-	}
-
-	menu_addblank(menu, false);
+	SkinLang(id, "SKIN_MENU_ADMIN", szItem, charsmax(szItem), "\r管理员设置");
+	menu_additem(menu, szItem, "admin");
 
 	SkinMenuStyle(id, menu);
+	menu_display(id, menu, page);
+}
+
+MenuCharShop(id) {
+	new szTitle[128], szItem[96];
+	new iCt = CountTeamSkins(TEAM_CHAR_C);
+	new iTt = CountTeamSkins(TEAM_CHAR_T);
+	SkinLangF(id, "SKIN_CHAR_TITLE", "\y人物皮肤商店  \r[%d]",
+		szTitle, charsmax(szTitle), iCt + iTt);
+	new menu = menu_create(szTitle, "CharShopHandler");
+	SkinLangF(id, "SKIN_MENU_CT", "CT皮肤  \r[%d]", szItem, charsmax(szItem), iCt);
+	menu_additem(menu, szItem, "ct");
+	SkinLangF(id, "SKIN_MENU_TT", "TT皮肤  \r[%d]", szItem, charsmax(szItem), iTt);
+	menu_additem(menu, szItem, "tt");
+	SkinMenuStyle(id, menu);
+	SkinMenuReturn(id, menu);
 	menu_display(id, menu, 0);
 }
+
 MenuBrowseSkins(id, teamChar, page = 0) {
-	if (teamChar != TEAM_CHAR_C && teamChar != TEAM_CHAR_T)
-		teamChar = CharOfTeam(get_member(id, m_iTeam));
+	if (!is_user_connected(id))
+		return;
+
 	g_iBrowseTeam[id] = teamChar;
 	g_iBrowsePage[id] = page;
 
-	new cur[SKIN_KEY_MAX];
-	CurSlot(id, cur, charsmax(cur), teamChar);
-
-	new szTeam[16], szNone[32], szTitle[160];
+	new szTeam[32], szNone[32], szTitle[160];
 	SkinTeamName(id, teamChar, szTeam, charsmax(szTeam));
 	SkinLang(id, "SKIN_NONE", szNone, charsmax(szNone), "无");
+	new cur[SKIN_KEY_MAX];
+	CurSlot(id, cur, charsmax(cur), teamChar);
 	SkinLangF(id, "SKIN_BROWSE_TITLE", "\y%s皮肤^n\w金币: \y%d  \w当前: \y%s",
 		szTitle, charsmax(szTitle), szTeam, hns_gc_get_player(id), cur[0] ? cur : szNone);
 	new menu = menu_create(szTitle, "BrowseHandler");
@@ -2201,26 +2680,9 @@ MenuBrowseSkins(id, teamChar, page = 0) {
 		if (row[pool_team] != teamChar)
 			continue;
 
-		new bool:bOwned = IsSkinValid(id, row[pool_key]);
-		new bool:bSelected = bOwned && cur[0] && equal(cur, row[pool_key]);
-		if (bSelected) {
-			if (!row[pool_precache])
-				format(szTxt, charsmax(szTxt), "\w%s  \r[当前不可用]", row[pool_key]);
-			else
-				format(szTxt, charsmax(szTxt), "\w%s  \y[使用中]", row[pool_key]);
-		} else if (bOwned) {
-			if (SkinExpire(id, row[pool_key]) == 0 && row[pool_precache])
-				format(szTxt, charsmax(szTxt), "\w%s  \y[永久]", row[pool_key]);
-			else if (SkinExpire(id, row[pool_key]) == 0)
-				format(szTxt, charsmax(szTxt), "\w%s  \y[永久]  \r[当前不可用]", row[pool_key]);
-			else if (row[pool_precache])
-				format(szTxt, charsmax(szTxt), "\w%s  \y[剩%d天]", row[pool_key], DaysLeft(id, row[pool_key]));
-			else
-				format(szTxt, charsmax(szTxt), "\w%s  \y[剩%d天]  \r[当前不可用]", row[pool_key], DaysLeft(id, row[pool_key]));
-		} else {
-			// 未拥有的皮肤只展示灰色名称，不在列表里暴露购买价格。
-			format(szTxt, charsmax(szTxt), "\d%s", row[pool_key]);
-		}
+		FormatShopItem(id, szTxt, charsmax(szTxt), row[pool_key], IsSkinValid(id, row[pool_key]), row[pool_price], equal(cur, row[pool_key]) != 0);
+		if (!row[pool_precache])
+			format(szTxt, charsmax(szTxt), "%s  \r[当前不可用]", szTxt);
 
 		num_to_str(i, szInfo, charsmax(szInfo));
 		menu_additem(menu, szTxt, szInfo);
@@ -2228,7 +2690,7 @@ MenuBrowseSkins(id, teamChar, page = 0) {
 	}
 
 	if (!added) {
-		SkinLang(id, "SKIN_BROWSE_EMPTY", szTxt, charsmax(szTxt), "\d(该阵营没有可用皮肤)");
+		SkinLang(id, "SKIN_BROWSE_EMPTY", szTxt, charsmax(szTxt), "  (当前阵营没有可用皮肤)");
 		menu_additem(menu, szTxt, "none");
 	}
 
@@ -2237,13 +2699,41 @@ MenuBrowseSkins(id, teamChar, page = 0) {
 	menu_display(id, menu, page);
 }
 
+MenuBuyGold(id) {
+	new szTitle[64], szItem[160];
+	SkinLang(id, "SKIN_BUY_GOLD_TITLE", szTitle, charsmax(szTitle), "\y购买点数");
+	new menu = menu_create(szTitle, "BuyGoldHandler");
+	if (g_szBuyGoldText[0])
+		copy(szItem, charsmax(szItem), g_szBuyGoldText);
+	else
+		SkinLang(id, "SKIN_BUY_GOLD_TEXT", szItem, charsmax(szItem), "请联系管理员购买 GBIC 点数");
+	menu_additem(menu, szItem, "info");
+	if (g_szBuyGoldUrl[0]) {
+		SkinLang(id, "SKIN_BUY_GOLD_OPEN", szItem, charsmax(szItem), "打开购买页面");
+		menu_additem(menu, szItem, "open");
+	}
+	SkinMenuStyle(id, menu);
+	SkinMenuReturn(id, menu);
+	menu_display(id, menu, 0);
+}
+
 MenuGold(id) {
 	new iGold = hns_gc_get_player(id);
-	new szTitle[160], szItem[96];
-	SkinLangF(id, "SKIN_GOLD_TITLE", "\yGBIC金币 \w· \y账户^n\w余额: \y%d  \w租期: \y%d天^n\w升级永久: \y%d 金币",
-		szTitle, charsmax(szTitle), iGold, g_iRentDays, g_iUpgradePrice);
+	new szTitle[192], szItem[96];
+	new iRemain = GetPlayRemain(id);
+	if (iRemain < 0)
+		iRemain = 0;
+	new iMin = iRemain / 60;
+	new iSec = iRemain % 60;
+	SkinLangF(id, "SKIN_GOLD_TITLE", "\yGBIC金币 \w· \y账户^n\w余额: \y%d  \w租期: \y%d天^n\w升级永久: \y%d 金币^n\w在线奖励: \y%d分%d秒 \w后 +%d",
+		szTitle, charsmax(szTitle), iGold, g_iRentDays, g_iUpgradePrice, iMin, iSec, g_iPlaytimeBonus);
 	new menu = menu_create(szTitle, "GoldHandler");
-	SkinLangF(id, "SKIN_GOLD_UP", "升级已购皮肤为永久  \y[%d金币/款]", szItem, charsmax(szItem), g_iUpgradePrice);
+	if (HasCheckedInToday(id))
+		SkinLangF(id, "SKIN_GOLD_CHECKIN_DONE", "每日签到  \d[今天已领 +%d]", szItem, charsmax(szItem), g_iCheckinBonus);
+	else
+		SkinLangF(id, "SKIN_GOLD_CHECKIN", "每日签到  \y[+%d GBIC]", szItem, charsmax(szItem), g_iCheckinBonus);
+	menu_additem(menu, szItem, "checkin");
+	SkinLangF(id, "SKIN_GOLD_UP", "升级已购皮肤为永久 (%d金币)", szItem, charsmax(szItem), g_iUpgradePrice);
 	menu_additem(menu, szItem, "up");
 	SkinLang(id, "SKIN_GOLD_REFRESH", szItem, charsmax(szItem), "刷新余额");
 	menu_additem(menu, szItem, "refresh");
@@ -2598,7 +3088,7 @@ MenuGiveSkin(id, target) {
 	for (new knife = 0; knife < crxknives_get_knives_num(); knife++) {
 		new kname[MAX_NAME_LENGTH], kprice;
 		KnifeInfo(knife, kname, charsmax(kname), kprice);
-		formatex(szTxt, charsmax(szTxt), "\w[刀] %s", kname);
+		SkinLangF(id, "SKIN_GIVE_TAG_KNIFE", "\w[刀] %s", szTxt, charsmax(szTxt), kname);
 		formatex(szInfo, charsmax(szInfo), "k%d", knife);
 		menu_additem(menu, szTxt, szInfo);
 		added++;
@@ -2608,7 +3098,7 @@ MenuGiveSkin(id, target) {
 	for (new i = 0; i < g_iNadeSize; i++) {
 		new row[nade_e];
 		ArrayGetArray(g_pNade, i, row, sizeof row);
-		formatex(szTxt, charsmax(szTxt), "\w[投掷物] %s", row[nade_key]);
+		SkinLangF(id, "SKIN_GIVE_TAG_NADE", "\w[投掷物] %s", szTxt, charsmax(szTxt), row[nade_key]);
 		formatex(szInfo, charsmax(szInfo), "n%d", i);
 		menu_additem(menu, szTxt, szInfo);
 		added++;
@@ -2678,10 +3168,22 @@ public plugin_precache() {
 public plugin_init() {
 	register_plugin("HNS Match Skin", "1.0.0", "OpenHNS");
 
+	// crx 在 plugin_cfg 里缓存 km_select_message, 必须在它之前关掉英文选刀提示
+	MuteCrxKnifeSelectMessage();
+
 	for (new i = 0; i < sizeof(g_szClcmds); i++)
 		register_clcmd(g_szClcmds[i], "Cl_Cmd");
+	register_clcmd("say /sign", "CmdCheckin");
+	register_clcmd("say_team /sign", "CmdCheckin");
+	register_clcmd("say /qd", "CmdCheckin");
+	register_clcmd("say_team /qd", "CmdCheckin");
+	register_clcmd("say /checkin", "CmdCheckin");
+	register_clcmd("say_team /checkin", "CmdCheckin");
+	register_clcmd("say /签到", "CmdCheckin");
+	register_clcmd("say_team /签到", "CmdCheckin");
 
 	LoadDbCfg();
+	g_tAuthByIp = TrieCreate();
 	g_hSqlTuple = SQL_MakeDbTuple(g_eDb[db_host], g_eDb[db_user], g_eDb[db_pass], g_eDb[db_db]);
 	SQL_SetCharset(g_hSqlTuple, "utf8");
 
@@ -2696,16 +3198,39 @@ public plugin_init() {
 
 	// 投掷物皮肤: 换掉出厂的烟雾/闪光模型
 	register_forward(FM_SetModel, "fw_SetModel", 0);
+	RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy, "OnNadeDeployPre", false);
+	RegisterHookChain(RG_CBasePlayerWeapon_DefaultDeploy, "OnNadeDeployPost", true);
+	RegisterHookChain(RG_CBasePlayer_Spawn, "OnPlayerSpawnPost", true);
+	if (g_iVaultReward == INVALID_HANDLE)
+		g_iVaultReward = nvault_open("hns_skin_reward");
 }
 
 public TaskSyncCatalog() {
 	DbSyncCatalog(false);
 }
 
+public plugin_cfg() {
+	MuteCrxKnifeSelectMessage();
+	if (g_iVaultReward == INVALID_HANDLE)
+		g_iVaultReward = nvault_open("hns_skin_reward");
+}
+
+MuteCrxKnifeSelectMessage() {
+	set_cvar_num("km_select_message", 0);
+	new pCvar = get_cvar_pointer("km_select_message");
+	if (pCvar)
+		set_pcvar_num(pCvar, 0);
+}
+
 public plugin_end() {
 	if (g_pPool) { ArrayDestroy(g_pPool); g_pPool = Empty_Handle; }
 	if (g_pPoolIndex) { TrieDestroy(g_pPoolIndex); g_pPoolIndex = Invalid_Trie; }
+	if (g_tAuthByIp) { TrieDestroy(g_tAuthByIp); g_tAuthByIp = Invalid_Trie; }
 	if (g_pNade) { ArrayDestroy(g_pNade); g_pNade = Empty_Handle; }
+	if (g_iVaultReward != INVALID_HANDLE) {
+		nvault_close(g_iVaultReward);
+		g_iVaultReward = INVALID_HANDLE;
+	}
 	for (new i = 1; i <= MaxClients; i++) {
 		if (g_Owned[i])
 			ArrayDestroy(g_Owned[i]);
@@ -2812,10 +3337,7 @@ public fwd_PlayerPreThink(id) {
 public client_authorized(id) {
 	if (!g_hSqlTuple || is_user_bot(id) || is_user_hltv(id))
 		return;
-
-	g_iLoadGen[id]++;
-	GetPlayerAuth(id, g_szAuth[id], charsmax(g_szAuth[]));
-	Db_LoadOwned(id, g_szAuth[id]);
+	TryLoadOwned(id);
 }
 
 public client_putinserver(id) {
@@ -2823,21 +3345,78 @@ public client_putinserver(id) {
 	g_iLastTeam[id] = 0;
 	g_szAppliedTeam[id] = 0;
 	g_szAppliedKey[id][0] = EOS;
-	g_bOwnedLoaded[id] = false;
+	StartPlaytimeTrack(id);
 
 	if (!g_hSqlTuple || is_user_bot(id) || is_user_hltv(id))
 		return;
+	TryLoadOwned(id);
+}
 
-	new szOld[MAX_AUTHID_LENGTH];
-	copy(szOld, charsmax(szOld), g_szAuth[id]);
-
-	new szAuth[MAX_AUTHID_LENGTH];
-	GetPlayerAuth(id, szAuth, charsmax(szAuth));
-	if (equal(szOld, szAuth) && g_Owned[id])
+TryLoadOwned(id) {
+	if (!is_user_connected(id) || !g_hSqlTuple || is_user_bot(id) || is_user_hltv(id))
 		return;
 
+	new szLive[MAX_AUTHID_LENGTH], szCached[MAX_AUTHID_LENGTH];
+	get_user_authid(id, szLive, charsmax(szLive));
+	LookupAuthByIp(id, szCached, charsmax(szCached));
+	if (IsPendingAuth(szLive) && !IsSteamAuth(g_szAuth[id]) && !IsSteamAuth(szCached) && g_iAuthRetry[id] < 15) {
+		ScheduleAuthRetry(id);
+		return;
+	}
+
+	new szOld[MAX_AUTHID_LENGTH], szAuth[MAX_AUTHID_LENGTH];
+	copy(szOld, charsmax(szOld), g_szAuth[id]);
+	GetPlayerAuth(id, szAuth, charsmax(szAuth));
+	if (!szAuth[0]) {
+		ScheduleAuthRetry(id);
+		return;
+	}
+
+	// SteamID 没变且已经读过库: 只重新贴模型, 不要 ClearOwned
+	if (equal(szOld, szAuth) && g_Owned[id] && g_bOwnedLoaded[id]) {
+		ApplyCurrentSkin(id);
+		ScheduleKnifeReapply(id);
+		return;
+	}
+
+	remove_task(id + TASK_AUTH_RETRY);
+	g_iAuthRetry[id] = 0;
+	g_bOwnedLoaded[id] = false;
 	g_iLoadGen[id]++;
+	copy(g_szAuth[id], charsmax(g_szAuth[]), szAuth);
 	Db_LoadOwned(id, szAuth);
+}
+
+ScheduleAuthRetry(id) {
+	if (!is_user_connected(id))
+		return;
+	remove_task(id + TASK_AUTH_RETRY);
+	if (g_iAuthRetry[id] >= 15)
+		return;
+	set_task(0.5, "TaskAuthRetry", id + TASK_AUTH_RETRY);
+}
+
+public TaskAuthRetry(taskid) {
+	new id = taskid - TASK_AUTH_RETRY;
+	if (!is_user_connected(id))
+		return;
+
+	new szLive[MAX_AUTHID_LENGTH];
+	get_user_authid(id, szLive, charsmax(szLive));
+	if (IsSteamAuth(szLive)) {
+		g_iAuthRetry[id] = 0;
+		TryLoadOwned(id);
+		return;
+	}
+
+	g_iAuthRetry[id]++;
+	if (g_iAuthRetry[id] < 15) {
+		set_task(0.5, "TaskAuthRetry", taskid);
+		return;
+	}
+
+	// 一直拿不到 SteamID 才退回 LAN:IP, 避免换图瞬间用空账号把皮肤冲掉
+	TryLoadOwned(id);
 }
 
 public client_disconnected(id) {
@@ -2848,6 +3427,8 @@ public client_disconnected(id) {
 	g_iBrowseTeam[id] = 0;
 	g_legacyPendingAdmin[id] = 0;
 	g_iLoadGen[id]++;
+	StopPlaytimeTrack(id, true);
+	RememberAuthByIp(id, g_szAuth[id]);
 	g_szAuth[id][0] = EOS;
 	ClearOwned(id);
 	g_bOwnedLoaded[id] = false;
@@ -2860,8 +3441,24 @@ public client_disconnected(id) {
 	g_NadeSmoke[id][0] = EOS;
 	g_NadeFlash[id][0] = EOS;
 	g_iKnifePage[id] = 0;
+	g_iKnifeRetry[id] = 0;
+	g_iAuthRetry[id] = 0;
+	g_bApplyingKnife[id] = false;
+	g_flShopKeep[id] = 0.0;
+	remove_task(id + TASK_REAPPLY_KNIFE);
+	remove_task(id + TASK_AUTH_RETRY);
 	g_iBrowsePage[id] = 0;
 	g_iNadePage[id] = 0;
+	g_iNadeKindPage[id] = -1;
+	g_iShopMenu[id] = 0;
+	g_iShopPage[id] = 0;
+	g_iShopKind[id] = -1;
+	remove_task(id + TASK_APPLY_NADE);
+	remove_task(id + TASK_MENU_SHOP);
+	g_iLastCheckin[id] = 0;
+	g_iPlayRemain[id] = 0;
+	g_flPlayStart[id] = 0.0;
+	g_bRewardLoaded[id] = false;
 }
 
 RefundGold(id, iPaid) {
@@ -2972,6 +3569,8 @@ public SqlHandler(failstate, Handle:query, error[], errnum, data[], size, Float:
 			}
 			ApplyCurrentSkin(id);
 			ReapplyKnife(id);
+			ScheduleKnifeReapply(id);
+			ScheduleHeldNadeApply(id);
 		}
 	}
 
@@ -2979,45 +3578,64 @@ public SqlHandler(failstate, Handle:query, error[], errnum, data[], size, Float:
 }
 
 public Cl_Cmd(id) {
-	MenuSkin(id);
+	new szArg[64];
+	read_argv(0, szArg, charsmax(szArg));
+
+	if (containi(szArg, "/cpm") != -1 || containi(szArg, "/giveskin") != -1) {
+		if (IsSkinAdmin(id))
+			MenuAdmin(id);
+		else
+			SkinChat(id, print_team_red, "SKIN_CHAT_NO_ADMIN", "你没有管理权限");
+	} else {
+		MenuSkin(id);
+	}
 	return PLUGIN_HANDLED;
 }
 
 public SkinHandler(id, menu, item) {
-	if (item != MENU_EXIT) {
-		new szInfo[12], access, callback;
-		menu_item_getinfo(menu, item, access, szInfo, charsmax(szInfo), _, _, callback);
-		if (equal(szInfo, "ct"))
-			MenuBrowseSkins(id, TEAM_CHAR_C);
-		else if (equal(szInfo, "tt"))
-			MenuBrowseSkins(id, TEAM_CHAR_T);
-		else if (equal(szInfo, "knife"))
-			MenuKnives(id);
-		else if (equal(szInfo, "nade"))
-			MenuNades(id);
-		else if (equal(szInfo, "gold"))
-			MenuGold(id);
-		else if (equal(szInfo, "admin")) {
-			if (IsSkinAdmin(id))
-				MenuAdmin(id);
-			else {
-				SkinChat(id, print_team_red, "SKIN_CHAT_NO_ADMIN", "当前没有权限：管理员设置需要 A 管理员权限");
-				MenuSkin(id);
-			}
-		} else if (equal(szInfo, "sql")) {
-			if (IsSkinSqlAdmin(id))
-				MenuSqlDebug(id);
-			else {
-				SkinChat(id, print_team_red, "SKIN_CHAT_NO_ADMIN", "当前没有权限：SQL 调试需要 A 或 B 管理员权限");
-				MenuSkin(id);
-			}
-		}
+	if (item == MENU_EXIT) {
+		menu_destroy(menu);
+		return PLUGIN_HANDLED;
 	}
+
+	new szInfo[12], access, callback;
+	menu_item_getinfo(menu, item, access, szInfo, charsmax(szInfo), _, _, callback);
 	menu_destroy(menu);
+
+	if (equal(szInfo, "char"))
+		MenuCharShop(id);
+	else if (equal(szInfo, "knife"))
+		MenuKnives(id);
+	else if (equal(szInfo, "nade"))
+		MenuNades(id);
+	else if (equal(szInfo, "gold"))
+		MenuGold(id);
+	else if (equal(szInfo, "checkin")) {
+		DoDailyCheckin(id);
+		MenuSkin(id);
+	}
+	else if (equal(szInfo, "buy"))
+		MenuBuyGold(id);
+	else if (equal(szInfo, "sql")) {
+		if (IsSkinSqlAdmin(id))
+			MenuSqlDebug(id);
+		else {
+			SkinChat(id, print_team_red, "SKIN_CHAT_NO_ADMIN", "你没有 SQL 调试权限");
+			MenuSkin(id);
+		}
+	} else if (equal(szInfo, "admin")) {
+		if (IsSkinAdmin(id))
+			MenuAdmin(id);
+		else {
+			SkinChat(id, print_team_red, "SKIN_CHAT_NO_ADMIN", "你没有管理权限");
+			MenuSkin(id);
+		}
+	} else
+		MenuSkin(id);
 	return PLUGIN_HANDLED;
 }
 
-public KnifeHandler(id, menu, item) {
+public CharShopHandler(id, menu, item) {
 	if (item == MENU_EXIT) {
 		menu_destroy(menu);
 		MenuSkin(id);
@@ -3025,17 +3643,80 @@ public KnifeHandler(id, menu, item) {
 	}
 	new szInfo[12], access, callback;
 	menu_item_getinfo(menu, item, access, szInfo, charsmax(szInfo), _, _, callback);
-	new page = item / SKIN_PER_PAGE;
 	menu_destroy(menu);
+	if (equal(szInfo, "ct"))
+		MenuBrowseSkins(id, TEAM_CHAR_C);
+	else if (equal(szInfo, "tt"))
+		MenuBrowseSkins(id, TEAM_CHAR_T);
+	else
+		MenuCharShop(id);
+	return PLUGIN_HANDLED;
+}
+
+public BuyGoldHandler(id, menu, item) {
+	if (item == MENU_EXIT) {
+		menu_destroy(menu);
+		MenuSkin(id);
+		return PLUGIN_HANDLED;
+	}
+	new szInfo[12], access, callback;
+	menu_item_getinfo(menu, item, access, szInfo, charsmax(szInfo), _, _, callback);
+	menu_destroy(menu);
+	if (equal(szInfo, "open") && g_szBuyGoldUrl[0])
+		show_motd(id, g_szBuyGoldUrl, "GBIC");
+	else if (g_szBuyGoldText[0])
+		SkinChat(id, print_team_default, "SKIN_CHAT_BUY_GOLD", "%s", g_szBuyGoldText);
+	else
+		SkinChat(id, print_team_default, "SKIN_CHAT_BUY_GOLD", "请联系管理员购买 GBIC 点数");
+	MenuBuyGold(id);
+	return PLUGIN_HANDLED;
+}
+
+RefreshKnifeNames(id, menu) {
+	new szItem[160], szName[MAX_NAME_LENGTH], szInfo[12], access, callback, name[2], price;
+	new selectedKnife = g_iCurKnife[id] ? g_iCurKnife[id] : crxknives_get_user_knife(id);
+	new count = menu_items(menu);
+	for (new i = 0; i < count; i++) {
+		menu_item_getinfo(menu, i, access, szInfo, charsmax(szInfo), name, charsmax(name), callback);
+		if (!szInfo[0] || equal(szInfo, "none"))
+			continue;
+		new knife = str_to_num(szInfo);
+		if (!IsKnifeShopItemValid(knife))
+			continue;
+		KnifeInfo(knife, szName, charsmax(szName), price);
+		FormatShopItem(id, szItem, charsmax(szItem), szName, (knife < g_iKnifeFree || IsKnifeOwned(id, knife)), price, knife == selectedKnife);
+		menu_item_setname(menu, i, szItem);
+	}
+}
+
+public KnifeHandler(id, menu, item) {
+	if (item == MENU_EXIT) {
+		if (KeepShopMenu(id)) {
+			menu_display(id, menu, g_iKnifePage[id]);
+			return PLUGIN_HANDLED;
+		}
+		menu_destroy(menu);
+		OpenShopLater(id, SHOP_MENU_SKIN);
+		return PLUGIN_HANDLED;
+	}
+	new szInfo[12], access, callback;
+	menu_item_getinfo(menu, item, access, szInfo, charsmax(szInfo), _, _, callback);
+	new page = item / SKIN_PER_PAGE;
+	g_iKnifePage[id] = page;
 	if (!equal(szInfo, "none")) {
 		new knife = str_to_num(szInfo);
-		if (IsKnifeOwned(id, knife))
+		if (IsKnifeOwned(id, knife)) {
 			SelectKnife(id, knife);
-		else
+			MarkShopKeep(id);
+			RefreshKnifeNames(id, menu);
+			menu_display(id, menu, page);
+		} else {
+			menu_destroy(menu);
 			MenuConfirmKnifeBuy(id, knife, page);
-		MenuKnives(id, page);
+		}
 	} else {
-		MenuKnives(id);
+		MarkShopKeep(id);
+		menu_display(id, menu, 0);
 	}
 	return PLUGIN_HANDLED;
 }
@@ -3043,7 +3724,7 @@ public KnifeHandler(id, menu, item) {
 public KnifeConfirmHandler(id, menu, item) {
 	if (item == MENU_EXIT) {
 		menu_destroy(menu);
-		MenuKnives(id, g_iKnifePage[id]);
+		OpenShopLater(id, SHOP_MENU_KNIFE, g_iKnifePage[id]);
 		return PLUGIN_HANDLED;
 	}
 	new szInfo[12], access, callback;
@@ -3051,7 +3732,7 @@ public KnifeConfirmHandler(id, menu, item) {
 	menu_destroy(menu);
 	if (!equal(szInfo, "cancel"))
 		DoBuyKnife(id, str_to_num(szInfo));
-	MenuKnives(id, g_iKnifePage[id]);
+	OpenShopLater(id, SHOP_MENU_KNIFE, g_iKnifePage[id]);
 	return PLUGIN_HANDLED;
 }
 
@@ -3068,14 +3749,21 @@ public crxknives_attempt_change(id, knife) {
 }
 
 public crxknives_knife_updated(id, knife, bool:onconnect) {
-	if (!IsKnifeShopItemValid(knife) || IsKnifeOwned(id, knife))
+	if (!is_user_connected(id) || g_bApplyingKnife[id])
 		return;
-	// 拥有列表还没从MySQL加载完: 不要急着把刀重置成原皮, 等 ReapplyKnife 再判断
 	if (!g_bOwnedLoaded[id])
 		return;
-	if (knife != 0) {
-		g_iCurKnife[id] = 0;
-		crxknives_select_knife(id, 0);
+
+	new saved = g_iCurKnife[id];
+	if (saved > 0 && IsKnifeShopItemValid(saved) && IsKnifeOwned(id, saved)) {
+		if (knife != saved)
+			ForceSelectKnife(id, saved);
+		return;
+	}
+
+	if (!IsKnifeShopItemValid(knife) || !IsKnifeOwned(id, knife)) {
+		if (knife != 0)
+			ForceSelectKnife(id, 0);
 	}
 }
 
@@ -3084,14 +3772,49 @@ SelectKnife(id, knife) {
 		return;
 
 	g_iCurKnife[id] = knife;
-	crxknives_select_knife(id, knife);
+	ForceSelectKnife(id, knife);
 
-	new authid[MAX_AUTHID_LENGTH];
+	new authid[MAX_AUTHID_LENGTH], szName[MAX_NAME_LENGTH], price;
 	GetPlayerAuth(id, authid, charsmax(authid));
 	Db_SaveKnifeCurrent(id, authid, knife);
+	KnifeInfo(knife, szName, charsmax(szName), price);
+	SkinChat(id, print_team_blue, "SKIN_CHAT_KNIFE_SELECTED", "你已选用刀皮: ^3%s", szName);
+	ScheduleKnifeReapply(id);
 }
 
-// Restore the selected knife after the engine and the async owned-list query are ready.
+ForceSelectKnife(id, knife) {
+	if (!is_user_connected(id))
+		return;
+	g_bApplyingKnife[id] = true;
+	crxknives_select_knife(id, knife);
+	g_bApplyingKnife[id] = false;
+}
+
+ScheduleKnifeReapply(id) {
+	if (!is_user_connected(id))
+		return;
+	remove_task(id + TASK_REAPPLY_KNIFE);
+	g_iKnifeRetry[id] = 0;
+	set_task(1.0, "TaskReapplyKnife", id + TASK_REAPPLY_KNIFE);
+}
+
+public TaskReapplyKnife(taskid) {
+	new id = taskid - TASK_REAPPLY_KNIFE;
+	ReapplyKnife(id);
+	if (!is_user_connected(id))
+		return;
+	g_iKnifeRetry[id]++;
+	if (g_iKnifeRetry[id] < 5)
+		set_task(1.2, "TaskReapplyKnife", taskid);
+}
+
+public OnPlayerSpawnPost(id) {
+	if (is_user_alive(id)) {
+		ReapplyKnife(id);
+		ScheduleHeldNadeApply(id);
+	}
+}
+
 ReapplyKnife(id) {
 	if (!g_bOwnedLoaded[id] || !is_user_connected(id))
 		return;
@@ -3101,17 +3824,17 @@ ReapplyKnife(id) {
 		return;
 	if (!IsKnifeShopItemValid(knife) || !IsKnifeOwned(id, knife)) {
 		g_iCurKnife[id] = 0;
-		crxknives_select_knife(id, 0);
+		ForceSelectKnife(id, 0);
 		return;
 	}
-	crxknives_select_knife(id, knife);
+	if (crxknives_get_user_knife(id) != knife)
+		ForceSelectKnife(id, knife);
 }
 
 public BrowseHandler(id, menu, item) {
-	new teamChar = g_iBrowseTeam[id];
 	if (item == MENU_EXIT) {
 		menu_destroy(menu);
-		MenuSkin(id);
+		MenuCharShop(id);
 		return PLUGIN_HANDLED;
 	}
 	new szInfo[12], access, callback;
@@ -3121,7 +3844,7 @@ public BrowseHandler(id, menu, item) {
 	if (!equal(szInfo, "none"))
 		OnSkinChosen(id, str_to_num(szInfo), page);
 	else
-		MenuBrowseSkins(id, teamChar, page);
+		MenuBrowseSkins(id, g_iBrowseTeam[id], page);
 	return PLUGIN_HANDLED;
 }
 
@@ -3134,7 +3857,11 @@ public GoldHandler(id, menu, item) {
 	new szInfo[12], access, callback;
 	menu_item_getinfo(menu, item, access, szInfo, charsmax(szInfo), _, _, callback);
 	menu_destroy(menu);
-	if (equal(szInfo, "up"))
+	if (equal(szInfo, "checkin")) {
+		DoDailyCheckin(id);
+		MenuGold(id);
+	}
+	else if (equal(szInfo, "up"))
 		MenuUpgrade(id);
 	else
 		MenuGold(id);
@@ -3206,7 +3933,7 @@ public UpgradeHandler(id, menu, item) {
 public UpgradeConfirmHandler(id, menu, item) {
 	if (item == MENU_EXIT) {
 		menu_destroy(menu);
-		MenuGold(id);
+		MenuUpgrade(id);
 		return PLUGIN_HANDLED;
 	}
 	new szInfo[12], access, callback;
@@ -3215,7 +3942,7 @@ public UpgradeConfirmHandler(id, menu, item) {
 	if (str_to_num(szInfo) >= 0 && !equal(szInfo, "cancel"))
 		DoUpgrade(id, str_to_num(szInfo));
 	else
-		MenuGold(id);
+		MenuUpgrade(id);
 	return PLUGIN_HANDLED;
 }
 

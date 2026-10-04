@@ -1,0 +1,18 @@
+HnsAds.sma —— HNS 聊天栏广告轮播 版本说明
+===========================================
+插件名: HNS Chat Ads  v1.1  作者: GTR(自研)
+功能: 聊天栏轮播广告, 按玩家 /lang 分语言发送(简中/繁中/英语/俄语)
+来源: gtr (3).zip —— cstrike/addons/amxmodx/scripting/HnsAds.sma (13503 字节, 2026-10-04 06:33)
+
+配置:
+- 广告文案: configs/mixsystem/hns_ads.cfg ([cn][tw][en][ru] 分段, 支持 {g}{r}{b}{w}{y} 颜色与 {players}{online}{mode}{map} 变量)
+- cvars:
+  hns_ads_enabled   1 开 / 0 关
+  hns_ads_interval  轮播间隔秒数(默认 45)
+
+命令:
+- hns_ads_reload (ADMIN_CFG) 重新读取 hns_ads.cfg
+- hns_ads_now    (ADMIN_CFG) 立刻播放下一条
+- say /github 或 /source 或 /开源 —— 显示开源仓库地址
+
+依赖: HnsLanguage(取语言键), 需在 plugins.ini 中排在 HnsLanguage 之后

@@ -145,7 +145,6 @@ Das GTR-Team hat darauf rund um den gesamten Ablauf „**Anmeldung → Gruppieru
 06_Beta测试插件包/          5 unabhängige kleine Plugins
 07_第三方插件包/            SEM / semiclip / rtv_rus (dream-x.ru)
 08_资源文件_asd/           Skin-Modelle / Sounds / Texturen
-09_开发脚本与临时文件/      Zwischenprodukte der KI-Programmierung (nur zur Fehleranalyse)
 10_交接与文档/              Änderungsaufzeichnungen, Übergabehinweise, Update-Log
 ```
 

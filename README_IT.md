@@ -146,7 +146,6 @@ dando vita a un motore di match indipendente: il **motore proprietario GTR**.
 06_Beta测试插件包/          5 piccoli plugin indipendenti
 07_第三方插件包/            SEM / semiclip / rtv_rus (dream-x.ru)
 08_资源文件_asd/            modelli skin / suoni / texture
-09_开发脚本与临时文件/      prodotti intermedi della programmazione AI (solo per confronto/verifica)
 10_交接与文档/              registro modifiche, note di consegna, changelog
 ```
 

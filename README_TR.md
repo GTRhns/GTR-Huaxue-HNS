@@ -146,7 +146,6 @@ GTR ekibi bunun üzerine «**kayıt → takım oluşturma → mod/harita seçimi
 06_Beta测试插件包/          5 bağımsız küçük eklenti
 07_第三方插件包/            SEM / semiclip / rtv_rus (dream-x.ru)
 08_资源文件_asd/            skin modelleri / sesler / doku materyalleri
-09_开发脚本与临时文件/      AI programlama ara çıktıları (yalnızca inceleme/karşılaştırma için)
 10_交接与文档/              değişiklik kayıtları, devir notları, güncelleme günlüğü
 ```
 

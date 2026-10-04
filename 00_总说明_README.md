@@ -31,7 +31,6 @@
 | `06_Beta测试插件包/` | 5 个小插件整理包（观察者列表/广告/解封/比分/游戏内广告） | gtr/amxx plugins bata |
 | `07_第三方插件包/` | SEM(semiclip+metamod)、semiclip_package、rtv_rus（俄站 dream-x.ru 来源） | gtr/SEM, semiclip_package, rtv_rus |
 | `08_资源文件_asd/` | 皮肤模型/音效资源（buffclass 皮肤素材） | gtr/asd |
-| `09_开发脚本与临时文件/` | AI 开发过程的 patch 脚本、断点备份、测试产物 | gtr/_tmp |
 | `10_交接与文档/` | 修改记录、交接说明、更新日志、源地址、AI agent 定义 | 各文档 |
 
 ---

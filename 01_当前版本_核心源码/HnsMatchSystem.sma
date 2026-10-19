@@ -204,22 +204,22 @@ public native_external_set_team_size(amxx, params) {
 }
 
 // 设置比赛规则 (NATCH_RULES: MR/TIMER/DUEL/ROUNDS)
+// argMode 不能叫 iMode: 同名局部变量会遮蔽枚举常量, get_param 读到未初始化下标, 直接把 hlds 打崩
 public native_external_set_match_mode(amxx, params) {
-	enum { iMode = 1 };
-	new iMode = get_param(iMode);
+	enum { argMode = 1 };
+	new iMode = get_param(argMode);
 
 	if (iMode < 0 || iMode > _:RULES_ROUNDS)
 		return 0;
 
 	g_iCurrentRules = NATCH_RULES:iMode;
-	PDS_SetCell("match_rules", iMode);
 	if (g_iCurrentRules == RULES_ROUNDS) {
 		g_iSettings[MAXROUNDS] = 7;
 	} else if (g_iCurrentRules == RULES_MR) {
 		if (g_iSettings[MAXROUNDS] <= 0)
 			g_iSettings[MAXROUNDS] = 6;
 	} else if (g_iCurrentRules == RULES_TIMER) {
-		g_eMatchInfo[e_mWintime] = g_iSettings[WINTIME] > 0.0 ? g_iSettings[WINTIME] : 15.0;
+		g_eMatchInfo[e_mWintime] = hns_wintime_minutes();
 	}
 	return 1;
 }
@@ -276,15 +276,6 @@ public native_begin_external_match(amxx, params) {
 	g_eMatchType = bSponsor ? MATCH_TYPE_SPONSOR : MATCH_TYPE_CASUAL;
 	g_bSponsorMatch = bSponsor;
 	g_iSponsorPlayer = iStarter;
-
-	// AI 开赛前再套一次报名选的赛制, 防止换图 delayed_mode 把回合制盖回 MR
-	new iAiRules;
-	if (PDS_GetCell("ai_match_rules", iAiRules) && iAiRules >= _:RULES_MR && iAiRules <= _:RULES_ROUNDS) {
-		g_iCurrentRules = NATCH_RULES:iAiRules;
-		PDS_SetCell("match_rules", iAiRules);
-		if (g_iCurrentRules == RULES_ROUNDS)
-			g_iSettings[MAXROUNDS] = 7;
-	}
 
 	// 开赛前把当前所有 T/CT 玩家标记为参赛者 (含测试人机),
 	// 否则 mix_start 的 forceUnmatchedToSpec 会把人踢到观战
@@ -519,6 +510,7 @@ public client_disconnected(id) {
 
 	g_bSurrenderVoted[id] = false;
 	hook[id] = false;
+	arrayset(eAfkData[id], 0, AfkData_s);
 }
 
 public Knife_PrimaryAttack(ent)
@@ -653,8 +645,12 @@ public ShowTimeAsMoney()
 		{
 			id = players[num];
 
+			new iLeft = floatround(hns_wintime_cap_seconds() - g_eMatchInfo[e_flSidesTime][g_isTeamTT], floatround_floor);
+			if (iLeft < 0)
+				iLeft = 0;
+
 			message_begin(MSG_ONE, g_msgMoney, .player=id);
-			write_long(floatround((g_iSettings[WINTIME]*60.0) - g_eMatchInfo[e_flSidesTime][g_isTeamTT], floatround_floor));
+			write_long(iLeft);
 			write_byte(0);
 			message_end();
 		}

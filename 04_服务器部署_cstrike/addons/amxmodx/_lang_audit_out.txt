@@ -1,0 +1,109 @@
+================================================================================
+hns_language.txt
+sections: cn=971, tw=970, en=969, ru=967
+DUPS: 10
+  DUP cn MENU_BACK line 167
+  DUP tw MENU_BACK line 1146
+  DUP en MENU_BACK line 2123
+  DUP en AI_MENU_TYPE line 2340
+  DUP en HMS_KZ_BOTTOM line 2911
+  DUP en HMS_KZ_CENTER line 2912
+  DUP ru MENU_BACK line 3109
+  DUP ru AI_MENU_TYPE line 3317
+  DUP ru HMS_KZ_BOTTOM line 3885
+  DUP ru HMS_KZ_CENTER line 3886
+MISSING IN EN: 4
+  AI_CHAT_MAP_RANDOM_WAIT from cn,tw :: 随机地图: ^3%s^1, ^3%d^1 秒后换图. 管理员输入 ^3/nomaps^1 可取消
+  AI_CHAT_POOL_SET from cn,tw :: 地图池已设为: ^3%s
+  HMS_STYLE_CLASSIC from cn,tw :: 经典
+  HMS_STYLE_FENCE from cn,tw :: KZ中屏
+CJK IN EN:
+  count 0
+EN not in cn: 2
+  AI_CHAT_MAP__SET = Map pool set to: ^3%s
+  AI_CHAT_POOLRANDOM_WAIT = Random map: ^3%s^1, changing in ^3%d^1 sec. Admin can type ^3/nomaps^1 to cancel
+cn not in EN: 4
+  SPEC HMS_POS_TITLE cn=[%%] en=[]
+    CN \rHMS \w| 位置微调^n\y每次 2%%
+    EN \rHMS \w| Fine Position Tools^n\ySTEP: 2 PERCENT PER PRESS
+SPEC MISMATCH cn vs en: 1
+IDENTICAL cn==en: 0
+missing in tw: 3
+  AI_CHAT_MAP__SET
+  AI_CHAT_POOLRANDOM_WAIT
+  MENU_ADMIN_QUICK
+EN not in ru: 2
+  PADM_ALIVE
+  PADM_SLAY_DONE
+CJK IN RU: 0
+================================================================================
+HnsSkin.txt
+sections: zh=55, zh-TW=55, en=55, ru=55
+DUPS: 0
+MISSING IN EN: 0
+CJK IN EN:
+  count 0
+EN not in zh: 0
+zh not in EN: 0
+SPEC MISMATCH zh vs en: 0
+IDENTICAL zh==en: 0
+missing in zh-TW: 0
+EN not in ru: 0
+CJK IN RU: 0
+================================================================================
+mixsystem.txt
+sections: cn=157, tw=157, en=157, ru=157
+DUPS: 0
+MISSING IN EN: 0
+CJK IN EN:
+  count 0
+EN not in cn: 0
+cn not in EN: 0
+SPEC MISMATCH cn vs en: 0
+IDENTICAL cn==en: 0
+missing in tw: 0
+EN not in ru: 0
+CJK IN RU: 0
+================================================================================
+match_additons.txt
+sections: en=136, ru=136, cn=136, tw=134
+DUPS: 0
+MISSING IN EN: 0
+CJK IN EN:
+  count 0
+EN not in cn: 0
+cn not in EN: 0
+SPEC MISMATCH cn vs en: 0
+IDENTICAL cn==en: 0
+missing in tw: 2
+  MENU_TRNING_FLASH
+  MENU_TRNING_SMOKE
+EN not in ru: 0
+CJK IN RU: 0
+================================================================================
+SemiclipSystem.txt
+sections: cn=5, en=5, ru=5
+DUPS: 0
+MISSING IN EN: 0
+CJK IN EN:
+  count 0
+EN not in cn: 0
+cn not in EN: 0
+SPEC MISMATCH cn vs en: 0
+IDENTICAL cn==en: 0
+EN not in ru: 0
+CJK IN RU: 0
+================================================================================
+KnifeModels.txt
+sections: en=12, mk=12, bg=12, ro=9, pl=9, bp=9, es=9, lt=9, hu=9, de=9, tr=9, sk=9, cn=12, tw=12, ru=12
+DUPS: 0
+MISSING IN EN: 0
+CJK IN EN:
+  count 0
+EN not in cn: 0
+cn not in EN: 0
+SPEC MISMATCH cn vs en: 0
+IDENTICAL cn==en: 0
+missing in tw: 0
+EN not in ru: 0
+CJK IN RU: 0

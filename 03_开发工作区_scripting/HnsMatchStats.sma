@@ -45,6 +45,10 @@ new Float:g_flLastPosition[MAX_PLAYERS + 1][3];
 new Trie:g_tSaveData;
 new Trie:g_tSaveRoundData;
 
+// ReGameDLL 的用户消息号不是原版固定值。写死 85 会变成非法消息号,
+// 引擎直接 Sys_Error: PF_MessageBegin_I bogus message type, 然后无限重启。
+new g_iMsgScoreInfo;
+
 public plugin_init() {
 	register_plugin("Match: Stats", "1.1.1", "OpenHNS"); // Garey
 
@@ -56,6 +60,8 @@ public plugin_init() {
 	RegisterHookChain(RG_CSGameRules_OnRoundFreezeEnd, "rgRoundFreezeEnd", true);
 	RegisterHookChain(RG_RoundEnd, "rgRoundEnd", false);
 	RegisterHookChain(RG_PlayerBlind, "rgPlayerBlind");
+
+	g_iMsgScoreInfo = get_user_msgid("ScoreInfo");
 
 	g_tSaveData = TrieCreate();
 	g_tSaveRoundData = TrieCreate();
@@ -298,10 +304,12 @@ public rgPlayerTakeDamage(iVictim, iWeapon, iAttacker, Float:fDamage) { // Пр�
 }
 
 public rgPlayerFallDamage(id) {
-	if (hns_get_mode() != MODE_MIX || hns_get_state() != STATE_ENABLED)
+	if (hns_get_mode() != MODE_MIX || hns_get_state() != STATE_ENABLED) {
 		return;
+	}
 
 	new dmg = floatround(Float:GetHookChainReturn(ATYPE_FLOAT));
+
 	if (rg_get_user_team(id) == TEAM_TERRORIST) {
 		g_StatsRound[id][PLR_STATS_DMG_TT] += dmg;
 		iStats[id][PLR_STATS_DMG_TT] += dmg;
@@ -312,7 +320,7 @@ public rgPlayerFallDamage(id) {
 }
 
 public rgPlayerBlind(const index, const inflictor, const attacker, const Float:fadeTime, const Float:fadeHold, const alpha) {
-	if (rg_get_user_team(index) != TEAM_CT || rg_get_user_team(attacker) != TEAM_TERRORIST || index == attacker)
+	if(rg_get_user_team(index) != TEAM_CT || rg_get_user_team(attacker) != TEAM_TERRORIST || index == attacker)
 		return HC_CONTINUE;
 
 	if (alpha != 255 || fadeHold < 1.0)
@@ -325,29 +333,34 @@ public rgPlayerBlind(const index, const inflictor, const attacker, const Float:f
 }
 
 public rgPlayerPreThink(id) {
-	if (hns_get_mode() != MODE_MIX || hns_get_state() != STATE_ENABLED || !is_user_alive(id))
-		return;
-
-	if (rg_get_user_team(id) != TEAM_TERRORIST)
-		return;
-
 	static Float:origin[3];
 	static Float:velocity[3];
-	static Float:lastUpdated[MAX_PLAYERS + 1];
-	new Float:currentTime = get_gametime();
-	new Float:frameTime = currentTime - lastUpdated[id];
-	if (frameTime > 1.0)
-		frameTime = 1.0;
-
+	static Float:last_updated[MAX_PLAYERS + 1];
+	static Float:frametime;
 	get_entvar(id, var_origin, origin);
 	get_entvar(id, var_velocity, velocity);
-	new Float:velocityLength = vector_length(velocity);
-	if (velocityLength * frameTime >= get_distance_f(origin, g_flLastPosition[id]) && velocityLength > 125.0) {
-		g_StatsRound[id][PLR_STATS_RUNNED] += velocityLength * frameTime;
-		iStats[id][PLR_STATS_RUNNED] += velocityLength * frameTime;
+
+	frametime = get_gametime() - last_updated[id];
+	if (frametime > 1.0) {
+		frametime = 1.0;
 	}
 
-	lastUpdated[id] = currentTime;
+	if (hns_get_state() == STATE_ENABLED) {
+		if (is_user_alive(id)) {
+			if (rg_get_user_team(id) == TEAM_TERRORIST) {
+				if (vector_length(velocity) * frametime >= get_distance_f(origin, g_flLastPosition[id])) {
+					velocity[2] = 0.0;
+					if (vector_length(velocity) > 125.0) {
+						g_StatsRound[id][PLR_STATS_RUNNED] += vector_length(velocity) * frametime;
+						iStats[id][PLR_STATS_RUNNED] += vector_length(velocity) * frametime;
+					}
+				}
+
+			}
+		}
+	}
+
+	last_updated[id] = get_gametime();
 	xs_vec_copy(origin, g_flLastPosition[id]);
 }
 
@@ -433,14 +446,19 @@ stock SetScoreInfo(id) {
 }
 
 stock Msg_Update_ScoreInfo(id) {
-	const iMsg_ScoreInfo = 85;
+	if (!g_iMsgScoreInfo)
+		g_iMsgScoreInfo = get_user_msgid("ScoreInfo");
 
-	message_begin(MSG_BROADCAST, iMsg_ScoreInfo);
+	// 0 是非法消息号, message_begin 会立刻把服务器打崩并触发重启循环
+	if (g_iMsgScoreInfo <= 0 || !is_user_connected(id))
+		return;
+
+	message_begin(MSG_BROADCAST, g_iMsgScoreInfo);
 	write_byte(id);
+	write_short(iStats[id][PLR_STATS_KILLS]);
+	write_short(iStats[id][PLR_STATS_DEATHS]);
 	write_short(0);
-	write_short(0);
-	write_short(0);
-	write_short(0);
+	write_short(_:iStats[id][PLR_TEAM]);
 	message_end();
 }
 

@@ -22,8 +22,6 @@ public mix_start() {
 
 	match_reset_data();
 	g_iCurrentRules = iKeepRules;
-	if (g_iCurrentRules == RULES_ROUNDS)
-		g_iSettings[MAXROUNDS] = 7;
 
 	if (bKeepExternalSize) {
 		g_bExternalTeamSize = true;
@@ -55,7 +53,6 @@ public mix_start() {
 	deserter_match_start();
 
 	g_isTeamTT = HNS_TEAM_A;
-	syncRoundsScoreboard();
 
 	g_eSurrenderData[e_sFlDelay] = get_gametime() + g_iSettings[SURTIMEDELAY];
 
@@ -105,7 +102,6 @@ public mix_start() {
 		g_eMatchInfo[e_mTeamSize] = get_num_players_in_match();
 	}
 
-	print_match_start_chat();
 	ExecuteForward(g_hForwards[MATCH_START], _);
 }
 
@@ -127,6 +123,23 @@ stock begin_match_loading() {
 	g_iLoadingStep = 0;
 	g_iRefreshWave = 0;
 	g_iMatchCountdown = 0;
+
+	// 聊天框提示: 当前比赛 XX局 XX模式 (局=绿色, 模式=队伍色)
+	new szMatchType[16], szRules[16];
+	switch (g_eMatchType) {
+		case MATCH_TYPE_SPONSOR:	copy(szMatchType, charsmax(szMatchType), "赞助");
+		case MATCH_TYPE_CASUAL:		copy(szMatchType, charsmax(szMatchType), "娱乐");
+		case MATCH_TYPE_RANKED:		copy(szMatchType, charsmax(szMatchType), "个人");
+		default:					copy(szMatchType, charsmax(szMatchType), "未知");
+	}
+	switch (g_iCurrentRules) {
+		case RULES_MR:		copy(szRules, charsmax(szRules), "MR");
+		case RULES_TIMER:	copy(szRules, charsmax(szRules), "Wintime");
+		case RULES_DUEL:	copy(szRules, charsmax(szRules), "Duel");
+		case RULES_ROUNDS:	copy(szRules, charsmax(szRules), "回合制");
+		default:			copy(szRules, charsmax(szRules), "回合制");
+	}
+	chat_print(0, "当前比赛: ^3%s局^1 ^2%s^1", szMatchType, szRules);
 
 	// C4下包进度条: 底部引擎 BarTime, 走满后再刷新回合
 	show_engine_loading_bar(floatround(LOADING_BAR_TIME));
@@ -260,6 +273,8 @@ public mix_restartround() {
 	if (g_iCurrentRules == RULES_DUEL) {
 		duel_restartround();
 	}
+
+	ResetAfkData();
 }
 
 
@@ -306,7 +321,8 @@ public mix_swap() {
 		duel_swap();
 	}
 
-	syncRoundsScoreboard();
+	ResetAfkData();
+	queueRoundsScoreboard();
 }
 
 
@@ -347,13 +363,13 @@ stock cancel_match_loading() {
 	remove_task(TASK_REFRESH_WAVE);
 	remove_task(TASK_MATCH_ACTIVATE);
 	remove_task(TASK_MATCH_HUD);
-	remove_task(TASK_ROUNDS_SCORE);
 }
 
 
 public mix_roundstart() {
 	if (g_bMatchLoading) {
 		// 开场加载流程中的回合刷新: 只做基础重置, 不激活比赛逻辑
+		ResetAfkData();
 		return;
 	}
 
@@ -370,11 +386,11 @@ public mix_roundstart() {
 		return;
 	}
 
-	syncRoundsScoreboard();
-
 	g_flRoundTime = 0.0;
 
 	cmdShowTimers(0);
+
+	ResetAfkData();
 
 	if (g_bHnsBannedInit) {
 		checkUserBan();
@@ -406,6 +422,9 @@ public mix_roundstart() {
 		get_players(iPlayers, iNum, "che", "TERRORIST");
 		g_eMatchInfo[e_mTeamSizeTT] = iNum;
 	}
+
+	set_task(0.3, "taskSaveAfk");
+
 }
 
 public taskCheckLeave() {
@@ -576,16 +595,11 @@ public mix_roundend(bool:win_ct) {
 	} else if (g_iCurrentRules == RULES_TIMER) {
 		g_eMatchInfo[e_iSidesRounds][g_isTeamTT]++
 
-		new iPlayers[MAX_PLAYERS], iNum;
-		get_players(iPlayers, iNum, "ache", "CT");
-
-		if (!iNum) {
-			new Float:roundtime = get_round_time() * 60.0;
-			g_eMatchInfo[e_flSidesTime][g_isTeamTT] += roundtime - g_flRoundTime;
-
-			if (g_eMatchInfo[e_flSidesTime][g_isTeamTT] <= 0.0) {
-				g_eMatchInfo[e_flSidesTime][g_isTeamTT] = 0.0;
-			}
+		// 只记 taskRoundEvent 里真正走过的时间。
+		// CT 死光不再把本回合没打的剩余时间加进去，否则 10 分钟还没打满就结束。
+		if (g_eMatchInfo[e_flSidesTime][g_isTeamTT] >= hns_wintime_cap_seconds()) {
+			MixFinishedWT();
+			return;
 		}
 
 		if (win_ct) {
@@ -605,12 +619,12 @@ public mix_roundend(bool:win_ct) {
 		new szWinnerName[16];
 		copy(szWinnerName, charsmax(szWinnerName), winTeam == HNS_TEAM_A ? "A队" : "B队");
 
-		// CT 赢换边, T 赢不换边。分数记在 A/B 队伍上, 换边后 CT/TT 显示跟着人走。
+		// CT 赢换边, T 赢不换边
 		if (win_ct) {
 			hns_swap_teams();
+		} else {
+			queueRoundsScoreboard();
 		}
-
-		syncRoundsScoreboard();
 
 		if (g_iRoundsScore[winTeam] >= g_iSettings[MAXROUNDS]) {
 			MixFinishedRounds(winTeam == HNS_TEAM_A ? 1 : 2);
@@ -619,9 +633,9 @@ public mix_roundend(bool:win_ct) {
 
 		new iCtScore, iTtScore;
 		getRoundsScore(iCtScore, iTtScore);
-		chat_print(0, "本回合 ^3%s^1 获胜 | 比分跟随队伍 [CT] ^3%d^1 : [TT] ^3%d^1 | A队 %d : %d B队 (先到 %d 胜)",
+		chat_print(0, "本回合 ^3%s^1 获胜 | 当前[CT] ^3%d^1 : [TT] ^3%d^1 | A队 %d : %d B队 (先到 %d 胜)",
 			szWinnerName, iCtScore, iTtScore, g_iRoundsScore[HNS_TEAM_A], g_iRoundsScore[HNS_TEAM_B], g_iSettings[MAXROUNDS]);
-		setTaskHud(0, 0.5, 1, 255, 255, 255, 4.0, "[回合制] %s 获胜!^n比分跟随队伍 [CT] %d : [TT] %d^nA队 %d - %d B队 (先到 %d 胜)",
+		setTaskHud(0, 0.5, 1, 255, 255, 255, 4.0, "[回合制] %s 获胜!^n当前[CT] %d : [TT] %d^nA队 %d - %d B队 (先到 %d 胜)",
 			szWinnerName, iCtScore, iTtScore, g_iRoundsScore[HNS_TEAM_A], g_iRoundsScore[HNS_TEAM_B], g_iSettings[MAXROUNDS]);
 	}
 }
@@ -650,8 +664,8 @@ public taskRoundEvent() {
             }
         }
     } else if (g_iCurrentRules == RULES_TIMER) {
-        new Float:flCapTime = floatmul(g_eMatchInfo[e_mWintime], 60.0);
-        if (g_eMatchInfo[e_flSidesTime][g_isTeamTT] >= flCapTime) {
+        new Float:flCapTime = hns_wintime_cap_seconds();
+        if (flCapTime >= 60.0 && g_eMatchInfo[e_flSidesTime][g_isTeamTT] >= flCapTime) {
             MixFinishedWT()
         }
     }
@@ -805,8 +819,7 @@ stock award_match_gbic(iWinTeam) {
 	if (iWinTeam != 1 && iWinTeam != 2)
 		return;
 
-	new PLAYER_ROLES:winRole = iWinTeam == 1 ? ROLE_TEAM_A : ROLE_TEAM_B;
-	new PLAYER_ROLES:winCapRole = iWinTeam == 1 ? ROLE_CAP_A : ROLE_CAP_B;
+	new TeamName:winTeam = (iWinTeam == 1) ? TEAM_TERRORIST : TEAM_CT;
 	new iAward = g_iSponsorGC;
 	new iGiven;
 
@@ -818,7 +831,7 @@ stock award_match_gbic(iWinTeam) {
 			continue;
 		if (!g_ePlayerInfo[id][PLAYER_MATCH])
 			continue;
-		if (g_ePlayerInfo[id][PLAYER_ROLE] != winRole && g_ePlayerInfo[id][PLAYER_ROLE] != winCapRole)
+		if (getUserTeam(id) != winTeam)
 			continue;
 
 		new iNew = hns_gc_add_player(id, iAward);
@@ -835,13 +848,10 @@ stock match_reset_data(bool:bMatchFinish = false) {
 	g_iMatchStatus = MATCH_NONE;
 	g_eMatchState = STATE_DISABLED;
 
-	// 关闭/结束比赛后不把 AI 报名选的赛制改成 MR。
-	// 否则 PDS_Save 会把 match_rules 写成 MR, 下一把 AI 选的回合制又被盖掉。
-	new iAiRules;
-	if (PDS_GetCell("ai_match_rules", iAiRules) && iAiRules >= _:RULES_MR && iAiRules <= _:RULES_ROUNDS)
-		g_iCurrentRules = NATCH_RULES:iAiRules;
-	else
-		g_iCurrentRules = RULES_MR;
+	// 关闭/结束比赛后只复位本次会话内的 g_iCurrentRules, 不清除持久化的 AI 赛制。
+	// 之前这里会 PDS_SetCell("ai_match_rules", RULES_MR) 把 AI 报名记住的模式抹掉,
+	// 导致换图/打完一把后 AI 报名又退回 MR —— 这是 AI 赛制记不住的根因。
+	g_iCurrentRules = RULES_MR;
 
 	cancel_match_loading();
 
@@ -858,9 +868,8 @@ stock match_reset_data(bool:bMatchFinish = false) {
 	g_eMatchInfo[e_mLeaved] = false;
 	g_bGbicAwarded = false;
 
-	// TIMER 上限必须用 hns_wintime 分钟数。e_mWintime 以前没标 Float，
-	// 一直是 0，开赛后 0.25s 就会 MixFinishedWT。
-	g_eMatchInfo[e_mWintime] = g_iSettings[WINTIME] > 0.0 ? g_iSettings[WINTIME] : 15.0;
+	// TIMER 上限必须用 hns_wintime 的真实分钟数，不能读被 _: 剥掉标记的格子。
+	g_eMatchInfo[e_mWintime] = hns_wintime_minutes();
 	cvar_update_wintime(g_eMatchInfo[e_mWintime]);
 
 	if (g_iSettings[MAXROUNDS] <= 0)

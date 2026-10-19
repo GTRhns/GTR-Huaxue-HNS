@@ -42,6 +42,7 @@ public PDS_Save() {
 		if (g_szBuffer[0])
 			PDS_SetString("playerslist", g_szBuffer);
 	}
+
 	PDS_SetCell("match_status",		g_iMatchStatus);
 	PDS_SetCell("match_mode",		g_iCurrentMode);
 	PDS_SetCell("match_gameplay",   g_iCurrentGameplay);

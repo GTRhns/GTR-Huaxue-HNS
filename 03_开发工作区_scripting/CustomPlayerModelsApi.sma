@@ -27,10 +27,12 @@
 enum _:model_s {
 	MODEL_INDEX_TT,
 	MODEL_TT[CPM_MAX_MODEL_LENGTH],
+	MODEL_NAME_TT[32],
 	MODEL_BODY_TT,
 	MODEL_SKIN_TT,
 	MODEL_INDEX_CT,
 	MODEL_CT[CPM_MAX_MODEL_LENGTH],
+	MODEL_NAME_CT[32],
 	MODEL_BODY_CT,
 	MODEL_SKIN_CT
 };
@@ -44,9 +46,53 @@ enum _:player_s {
 
 new Trie:Models = Invalid_Trie, Model[model_s];
 new Players[MAX_PLAYERS + 1][player_s];
+// 换队/设皮肤时写入。0 = 没有自定义模型
+new g_iShowModel[MAX_PLAYERS + 1];
+new g_iModelTeam[MAX_PLAYERS + 1];
+// models/player/名字/名字.mdl 里的文件夹名。客户端靠这个画人，不再每帧改 modelindex
+new g_szShowName[MAX_PLAYERS + 1][32];
+new g_iPackFwd;
+new bool:g_bPackHook;
 
 new Receiver;
 new g_iDisableCorpses;
+new g_pLodDistance;
+
+CacheShowModel(id) {
+	g_iShowModel[id] = 0;
+	g_szShowName[id][0] = EOS;
+	g_iModelTeam[id] = get_member(id, m_iTeam);
+	if (!Players[id][PLAYER_HAS_MODEL])
+		return;
+	switch (g_iModelTeam[id]) {
+		case TEAM_TERRORIST: {
+			g_iShowModel[id] = Players[id][PLAYER_MODEL][MODEL_INDEX_TT];
+			copy(g_szShowName[id], charsmax(g_szShowName[]), Players[id][PLAYER_MODEL][MODEL_NAME_TT]);
+		}
+		case TEAM_CT: {
+			g_iShowModel[id] = Players[id][PLAYER_MODEL][MODEL_INDEX_CT];
+			copy(g_szShowName[id], charsmax(g_szShowName[]), Players[id][PLAYER_MODEL][MODEL_NAME_CT]);
+		}
+	}
+}
+
+// 只有拿不到文件夹名的模型才需要每个网络包改 modelindex。正常皮肤不挂这个钩子。
+UpdatePackHook() {
+	new bool:need;
+	for (new id = 1; id <= MaxClients; id++) {
+		if (Players[id][PLAYER_HAS_MODEL] && g_iShowModel[id] && !g_szShowName[id][0]) {
+			need = true;
+			break;
+		}
+	}
+	if (need == g_bPackHook)
+		return;
+	if (need)
+		g_iPackFwd = register_forward(FM_AddToFullPack, "AddToFullPack_Post", true);
+	else
+		unregister_forward(FM_AddToFullPack, g_iPackFwd, true);
+	g_bPackHook = need;
+}
 
 public plugin_natives() {
 	register_native("custom_player_models_register", "NativeRegister");
@@ -63,7 +109,7 @@ public plugin_natives() {
 }
 
 public plugin_precache() {
-	register_plugin("Custom Player Models API", "0.2.7", "F@nt0M & BlackSignature");
+	register_plugin("Custom Player Models API", "0.2.8", "F@nt0M & BlackSignature");
 
 	new ret, fwd = CreateMultiForward("custom_player_models_init", ET_IGNORE);
 	ExecuteForward(fwd, ret);
@@ -73,7 +119,6 @@ public plugin_precache() {
 public plugin_init() {
 	if (Models != Invalid_Trie) {
 		RegisterHookChain(RH_SV_WriteFullClientUpdate, "SV_WriteFullClientUpdate_Pre", false);
-		register_forward(FM_AddToFullPack, "AddToFullPack_Post", true);
 
 		if(find_plugin_byfile("rt_core.amxx", .ignoreCase = 0) == INVALID_PLUGIN_ID && find_plugin_byfile("revive_teammates.amxx", .ignoreCase = 0) == INVALID_PLUGIN_ID) {
 			register_message(get_user_msgid("ClCorpse"), "MsgHookClCorpse")
@@ -84,19 +129,42 @@ public plugin_init() {
 	}
 
 	RegCvars();
+	// 只在换队时补一次模型名，不再 0.25 秒扫全场
+	set_task(1.0, "TaskSyncModelTeam", 87421, .flags = "b");
 }
 
 RegCvars() {
-	bind_pcvar_num(create_cvar("cpm_no_corpses", "0", .description = "Set to 1 to disable corpses"), g_iDisableCorpses);
+	bind_pcvar_num(create_cvar("cpm_no_corpses", "1", .description = "Set to 1 to disable custom skin corpses"), g_iDisableCorpses);
+	// 按距离切换会在边界把人藏起来，而且每个网络包都要算坐标。这个值不再使用。
+	g_pLodDistance = create_cvar("cpm_lod_distance", "0", .description = "Ignored. Distance switching hid players while walking");
 
 #if defined CONFIG_FILENAME
 	AutoExecConfig(.name = CONFIG_FILENAME);
 #endif
+
+	if (get_pcvar_num(g_pLodDistance) > 0)
+		log_amx("[CPM] cpm_lod_distance is ignored so players do not vanish while walking");
 }
 
 public plugin_end() {
 	if (Models != Invalid_Trie) {
 		TrieDestroy(Models);
+	}
+}
+
+public TaskSyncModelTeam() {
+	for (new id = 1; id <= MaxClients; id++) {
+		if (!Players[id][PLAYER_HAS_MODEL] || !is_user_connected(id))
+			continue;
+		if (get_member(id, m_iTeam) == g_iModelTeam[id])
+			continue;
+		new szOld[32];
+		copy(szOld, charsmax(szOld), g_szShowName[id]);
+		CacheShowModel(id);
+		UpdatePackHook();
+		// 换队后模型名变了才通知客户端。同一款重复刷会让人闪没大约一秒
+		if (!equal(szOld, g_szShowName[id]))
+			rh_update_user_info(id);
 	}
 }
 
@@ -114,38 +182,27 @@ public SV_WriteFullClientUpdate_Pre(const client, const buffer, const receiver) 
 	}
 
 	if (Players[receiver][PLAYER_SEE_MODEL] && is_user_connected(client) && Players[client][PLAYER_HAS_MODEL]) {
-		set_key_value(buffer, "model", "");
+		// 空模型会让客户端在走路、进出视野时把人藏起来大约一秒。
+		// 写成 models/player/名字/名字.mdl 的文件夹名，客户端按正常玩家模型画。
+		if (g_szShowName[client][0])
+			set_key_value(buffer, "model", g_szShowName[client]);
+		else
+			set_key_value(buffer, "model", "");
 	}
 
 	return HC_CONTINUE;
 }
 
+// 只给不是玩家目录的模型用。正常皮肤不注册这个钩子，避免每个网络包都进插件。
 public AddToFullPack_Post(const handle, const e, const ent, const host, const hostflags, const player, const pSet) {
-	if (!player || !Players[ent][PLAYER_HAS_MODEL] || !Players[host][PLAYER_SEE_MODEL] || !get_orig_retval()) {
+	if (!player || !Players[host][PLAYER_SEE_MODEL] || !get_orig_retval())
 		return;
-	}
+	if (g_szShowName[ent][0])
+		return;
 
-	switch (get_member(ent, m_iTeam)) {
-		case TEAM_TERRORIST: {
-			set_es(handle, ES_ModelIndex, Players[ent][PLAYER_MODEL][MODEL_INDEX_TT]);
-		#if defined SUPPORT_BODY
-			set_es(handle, ES_Body, Players[ent][PLAYER_MODEL][MODEL_BODY_TT]);
-		#endif
-		#if defined SUPPORT_SKIN
-			set_es(handle, ES_Skin, Players[ent][PLAYER_MODEL][MODEL_SKIN_TT]);
-		#endif
-		}
-
-		case TEAM_CT: {
-			set_es(handle, ES_ModelIndex, Players[ent][PLAYER_MODEL][MODEL_INDEX_CT]);
-		#if defined SUPPORT_BODY
-			set_es(handle, ES_Body, Players[ent][PLAYER_MODEL][MODEL_BODY_CT]);
-		#endif
-		#if defined SUPPORT_SKIN
-			set_es(handle, ES_Skin, Players[ent][PLAYER_MODEL][MODEL_SKIN_CT]);
-		#endif
-		}
-	}
+	new iModel = g_iShowModel[ent];
+	if (iModel)
+		set_es(handle, ES_ModelIndex, iModel);
 }
 
 public MsgHookClCorpse() {
@@ -223,6 +280,10 @@ public MsgHookClCorpse() {
 		msgClCorpse = get_user_msgid("ClCorpse");
 	}
 
+	// 关闭比赛会结束回合并生成尸体。消息号是 0 时再 message_begin 会直接炸服。
+	if (msgClCorpse <= 0)
+		return PLUGIN_HANDLED;
+
 	for (new id = 1; id <= MaxClients; id++) {
 		if (!is_user_connected(id)) {
 			continue;
@@ -270,20 +331,22 @@ public bool:NativeRegister(const plugin, const argc) {
 		return true;
 	}
 
-	new model[CPM_MAX_MODEL_LENGTH];
+	new model[CPM_MAX_MODEL_LENGTH], szName[32];
 	get_string(arg_model_tt, model, charsmax(model));
 
-	if (!loadModel(model, MODEL_INDEX_TT, MODEL_TT)) {
+	if (!loadModel(model, MODEL_INDEX_TT, MODEL_TT, szName, charsmax(szName))) {
 		log_error(AMX_ERR_NATIVE, "Error precache %s", model);
 		return false;
 	}
+	copy(Model[MODEL_NAME_TT], charsmax(Model[MODEL_NAME_TT]), szName);
 
 	get_string(arg_model_ct, model, charsmax(model));
 
-	if (!loadModel(model, MODEL_INDEX_CT, MODEL_CT)) {
+	if (!loadModel(model, MODEL_INDEX_CT, MODEL_CT, szName, charsmax(szName))) {
 		log_error(AMX_ERR_NATIVE, "Error precache %s", model);
 		return false;
 	}
+	copy(Model[MODEL_NAME_CT], charsmax(Model[MODEL_NAME_CT]), szName);
 
 	if (Models == Invalid_Trie) {
 		Models = TrieCreate();
@@ -353,9 +416,19 @@ public bool:NativeSet(const plugin, const argc) {
 		return false;
 	}
 
+	new szOld[32];
+	copy(szOld, charsmax(szOld), g_szShowName[player]);
+	new bool:bHad = Players[player][PLAYER_HAS_MODEL];
+
 	Players[player][PLAYER_HAS_MODEL] = true;
 	copy(Players[player][PLAYER_MODEL_KEY], CPM_MAX_KEY_LENGTH - 1, key);
 	Players[player][PLAYER_MODEL] = Model;
+	CacheShowModel(player);
+	UpdatePackHook();
+	// 模型名没变就不要重发用户信息。重发会让客户端重新加载模型，人会消失大约一秒
+	if (bHad && equal(szOld, g_szShowName[player]))
+		return true;
+
 	rh_update_user_info(player);
 	return true;
 }
@@ -462,6 +535,10 @@ public bool:NativeReset(const plugin, const argc) {
 	CHECK_NATIVE_PLAYER(player, false)
 
 	Players[player][PLAYER_HAS_MODEL] = false;
+	g_iShowModel[player] = 0;
+	g_szShowName[player][0] = EOS;
+	g_iModelTeam[player] = 0;
+	UpdatePackHook();
 	rh_update_user_info(player);
 	return true;
 }
@@ -498,17 +575,46 @@ public bool:NativeIsEnable(const plugin, const argc) {
 	return Players[player][PLAYER_SEE_MODEL];
 }
 
-bool:loadModel(const model[], const key_index, const key_model) {
+bool:loadModel(const model[], const key_index, const key_model, name[], nameLen) {
 	if (!file_exists(model, true)) {
 		return false;
 	}
 	Model[key_index] = precache_model(model);
 	copy(Model[key_model], CPM_MAX_MODEL_LENGTH - 1, model);
+	ModelFolder(model, name, nameLen);
+	if (!name[0])
+		log_amx("[CPM] not a player folder, using slower model index: %s", model);
 	return true;
+}
+
+// models/player/T0T/T0T.mdl -> T0T 。客户端用这个名字找模型，不会出现空模型。
+ModelFolder(const path[], dest[], len) {
+	dest[0] = EOS;
+	new pos = containi(path, "models/player/");
+	if (pos < 0)
+		return;
+	new start = pos + 14;
+	if (!path[start] || path[start] == '/')
+		return;
+	new slash = contain(path[start], "/");
+	if (slash <= 0 || slash >= 32 || slash > len)
+		return;
+
+	new name[32];
+	copy(name, slash, path[start]);
+	new tail[40];
+	formatex(tail, charsmax(tail), "/%s.mdl", name);
+	if (!equali(path[start + slash], tail))
+		return;
+	copy(dest, len, name);
 }
 
 clearPlayer(const id) {
 	Players[id][PLAYER_HAS_MODEL] = false;
 	Players[id][PLAYER_SEE_MODEL] = true;
+	g_iShowModel[id] = 0;
+	g_szShowName[id][0] = EOS;
+	g_iModelTeam[id] = 0;
 	arrayset(Players[id][PLAYER_MODEL_KEY], 0, CPM_MAX_KEY_LENGTH - 1);
+	UpdatePackHook();
 }

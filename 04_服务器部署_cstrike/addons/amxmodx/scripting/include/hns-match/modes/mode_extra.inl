@@ -88,37 +88,29 @@ stock cvar_update_wintime(Float:fTime) {
 }
 stock save_reset_data() {}
 stock getRoundsScore(&iCT, &iTT) {
-	if (g_isTeamTT == HNS_TEAM_A) {
-		iTT = g_iRoundsScore[HNS_TEAM_A];
-		iCT = g_iRoundsScore[HNS_TEAM_B];
-	} else {
-		iTT = g_iRoundsScore[HNS_TEAM_B];
-		iCT = g_iRoundsScore[HNS_TEAM_A];
-	}
-}
-
-// 回合制: 引擎记分板按 CT/TT 阵营累加, 换边后不会跟着人走。
-// 这里按当前站边的 A/B 队伍分数覆盖 TeamScore。
-stock syncRoundsScoreboard() {
-	if (g_iCurrentRules != RULES_ROUNDS)
-		return;
-
-	remove_task(TASK_ROUNDS_SCORE);
-	applyRoundsScoreboard();
-	set_task(0.2, "taskSyncRoundsScoreboard", TASK_ROUNDS_SCORE);
-}
-
-public taskSyncRoundsScoreboard() {
-	applyRoundsScoreboard();
+	// Scores follow the current CS sides after mix_swap flips g_isTeamTT.
+	iTT = g_iRoundsScore[g_isTeamTT];
+	iCT = g_iRoundsScore[HNS_TEAM:!g_isTeamTT];
 }
 
 stock applyRoundsScoreboard() {
-	if (g_iCurrentRules != RULES_ROUNDS)
+	if (g_iCurrentMode != MODE_MIX || g_iCurrentRules != RULES_ROUNDS)
 		return;
 
 	new iCT, iTT;
 	getRoundsScore(iCT, iTT);
-	set_member_game(m_iNumCTWins, iCT);
-	set_member_game(m_iNumTerroristWins, iTT);
 	rg_update_teamscores(iCT, iTT, false);
+}
+
+stock queueRoundsScoreboard() {
+	if (g_iCurrentMode != MODE_MIX || g_iCurrentRules != RULES_ROUNDS)
+		return;
+
+	remove_task(TASK_ROUNDS_SCORE);
+	applyRoundsScoreboard();
+	set_task(0.05, "taskApplyRoundsScoreboard", TASK_ROUNDS_SCORE);
+}
+
+public taskApplyRoundsScoreboard() {
+	applyRoundsScoreboard();
 }

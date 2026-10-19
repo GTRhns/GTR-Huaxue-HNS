@@ -11,19 +11,16 @@ public delayed_mode() {
 	PDS_GetCell("match_gameplay", g_iCurrentGameplay);
 	PDS_GetCell("match_status", g_iMatchStatus);
 
-	// 换图后赛制: AI 报名和比赛系统共用同一份规则。
-	// 以前 match_rules 被 mix_stop 写成 MR, 会盖掉 AI 选的回合制。
-	// 现在优先 ai_match_rules (报名菜单/管理员指令都会同步写两份)。
-	new iAiRules;
-	new bool:bHasAiRules = bool:PDS_GetCell("ai_match_rules", iAiRules)
-		&& iAiRules >= _:RULES_MR && iAiRules <= _:RULES_ROUNDS;
+	// ★ 换图后赛制的权威来源是 match_rules (由管理员 /mr /timer 等直接改
+	//   g_iCurrentRules, PDS_Save 时写入)。ai_match_rules 只是 AI 报名的辅助记录,
+	//   只有在 match_rules 从未写过时才用它兜底, 否则会覆盖管理员的切换。
 	new bool:bHasSavedRules = bool:PDS_GetCell("match_rules", g_iCurrentRules);
-
-	if (bHasAiRules) {
-		g_iCurrentRules = NATCH_RULES:iAiRules;
-		bHasSavedRules = true;
-	} else if (!bHasSavedRules || g_iCurrentRules < RULES_MR || g_iCurrentRules > RULES_ROUNDS) {
-		bHasSavedRules = false;
+	if (!bHasSavedRules || g_iCurrentRules < RULES_MR || g_iCurrentRules > RULES_ROUNDS) {
+		new iAiRules;
+		if (PDS_GetCell("ai_match_rules", iAiRules) && iAiRules >= 0 && iAiRules <= _:RULES_ROUNDS) {
+			g_iCurrentRules = NATCH_RULES:iAiRules;
+			bHasSavedRules = true;
+		}
 	}
 
 	if (hns_is_knife_map()) {
@@ -70,7 +67,7 @@ public wait_players() {
 	}
 
 	if (task_exists(TASK_STARTED)) {
-		showLangDhudFmt(0, 0.0, 255, 255, 255, 1.0, "HUD_START_LAST", "即将开始");
+		setTaskHud(0, 0.0, 1, 255, 255, 255, 1.0, "%L", LANG_SERVER, "HUD_START_LAST");
 	} else {
 		new iNum = get_num_players_in_match();
 
@@ -83,7 +80,7 @@ public wait_players() {
 
 		new sTime[24];
 		fnConvertTime(flWaitPlayersTime, sTime, charsmax(sTime));
-		showLangDhudFmt(0, 0.0, 255, 255, 255, 1.0, "HUD_START_WAIT", "等待玩家^n%s^n还差 %d 人", sTime, ArraySize(g_aPlayersLoadData) - iNum);
+		setTaskHud(0, 0.0, 1, 255, 255, 255, 1.0, "%L", LANG_SERVER, "HUD_START_WAIT", sTime, ArraySize(g_aPlayersLoadData) - iNum);
 
 		if (flWaitPlayersTime <= 0.0) {
 			if(task_exists(TASK_WAIT)) {

@@ -72,7 +72,8 @@ public native_get_force() {
 	return get_cvar_num("hns_satchel_force");
 }
 
-public native_set_force(iMode) {
+public native_set_force() {
+	new iMode = get_param(1);
 	if (iMode < -1)
 		iMode = -1;
 	if (iMode > 1)

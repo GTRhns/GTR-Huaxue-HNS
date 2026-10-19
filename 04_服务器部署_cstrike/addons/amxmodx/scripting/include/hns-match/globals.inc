@@ -15,6 +15,7 @@
 #define TASK_SURRENDER 55566
 #define TASK_PAUSE_SND 55567
 #define TASK_MATCH_HUD 55568
+#define TASK_ROUNDS_SCORE 55569
 
 new bool:g_bDebugMode;
 new bool:g_bExternalTeamSize;
@@ -100,8 +101,8 @@ new g_szBaseHostname[128];
 // const
 new const sndDenySelect[] = "common/wpn_denyselect.wav";
 new const sndUseSound[] = "buttons/blip1.wav";
-new const sndPauseTalk[] = "buttons/blip2.wav";
-new const sndUnpauseAcquired[] = "buttons/bell1.wav";
+new const sndPauseTalk[] = "fvox/minutes.wav";
+new const sndUnpauseAcquired[] = "fvox/acquired.wav";
 
 enum _: Forwards {
 	MATCH_START,
@@ -179,7 +180,6 @@ new bool:g_bGcSqlConnected;
 #define TASK_LOADING_DONE	24002	// C4进度条走满后进入回合刷新
 #define TASK_REFRESH_WAVE	24003	// 回合刷新
 #define TASK_MATCH_ACTIVATE	24004	// 缓冲期结束, 正式激活比赛
-#define TASK_ROUNDS_SCORE	24005	// 回合制换边后同步引擎记分板
 
 new bool:g_bMatchLoading;	// 正在执行开场加载流程 (进度条/回合刷新/缓冲期)
 new g_iRefreshWave;			// 已执行的回合刷新次数

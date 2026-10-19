@@ -473,11 +473,26 @@ public task_ShowPlayerInfo() {
 
 			if (show_id != id) {
 				if (g_ePlayerPtsData[show_id][e_bInit]) {
+					new szBoostRate[8], szSkillRate[8];
+					new iBoostGames = g_ePlayerPtsData[show_id][e_iBoostWins] + g_ePlayerPtsData[show_id][e_iBoostLoss];
+					new iSkillGames = g_ePlayerPtsData[show_id][e_iSkillWins] + g_ePlayerPtsData[show_id][e_iSkillLoss];
+					if (iBoostGames < 1)
+						copy(szBoostRate, charsmax(szBoostRate), "--");
+					else
+						formatex(szBoostRate, charsmax(szBoostRate), "%d%%", (g_ePlayerPtsData[show_id][e_iBoostWins] * 100) / iBoostGames);
+					if (iSkillGames < 1)
+						copy(szSkillRate, charsmax(szSkillRate), "--");
+					else
+						formatex(szSkillRate, charsmax(szSkillRate), "%d%%", (g_ePlayerPtsData[show_id][e_iSkillWins] * 100) / iSkillGames);
 					iLen += format(szHudMess[iLen], sizeof szHudMess - iLen, "\
 					Player: %n (#%d)^n\
-					PTS: %d [%s]^n", 
+					OBS: %d [%s]^n\
+					Boost: %d  %d场  %s^n\
+					Skill: %d  %d场  %s^n", 
 					show_id, g_ePlayerPtsData[show_id][e_iTop],
-					g_ePlayerPtsData[show_id][e_iPts], g_ePlayerPtsData[show_id][e_szRank]);
+					g_ePlayerPtsData[show_id][e_iPts], g_ePlayerPtsData[show_id][e_szRank],
+					g_ePlayerPtsData[show_id][e_iBoostPts], iBoostGames, szBoostRate,
+					g_ePlayerPtsData[show_id][e_iSkillPts], iSkillGames, szSkillRate);
 				} else {
 					iLen += format(szHudMess[iLen], sizeof szHudMess - iLen, "\
 					Player: %n^n", 

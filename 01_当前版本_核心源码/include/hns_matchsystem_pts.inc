@@ -6,16 +6,32 @@
 
 enum _:PTS_DATA {
 	bool:e_bInit, // Птс статистика получена
-	e_iPts, // Птс
+	e_iPts, // 综合 OBC
     e_iWins, // Победы
     e_iLoss, // Поражения
     e_iTop, // Топ
-	e_szRank[10] // Ранг
+	e_szRank[10], // 综合胜率
+	e_iBoostPts,
+	e_iBoostWins,
+	e_iBoostLoss,
+	e_iSkillPts,
+	e_iSkillWins,
+	e_iSkillLoss
 };
 
 new g_ePlayerPtsData[MAX_PLAYERS + 1][PTS_DATA];
 
 forward hns_pts_init_player(id, iPts, iWins, iLoss, iTop);
+forward hns_obc_init_player(id, iBoostPts, iBoostWins, iBoostLoss, iSkillPts, iSkillWins, iSkillLoss);
+
+stock get_obc_rate(iWins, iLoss, szOut[], iLen) {
+	new iGames = iWins + iLoss;
+	if (iGames < 1) {
+		copy(szOut, iLen, "--");
+		return;
+	}
+	formatex(szOut, iLen, "%d%%", (iWins * 100) / iGames);
+}
 
 public hns_pts_init_player(id, iPts, iWins, iLoss, iTop) {
 	g_ePlayerPtsData[id][e_bInit] = true;
@@ -23,7 +39,16 @@ public hns_pts_init_player(id, iPts, iWins, iLoss, iTop) {
 	g_ePlayerPtsData[id][e_iWins] = iWins;
 	g_ePlayerPtsData[id][e_iLoss] = iLoss;
 	g_ePlayerPtsData[id][e_iTop] = iTop;
-	g_ePlayerPtsData[id][e_szRank] = get_skill_player(g_ePlayerPtsData[id][e_iPts]);
+	get_obc_rate(iWins, iLoss, g_ePlayerPtsData[id][e_szRank], 9);
+}
+
+public hns_obc_init_player(id, iBoostPts, iBoostWins, iBoostLoss, iSkillPts, iSkillWins, iSkillLoss) {
+	g_ePlayerPtsData[id][e_iBoostPts] = iBoostPts;
+	g_ePlayerPtsData[id][e_iBoostWins] = iBoostWins;
+	g_ePlayerPtsData[id][e_iBoostLoss] = iBoostLoss;
+	g_ePlayerPtsData[id][e_iSkillPts] = iSkillPts;
+	g_ePlayerPtsData[id][e_iSkillWins] = iSkillWins;
+	g_ePlayerPtsData[id][e_iSkillLoss] = iSkillLoss;
 }
 
 enum _:SKILL_INFO

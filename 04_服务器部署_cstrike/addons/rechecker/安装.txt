@@ -1,0 +1,31 @@
+ReChecker 2.7（官方 https://github.com/rehlds/rechecker/releases/tag/2.7）
+
+本目录只放这两个文件：
+rechecker_mm.dll
+rechecker_mm_i386.so
+
+不要把官方 resources.ini 放到这个目录。那个文件是外挂特征列表，会按别的文件踢人，不是这次要的。
+如果正式服这个目录里已经有 resources.ini，换图或有人进服时它会被重新读一遍，可能误踢。
+
+正式服的 cstrike/addons/metamod/plugins.ini 里，写在 amxmodx 上面：
+
+win32 addons/rechecker/rechecker_mm.dll
+linux addons/rechecker/rechecker_mm_i386.so
+
+本工作区没有 metamod/plugins.ini，这里不要新建，免得盖掉正式服原来的列表。
+
+重启后插件只记录，不踢人。
+确认是 2024-10-07 (10210) 的人进服后，服务器控制台执行：
+hns_build_trust 玩家名
+
+这会把这个人的 hw.dll 哈希写成唯一允许，并开始踢其他哈希。
+提示是：请使用官方客户端 2024-10-07 (10210)
+没有哈希的人，开启后 15 秒会被踢。
+hns_build_enforce 0 只停止踢人，不删已经记下的哈希。
+hns_build_status 看当前状态。
+
+这项检查的是 hw.dll 文件哈希，不是控制台那一行 Exe build 文字。
+改过的客户端可以伪造这个哈希。
+盗版如果用的是同一份官方 hw.dll，这项检查会过；皮肤身份仍然按 IP 加名字。
+Linux 客户端是 hw.so，开启后会被踢。
+软件渲染、删掉 hw.dll 的客户端，开启后也会被踢。

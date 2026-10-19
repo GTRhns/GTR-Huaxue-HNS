@@ -45,6 +45,10 @@ new Float:g_flLastPosition[MAX_PLAYERS + 1][3];
 new Trie:g_tSaveData;
 new Trie:g_tSaveRoundData;
 
+// ReGameDLL 的用户消息号不是原版固定值。写死 85 会变成非法消息号,
+// 引擎直接 Sys_Error: PF_MessageBegin_I bogus message type, 然后无限重启。
+new g_iMsgScoreInfo;
+
 public plugin_init() {
 	register_plugin("Match: Stats", "1.1.1", "OpenHNS"); // Garey
 
@@ -56,6 +60,8 @@ public plugin_init() {
 	RegisterHookChain(RG_CSGameRules_OnRoundFreezeEnd, "rgRoundFreezeEnd", true);
 	RegisterHookChain(RG_RoundEnd, "rgRoundEnd", false);
 	RegisterHookChain(RG_PlayerBlind, "rgPlayerBlind");
+
+	g_iMsgScoreInfo = get_user_msgid("ScoreInfo");
 
 	g_tSaveData = TrieCreate();
 	g_tSaveRoundData = TrieCreate();
@@ -440,14 +446,19 @@ stock SetScoreInfo(id) {
 }
 
 stock Msg_Update_ScoreInfo(id) {
-	const iMsg_ScoreInfo = 85;
+	if (!g_iMsgScoreInfo)
+		g_iMsgScoreInfo = get_user_msgid("ScoreInfo");
 
-	message_begin(MSG_BROADCAST, iMsg_ScoreInfo);
+	// 0 是非法消息号, message_begin 会立刻把服务器打崩并触发重启循环
+	if (g_iMsgScoreInfo <= 0 || !is_user_connected(id))
+		return;
+
+	message_begin(MSG_BROADCAST, g_iMsgScoreInfo);
 	write_byte(id);
+	write_short(iStats[id][PLR_STATS_KILLS]);
+	write_short(iStats[id][PLR_STATS_DEATHS]);
 	write_short(0);
-	write_short(0);
-	write_short(0);
-	write_short(0);
+	write_short(_:iStats[id][PLR_TEAM]);
 	message_end();
 }
 

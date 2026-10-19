@@ -1,10 +1,19 @@
 [en]
 
-PTS_RANK = %s Your rank is ^3%d^1 (Pts: ^3%d^1 | Wins: ^3%d^1 | Loss: ^3%d^1 | Skill: ^3%s^1)
-PTS_NOT_TIME = %s Pts not counted, playing time is less than 15 minutes.
-PTS_NOT_PLR = %s Pts not counted, less than 6 players.
-PTS_SET_TT = %s Team ^3TT^1 set ^3+15^1 pts.
-PTS_SET_CT = %s Team ^3CT^1 set ^3+15^1 pts.
+PTS_RANK = %s Your rank is ^3%d^1 (OBS: ^3%d^1 | Wins: ^3%d^1 | Loss: ^3%d^1 | Win rate: ^3%s^1)
+PTS_NOT_TIME = %s OBS not counted, playing time is less than 15 minutes.
+PTS_NOT_PLR = %s OBS not counted, less than 6 players.
+PTS_SET_TT = %s Team ^3TT^1 set ^3+15^1 OBS.
+PTS_SET_CT = %s Team ^3CT^1 set ^3+15^1 OBS.
+OBS_RANK_ALL = %s OBS ^3%d^1  rank ^3%d^1  ^4%d^1W ^3%d^1L  WR ^4%s
+OBS_RANK_BOOST = %s Boost ^3%d^1  ^4%d^1 games  WR ^4%s
+OBS_RANK_SKILL = %s Skill ^3%d^1  ^4%d^1 games  WR ^4%s
+OBS_MODE_BOOST = %s This match counts for ^3Boost^1 and OBS.
+OBS_MODE_SKILL = %s This match counts for ^3Skill^1 and OBS.
+OBS_MODE_ALL = %s This match counts for OBS only.
+OBS_KNIFE_1 = %s Knife ^3#1^1 %s ^4+%d
+OBS_KNIFE_2 = %s Knife ^3#2^1 %s ^4+%d
+OBS_KNIFE_3 = %s Knife ^3#3^1 %s ^4+%d
 
 WTR_LEAVE = %s ^3%n^1 (watcher) is left, wait him or chose new watcher (say ^4rnw^1)...
 WTR_DELETE = %s ^3%n^1 removes ^3%n^1 watcher privileges.
@@ -157,11 +166,20 @@ RECON_EXPIRED = %s Time expired.
 
 [ru]
 
-PTS_RANK = %s Ваш ранг: ^3%d^1 (Птс: ^3%d^1 | Побед: ^3%d^1 | Поражений: ^3%d^1 | Скилл: ^3%s^1)
-PTS_NOT_TIME = %s Птс не засчитан, время игры меньше 15 минут.
-PTS_NOT_PLR = %s Птс не засчитан, меньше 6-ти игроков.
-PTS_SET_TT = %s Команда ^3TT^1 получила ^3+15^1 птс.
-PTS_SET_CT = %s Команда ^3КT^1 получила ^3+15^1 птс.
+PTS_RANK = %s Ваш ранг: ^3%d^1 (OBS: ^3%d^1 | Побед: ^3%d^1 | Поражений: ^3%d^1 | Винрейт: ^3%s^1)
+PTS_NOT_TIME = %s OBS не засчитан, время игры меньше 15 минут.
+PTS_NOT_PLR = %s OBS не засчитан, меньше 6-ти игроков.
+PTS_SET_TT = %s Команда ^3TT^1 получила ^3+15^1 OBS.
+PTS_SET_CT = %s Команда ^3КT^1 получила ^3+15^1 OBS.
+OBS_RANK_ALL = %s OBS ^3%d^1  место ^3%d^1  ^4%d^1 побед ^3%d^1 поражений  WR ^4%s
+OBS_RANK_BOOST = %s Boost ^3%d^1  ^4%d^1 игр  WR ^4%s
+OBS_RANK_SKILL = %s Skill ^3%d^1  ^4%d^1 игр  WR ^4%s
+OBS_MODE_BOOST = %s Этот матч идет в ^3Boost^1 и OBS.
+OBS_MODE_SKILL = %s Этот матч идет в ^3Skill^1 и OBS.
+OBS_MODE_ALL = %s Этот матч идет только в OBS.
+OBS_KNIFE_1 = %s Нож ^3#1^1 %s ^4+%d
+OBS_KNIFE_2 = %s Нож ^3#2^1 %s ^4+%d
+OBS_KNIFE_3 = %s Нож ^3#3^1 %s ^4+%d
 
 WTR_LEAVE = %s ^3%n^1 (watcher) ливнул, подождите его или выберите нового watcher'a (say ^3rnw^1)
 WTR_DELETE = %s ^3%n^3 удалил c ^3%n привилегию watcher.
@@ -312,11 +330,20 @@ RECON_DIDNT_CHOOSE = %s Игрок ^3%n^1 ничего не выбрал.
 RECON_EXPIRED = %s Время истекло.
 
 [cn]
-PTS_RANK = %s 您的排名是 ^3%d^1 （积分：^3%d^1 | 胜场：^3%d^1 | 负场：^3%d^1 | 技术：^3%s^1）
-PTS_NOT_TIME = %s 未计积分，游戏时间少于 15 分钟。
-PTS_NOT_PLR = %s 未计积分，玩家少于 6 人。
-PTS_SET_TT = %s ^3TT^1 队获得 ^3+15^1 积分。
-PTS_SET_CT = %s ^3CT^1 队获得 ^3+15^1 积分。
+PTS_RANK = %s 您的排名是 ^3%d^1 （OBS：^3%d^1 | 胜场：^3%d^1 | 负场：^3%d^1 | 胜率：^3%s^1）
+PTS_NOT_TIME = %s 未计OBS，游戏时间少于 15 分钟。
+PTS_NOT_PLR = %s 未计OBS，玩家少于 6 人。
+PTS_SET_TT = %s ^3TT^1 队获得 ^3+15^1 OBS。
+PTS_SET_CT = %s ^3CT^1 队获得 ^3+15^1 OBS。
+OBS_RANK_ALL = %s OBS ^3%d^1  排名 ^3%d^1  ^4%d^1胜 ^3%d^1负  胜率 ^4%s
+OBS_RANK_BOOST = %s Boost ^3%d^1  ^4%d^1场  胜率 ^4%s
+OBS_RANK_SKILL = %s Skill ^3%d^1  ^4%d^1场  胜率 ^4%s
+OBS_MODE_BOOST = %s 本场记入 ^3Boost^1 和 OBS。
+OBS_MODE_SKILL = %s 本场记入 ^3Skill^1 和 OBS。
+OBS_MODE_ALL = %s 本场只记 OBS。
+OBS_KNIFE_1 = %s 刀人^3第一名^1 %s ^4+%d
+OBS_KNIFE_2 = %s 刀人^3第二名^1 %s ^4+%d
+OBS_KNIFE_3 = %s 刀人^3第三名^1 %s ^4+%d
 
 WTR_LEAVE = %s ^3%n^1（观察员）离开了，等待他或选择新的观察员（输入 ^4rnw^1）……
 WTR_DELETE = %s ^3%n^1 移除了 ^3%n^1 的观察员权限。
@@ -468,11 +495,20 @@ RECON_DIDNT_CHOOSE = %s 玩家 ^3%n^1 未做任何选择。
 RECON_EXPIRED = %s 时间已到。
 
 [tw]
-PTS_RANK = %s 您的排名是 ^3%d^1 （積分：^3%d^1 | 勝場：^3%d^1 | 負場：^3%d^1 | 技術：^3%s^1）
-PTS_NOT_TIME = %s 未計積分，遊戲時間少於 15 分鐘。
-PTS_NOT_PLR = %s 未計積分，玩家少於 6 人。
-PTS_SET_TT = %s ^3TT^1 隊獲得 ^3+15^1 積分。
-PTS_SET_CT = %s ^3CT^1 隊獲得 ^3+15^1 積分。
+PTS_RANK = %s 您的排名是 ^3%d^1 （OBS：^3%d^1 | 勝場：^3%d^1 | 負場：^3%d^1 | 勝率：^3%s^1）
+PTS_NOT_TIME = %s 未計OBS，遊戲時間少於 15 分鐘。
+PTS_NOT_PLR = %s 未計OBS，玩家少於 6 人。
+PTS_SET_TT = %s ^3TT^1 隊獲得 ^3+15^1 OBS。
+PTS_SET_CT = %s ^3CT^1 隊獲得 ^3+15^1 OBS。
+OBS_RANK_ALL = %s OBS ^3%d^1  排名 ^3%d^1  ^4%d^1勝 ^3%d^1負  勝率 ^4%s
+OBS_RANK_BOOST = %s Boost ^3%d^1  ^4%d^1場  勝率 ^4%s
+OBS_RANK_SKILL = %s Skill ^3%d^1  ^4%d^1場  勝率 ^4%s
+OBS_MODE_BOOST = %s 本場記入 ^3Boost^1 和 OBS。
+OBS_MODE_SKILL = %s 本場記入 ^3Skill^1 和 OBS。
+OBS_MODE_ALL = %s 本場只記 OBS。
+OBS_KNIFE_1 = %s 刀人^3第一名^1 %s ^4+%d
+OBS_KNIFE_2 = %s 刀人^3第二名^1 %s ^4+%d
+OBS_KNIFE_3 = %s 刀人^3第三名^1 %s ^4+%d
 
 WTR_LEAVE = %s ^3%n^1（觀察員）離開了，等待他或選擇新的觀察員（輸入 ^4rnw^1）……
 WTR_DELETE = %s ^3%n^1 移除了 ^3%n^1 的觀察員權限。

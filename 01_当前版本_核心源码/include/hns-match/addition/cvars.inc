@@ -27,6 +27,24 @@ enum _: CVARS
 new pCvar[CVARS];
 new _:g_iSettings[CVARS];
 
+// g_iSettings 带了 _: ，WINTIME 的 Float 标记会被剥掉。
+// 直接拿这个格子做乘法，会把 10.0 的浮点位当成整数，钱数变成负数，比赛却结束不了。
+stock Float:hns_wintime_minutes() {
+	new Float:flMinutes = get_pcvar_float(_:pCvar[WINTIME]);
+	if (flMinutes < 1.0)
+		return 15.0;
+	if (flMinutes > 60.0)
+		return 60.0;
+	return flMinutes;
+}
+
+stock Float:hns_wintime_cap_seconds() {
+	new Float:flMinutes = g_eMatchInfo[e_mWintime];
+	if (flMinutes < 1.0 || flMinutes > 60.0)
+		flMinutes = hns_wintime_minutes();
+	return floatmul(flMinutes, 60.0);
+}
+
 stock cvars_init() {
 	g_pRoundTime = get_cvar_pointer("mp_roundtime");
 

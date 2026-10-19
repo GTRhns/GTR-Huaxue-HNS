@@ -34,6 +34,12 @@ public hns_optional_native_filter(const szName[], index, trap) {
 		return PLUGIN_HANDLED;
 	if (contain(szName, "hns_frost_") == 0)
 		return PLUGIN_HANDLED;
+	if (contain(szName, "hns_mflash_") == 0)
+		return PLUGIN_HANDLED;
+	if (contain(szName, "hns_showkeys_") == 0)
+		return PLUGIN_HANDLED;
+	if (contain(szName, "hns_playeradmin_") == 0)
+		return PLUGIN_HANDLED;
 	if (contain(szName, "SQL_") == 0)
 		return PLUGIN_HANDLED;
 

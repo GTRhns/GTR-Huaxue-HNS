@@ -1,0 +1,4 @@
+Country data: DB-IP Country Lite, October 2026.
+https://db-ip.com/
+Licensed under Creative Commons Attribution 4.0.
+The filename stays GeoLite2-Country.mmdb because AMXX only opens that name.

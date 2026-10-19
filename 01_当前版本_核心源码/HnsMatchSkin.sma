@@ -29,9 +29,17 @@
      7.管理员设置 (红, 需 A)
    投掷物菜单: 先进分类页(烟雾弹/闪光弹), 再进对应列表
    管理菜单: /cpm 或主菜单第7项 (A权限)
-   本地/盗版: 与金币一样用 get_user_authid() 写 MySQL
-     盗版模拟器通常也会给 STEAM_0:x:x, 买皮肤能跨图保留
-     真 LAN / PENDING 才退回 LAN:IP (不绑名字, 改名不丢皮肤)
+   本地/盗版: Reunion 判定不是正版时, 按 IP 和名字一起存 (NAME:IP|名字)
+     两个都必须相同才是同一个盗版账号。改名或换 IP 都是新档
+     盗版模拟出来的 STEAM_0:x:x 不再当账号
+     正版仍用 SteamID; 没有 Reunion 时才退回旧的 SteamID 认号
+   后台按 SteamID 发放 (玩家可以不在线, 写入 MySQL, HeidiSQL 直接可见):
+     - 管理菜单: 按SteamID发放 / 按SteamID收回 / 按SteamID一键清除
+     - 控制台: amx_giveskin <steamid> <皮肤名|all|all_t|all_c|all_knife|all_nade>
+               amx_takeskin <steamid> <皮肤名|all>
+               amx_clearskin <steamid>
+     - HeidiSQL 插入 cpm_skin_grant(steamid, skin_key) 后, 服务器约 8 秒写入拥有表
+     - HeidiSQL 查看视图 cpm_heidi_player: steamid + 该玩家已获得的全部皮肤
    换图: plugin_precache 只读 skins.cfg 并预缓存模型;
          建表/导入 MySQL 放到 plugin_init 后台, 避免卡住 changelevel
    死亡音效: 拦截原版 player/die* / death* , 换成当前皮肤音效, 不再叠原声
@@ -59,6 +67,7 @@
 #define SKINS_TABLE   "cpm_skins"
 #define OWNS_TABLE    "cpm_player_skins"
 #define CUR_TABLE     "cpm_player_current"
+#define GRANT_TABLE   "cpm_skin_grant"
 
 // ---- 数据库连接: 直接读取你 HnsMatchSql 共用的那个 cfg ----
 #define DB_CFG_FILE   "mixsystem/hnsmatch-sql.cfg"
@@ -90,6 +99,8 @@
 // 刀模型本体仍由 crxknives 引擎的 KnifeModels.ini 提供,
 // 但商店显示的价格/免费规则改由这个 cfg 控制, 方便单独管理 (不影响引擎的刀定义)。
 #define KNIFE_CFG_FILE "mixsystem/knife_skins.cfg"
+// 没写 PRICE 的刀不能当免费。0 才是免费，没标价按这个默认价卖。
+#define KNIFE_DEFAULT_PRICE 300
 
 #define ADMIN_FLAG ADMIN_BAN
 #define TASK_REAPPLY_KNIFE 26000
@@ -97,6 +108,8 @@
 #define TASK_PLAYTIME 28000
 #define TASK_APPLY_NADE 29000
 #define TASK_MENU_SHOP 30000
+#define TASK_GRANT_POLL 32000
+#define TASK_SKIN_WATCH 31000
 #define PLAYTIME_TICK 60.0
 
 #define SHOP_MENU_SKIN 1
@@ -111,7 +124,7 @@
 // ---- 可配置项 (在 skins.cfg 的 [SETTINGS] 区块里改, 这里只是默认值) ----
 new g_iRentDays = 30;       // 金币购买获得的租期天数, 0 = 直接永久
 new g_iUpgradePrice = 2000; // 限时皮肤升级为永久的价格 (ICGB金币)
-new g_iKnifeFree = 1;       // 刀皮前 N 把免费, 其余按 KnifeModels.ini 的 PRICE 花 GBIC 购买
+new g_iKnifeFree = 1;       // 刀皮前 N 把免费, 其余必须标价购买; 没写 PRICE 不再当成免费
 new g_iNadeFree = 1;        // 烟雾/闪光弹皮肤前 N 个免费, 其余按 GBIC 购买
 new g_iCheckinBonus = 10;   // 每日签到奖励 GBIC
 new g_iPlaytimeBonus = 5;   // 在线满 1 小时奖励 GBIC
@@ -183,12 +196,11 @@ new g_CurT[MAX_PLAYERS + 1][SKIN_KEY_MAX];   // 恐怖分子款
 new g_CurC[MAX_PLAYERS + 1][SKIN_KEY_MAX];   // 反恐精英款
 new g_iCurKnife[MAX_PLAYERS + 1];             // 当前刀皮编号, 0 = 默认 kf
 new g_iKnifeRetry[MAX_PLAYERS + 1];           // 换图后覆盖 crxknives nVault 的重试次数
-new g_iAuthRetry[MAX_PLAYERS + 1];            // 等 SteamID 就绪再读皮肤, 避免 LAN:IP 把拥有列表冲空
+new g_iAuthRetry[MAX_PLAYERS + 1];            // 正版等待 SteamID 就绪后再读皮肤
 new bool:g_bApplyingKnife[MAX_PLAYERS + 1];   // 正在强制套刀, 避免 knife_updated 递归重置
 new Array:g_Owned[MAX_PLAYERS + 1];
 new Trie:g_OwnedExpire[MAX_PLAYERS + 1];   // key -> 到期时间戳(UNIX秒), 0 = 永久
 new g_szAuth[MAX_PLAYERS + 1][MAX_AUTHID_LENGTH];
-new Trie:g_tAuthByIp = Invalid_Trie;        // 换图瞬间 PENDING 时用 IP 找回上次 SteamID
 new g_iLoadGen[MAX_PLAYERS + 1];
 new bool:g_bOwnedLoaded[MAX_PLAYERS + 1];   // 该玩家的拥有列表是否已从MySQL加载完毕
 new g_iLastTeam[MAX_PLAYERS + 1];
@@ -200,6 +212,7 @@ new bool:g_bPlayingDeathSnd; // emit_sound 替换死亡音效时防递归
 
 new g_pendingGiveTeam[MAX_PLAYERS + 1]; // 0=全部  TEAM_CHAR_T / TEAM_CHAR_C
 new bool:g_bSqlReady;
+new bool:g_bHasReunion;
 new g_szSqlStatus[96];
 new g_iSqlLastErr;
 new g_szSqlLastErr[128];
@@ -228,6 +241,13 @@ new g_iNadeKindPage[MAX_PLAYERS + 1];
 new g_iShopMenu[MAX_PLAYERS + 1];
 new g_iShopPage[MAX_PLAYERS + 1];
 new g_iShopKind[MAX_PLAYERS + 1];
+
+// 后台发放队列一次最多消化这么多行, 放全局避免撑爆 pawn 栈
+#define GRANT_BATCH 16
+new g_iGrantId[GRANT_BATCH];
+new g_szGrantSteam[GRANT_BATCH][64];
+new g_szGrantKey[GRANT_BATCH][SKIN_KEY_MAX];
+new g_szGrantAct[GRANT_BATCH][8];
 new Float:g_flShopKeep[MAX_PLAYERS + 1];
 
 // ---- 投掷物皮肤池 ----
@@ -252,6 +272,16 @@ new g_NadeFlash[MAX_PLAYERS + 1][NADE_KEY_MAX];
 bool:IsSkinAdmin(id) {
 	// 管理员设置：仅 A (ADMIN_IMMUNITY)。
 	return (get_user_flags(id) & ADMIN_IMMUNITY) != 0;
+}
+
+bool:IsVipBlockedFromSkin(id) {
+	if (get_user_flags(id) & ADMIN_IMMUNITY)
+		return false;
+	new szFlag[8];
+	get_cvar_string("hns_fullwatcher_flag", szFlag, charsmax(szFlag));
+	if (!szFlag[0])
+		copy(szFlag, charsmax(szFlag), "d");
+	return (get_user_flags(id) & read_flags(szFlag)) != 0;
 }
 
 bool:IsSkinSqlAdmin(id) {
@@ -282,60 +312,96 @@ bool:IsSteamAuth(const szAuth[]) {
 	return !IsPendingAuth(szAuth);
 }
 
-RememberAuthByIp(id, const szAuth[]) {
-	if (!g_tAuthByIp || !IsSteamAuth(szAuth))
-		return;
-	new szIp[32];
-	get_user_ip(id, szIp, charsmax(szIp), 1);
-	if (szIp[0])
-		TrieSetString(g_tAuthByIp, szIp, szAuth);
+// Reunion 在场时, 只有正版 CA_TYPE_STEAM 才按 SteamID 存皮肤。
+// 盗版不使用模拟器伪造的 SteamID, 必须 IP 和名字同时一致。
+bool:IsRealSteam(id) {
+	if (!g_bHasReunion)
+		return true;
+	if (id < 1 || id > MaxClients || !is_user_connected(id))
+		return false;
+	return REU_GetAuthtype(id) == CA_TYPE_STEAM;
 }
 
-LookupAuthByIp(id, dest[], len) {
-	dest[0] = EOS;
-	if (!g_tAuthByIp)
-		return;
-	new szIp[32];
+// CA_TYPE_NONE 表示 Reunion 还没判定完, 这时不能当成盗版名字。
+bool:SkinAuthReady(id) {
+	if (!g_bHasReunion)
+		return true;
+	if (id < 1 || id > MaxClients || !is_user_connected(id))
+		return false;
+	return REU_GetAuthtype(id) != CA_TYPE_NONE;
+}
+
+bool:IsUsableIp(const szIp[]) {
+	if (!szIp[0] || equal(szIp, "0.0.0.0") || contain(szIp, ".") == -1)
+		return false;
+	return true;
+}
+
+// 盗版账号: NAME:IP|名字。缺 IP 时返回 false, 调用方继续等。
+bool:BuildPirateAuth(id, dest[], len) {
+	new szIp[22];
 	get_user_ip(id, szIp, charsmax(szIp), 1);
-	if (szIp[0])
-		TrieGetString(g_tAuthByIp, szIp, dest, len);
+	new iColon = contain(szIp, ":");
+	if (iColon != -1)
+		szIp[iColon] = EOS;
+	if (!IsUsableIp(szIp))
+		return false;
+
+	new szName[MAX_NAME_LENGTH];
+	get_user_name(id, szName, charsmax(szName));
+	if (!szName[0])
+		copy(szName, charsmax(szName), "unnamed");
+	formatex(dest, len, "NAME:%s|%s", szIp, szName);
+	return dest[0] != EOS;
+}
+
+bool:SkinIdentityPending(id) {
+	if (!SkinAuthReady(id))
+		return true;
+	new szLive[MAX_AUTHID_LENGTH];
+	get_user_authid(id, szLive, charsmax(szLive));
+	if (IsRealSteam(id))
+		return IsPendingAuth(szLive) && !equali(g_szAuth[id], "STEAM:", 6);
+	if (equali(g_szAuth[id], "NAME:", 5))
+		return false;
+	new szKey[MAX_AUTHID_LENGTH];
+	return !BuildPirateAuth(id, szKey, charsmax(szKey));
 }
 
 GetPlayerAuth(id, dest[], len) {
-	new szAuth[MAX_AUTHID_LENGTH];
-	get_user_authid(id, szAuth, charsmax(szAuth));
-
-	// 正版 Steam / 盗版模拟器的 STEAM_0:x:x / VALVE_x:x:x, 与金币 SQL 同一把钥
-	if (!IsPendingAuth(szAuth)) {
-		copy(dest, len, szAuth);
-		copy(g_szAuth[id], charsmax(g_szAuth[]), szAuth);
-		RememberAuthByIp(id, szAuth);
+	if (!SkinAuthReady(id)) {
+		if (equali(g_szAuth[id], "STEAM:", 6))
+			copy(dest, len, g_szAuth[id]);
+		else
+			dest[0] = EOS;
 		return;
 	}
 
-	// 换图时常先拿到 PENDING, 不要用 LAN:IP 覆盖已经拿到的 SteamID
-	if (IsSteamAuth(g_szAuth[id])) {
+	new szAuth[MAX_AUTHID_LENGTH];
+	get_user_authid(id, szAuth, charsmax(szAuth));
+
+	// 正版使用 SteamID, 并加前缀避免与盗版名字冲突。
+	if (IsRealSteam(id) && !IsPendingAuth(szAuth)) {
+		formatex(dest, len, "STEAM:%s", szAuth);
+		copy(g_szAuth[id], charsmax(g_szAuth[]), dest);
+		return;
+	}
+
+	// 换图时常先拿到 PENDING, 不要用盗版键覆盖已经确认的正版 SteamID。
+	if (equali(g_szAuth[id], "STEAM:", 6)) {
 		copy(dest, len, g_szAuth[id]);
 		return;
 	}
 
-	new szCached[MAX_AUTHID_LENGTH];
-	LookupAuthByIp(id, szCached, charsmax(szCached));
-	if (IsSteamAuth(szCached)) {
-		copy(dest, len, szCached);
-		copy(g_szAuth[id], charsmax(g_szAuth[]), szCached);
+	// 盗版: IP 和名字都写入账号。单引号由 EscapeSql 处理。
+	if (!BuildPirateAuth(id, dest, len)) {
+		if (equali(g_szAuth[id], "NAME:", 5))
+			copy(dest, len, g_szAuth[id]);
+		else
+			dest[0] = EOS;
 		return;
 	}
-
-	// 真 LAN / 还没拿到 ID: 只绑 IP, 不绑名字, 改名不丢已买皮肤
-	new szIp[32];
-	get_user_ip(id, szIp, charsmax(szIp), 1);
-	if (!szIp[0])
-		copy(szIp, charsmax(szIp), "0.0.0.0");
-
-	formatex(dest, len, "LAN:%s", szIp);
-	if (!g_szAuth[id][0])
-		copy(g_szAuth[id], charsmax(g_szAuth[]), dest);
+	copy(g_szAuth[id], charsmax(g_szAuth[]), dest);
 }
 
 TodayYmd() {
@@ -417,6 +483,10 @@ GivePlaytimeRewards(id) {
 	if (!is_user_connected(id) || is_user_bot(id) || is_user_hltv(id))
 		return;
 
+	// 余额没读出来之前不要发奖, 否则会按 0 余额写回数据库
+	if (!hns_gc_player_ready(id))
+		return;
+
 	FlushPlaytime(id);
 	if (!g_bRewardLoaded[id])
 		return;
@@ -467,6 +537,10 @@ DoDailyCheckin(id) {
 	if (!is_user_connected(id) || is_user_bot(id) || is_user_hltv(id))
 		return;
 	LoadRewardState(id);
+	if (!hns_gc_player_ready(id)) {
+		SkinChat(id, print_team_red, "SKIN_CHAT_GOLD_WAIT", "GBIC 还在读取, 请稍后再试");
+		return;
+	}
 	if (HasCheckedInToday(id)) {
 		SkinChat(id, print_team_red, "SKIN_CHAT_CHECKIN_DONE", "今天已经签到过了");
 		return;
@@ -681,11 +755,20 @@ bool:IsKnifeOwned(id, knife) {
 
 	new name[MAX_NAME_LENGTH], price;
 	KnifeInfo(knife, name, charsmax(name), price);
+	// 只有明确标价 0 才免费。没写 PRICE 时 KnifeInfo 会给出默认价, 不能直接送。
 	if (price <= 0)
 		return true;
 	new key[SKIN_KEY_MAX];
 	KnifeOwnedKey(knife, key, charsmax(key));
 	return IsSkinValid(id, key);
+}
+
+// 余额还在从 MySQL 读时, 读到的是 0。这时扣款会把真实余额写成 0。
+bool:GoldReady(id) {
+	if (hns_gc_player_ready(id))
+		return true;
+	SkinChat(id, print_team_red, "SKIN_CHAT_GOLD_WAIT", "GBIC 还在读取, 请稍后再试");
+	return false;
 }
 
 bool:IsKnifeShopItemValid(knife) {
@@ -1068,6 +1151,8 @@ DoBuyNade(id, idx) {
 		SkinChat(id, print_team_red, "SKIN_CHAT_SQL_BUY", "MySQL 未就绪, 暂不能购买");
 		return;
 	}
+	if (!GoldReady(id))
+		return;
 
 	new price = row[nade_price];
 	new iGold = hns_gc_get_player(id);
@@ -1410,11 +1495,14 @@ Db_InsertOwned(id, const authid[], const key[], expireAt, iPaid = 0) {
 	EscapeSql(authid, szAuth, charsmax(szAuth));
 	EscapeSql(key, szKey, charsmax(szKey));
 
+	new szSteam[64], szSteamEsc[128], szQ[768];
+	SteamIdOfAuth(authid, szSteam, charsmax(szSteam));
+	EscapeSql(szSteam, szSteamEsc, charsmax(szSteamEsc));
+	formatex(szQ, charsmax(szQ), "INSERT INTO %s (authid, model_key, bought_at, expire_at, steamid) VALUES ('%s','%s',UNIX_TIMESTAMP(),%d,'%s') ON DUPLICATE KEY UPDATE bought_at=UNIX_TIMESTAMP(), expire_at=%d, steamid='%s'", OWNS_TABLE, szAuth, szKey, expireAt, szSteamEsc, expireAt, szSteamEsc);
+
 	new cData[4 + MAX_AUTHID_LENGTH];
 	PackQueryData(cData, QT_BUY_SKIN, id, iPaid);
-	SQL_ThreadQuery(g_hSqlTuple, "SqlHandler",
-		fmt("INSERT INTO %s (authid, model_key, bought_at, expire_at) VALUES ('%s','%s',UNIX_TIMESTAMP(),%d) ON DUPLICATE KEY UPDATE bought_at=UNIX_TIMESTAMP(), expire_at=%d",
-			OWNS_TABLE, szAuth, szKey, expireAt, expireAt), cData, sizeof(cData));
+	SQL_ThreadQuery(g_hSqlTuple, "SqlHandler", szQ, cData, sizeof(cData));
 }
 
 // 限时皮肤升级为永久 (expire_at 置 0)
@@ -1442,6 +1530,577 @@ Db_RemoveOwned(id, const authid[], const key[]) {
 		cData, sizeof(cData));
 }
 
+// authid -> HeidiSQL 显示用的 SteamID. STEAM:STEAM_0:1:2 只留 STEAM_0:1:2
+SteamIdOfAuth(const authid[], dest[], len) {
+	dest[0] = EOS;
+	if (equali(authid, "STEAM:", 6))
+		copy(dest, len, authid[6]);
+	else
+		copy(dest, len, authid);
+}
+
+// 后台输入归一成内部 authid. 成功返回 1
+NormalizeGrantSteam(const raw[], authid[], authLen, steamid[], steamLen) {
+	authid[0] = EOS;
+	steamid[0] = EOS;
+	if (!raw[0] || IsPendingAuth(raw))
+		return 0;
+
+	if (equali(raw, "STEAM:", 6)) {
+		copy(steamid, steamLen, raw[6]);
+		formatex(authid, authLen, "STEAM:%s", steamid);
+		return steamid[0] ? 1 : 0;
+	}
+	if (equali(raw, "NAME:", 5)) {
+		copy(authid, authLen, raw);
+		copy(steamid, steamLen, raw);
+		return 1;
+	}
+	if (equali(raw, "STEAM_", 6) || equali(raw, "VALVE_", 6)) {
+		copy(steamid, steamLen, raw);
+		formatex(authid, authLen, "STEAM:%s", raw);
+		return 1;
+	}
+	return 0;
+}
+
+FindPlayerByAuth(const authid[]) {
+	if (!authid[0])
+		return 0;
+	new i, szAuth[MAX_AUTHID_LENGTH];
+	for (i = 1; i <= MaxClients; i++) {
+		if (!is_user_connected(i) || is_user_bot(i) || is_user_hltv(i))
+			continue;
+		GetPlayerAuth(i, szAuth, charsmax(szAuth));
+		if (equali(szAuth, authid))
+			return i;
+	}
+	return 0;
+}
+
+bool:GrantSpecIsDigits(const spec[]) {
+	if (!spec[0])
+		return false;
+	for (new i = 0; spec[i]; i++) {
+		if (spec[i] < '0' || spec[i] > '9')
+			return false;
+	}
+	return true;
+}
+
+// 同步写入/删除拥有记录. 玩家不在线也会进库, HeidiSQL 马上能看到
+Db_WriteOwnedSync(Handle:conn, const authid[], const key[], bool:bRemove) {
+	new szAuth[MAX_AUTHID_LENGTH * 2], szKey[SKIN_KEY_MAX * 2], szSteam[64], szSteamEsc[128], szQ[768];
+	EscapeSql(authid, szAuth, charsmax(szAuth));
+	EscapeSql(key, szKey, charsmax(szKey));
+	SteamIdOfAuth(authid, szSteam, charsmax(szSteam));
+	EscapeSql(szSteam, szSteamEsc, charsmax(szSteamEsc));
+	if (bRemove)
+		formatex(szQ, charsmax(szQ), "DELETE FROM %s WHERE authid='%s' AND model_key='%s'", OWNS_TABLE, szAuth, szKey);
+	else
+		formatex(szQ, charsmax(szQ), "INSERT INTO %s (authid, model_key, bought_at, expire_at, steamid) VALUES ('%s','%s',UNIX_TIMESTAMP(),0,'%s') ON DUPLICATE KEY UPDATE expire_at=0, steamid='%s'", OWNS_TABLE, szAuth, szKey, szSteamEsc, szSteamEsc);
+	SQL_ExecSync(conn, "%s", szQ);
+}
+
+// 玩家已在线且库存已载入时同步内存, 不用重进
+TouchOwnedMemory(id, const key[], bool:bRemove) {
+	if (id < 1 || !is_user_connected(id) || !g_bOwnedLoaded[id] || !key[0])
+		return;
+
+	if (bRemove) {
+		if (g_Owned[id]) {
+			new count = ArraySize(g_Owned[id]);
+			for (new i = 0; i < count; i++) {
+				new k[SKIN_KEY_MAX];
+				ArrayGetString(g_Owned[id], i, k, charsmax(k));
+				if (equal(k, key)) {
+					ArrayDeleteItem(g_Owned[id], i);
+					break;
+				}
+			}
+		}
+		if (g_OwnedExpire[id])
+			TrieDeleteKey(g_OwnedExpire[id], key);
+
+		if (equali(g_CurT[id], key)) {
+			g_CurT[id][0] = EOS;
+			if (get_member(id, m_iTeam) == TEAM_TERRORIST)
+				ApplyCurrentSkin(id);
+		}
+		if (equali(g_CurC[id], key)) {
+			g_CurC[id][0] = EOS;
+			if (get_member(id, m_iTeam) == TEAM_CT)
+				ApplyCurrentSkin(id);
+		}
+		if (equali(key, "knife:", 6) && g_iCurKnife[id] == str_to_num(key[6]))
+			g_iCurKnife[id] = 0;
+		if (equali(key, "nade:", 5)) {
+			if (equali(g_NadeSmoke[id], key[5]))
+				g_NadeSmoke[id][0] = EOS;
+			if (equali(g_NadeFlash[id], key[5]))
+				g_NadeFlash[id][0] = EOS;
+		}
+		return;
+	}
+
+	if (!g_Owned[id])
+		g_Owned[id] = ArrayCreate(SKIN_KEY_MAX);
+	if (!g_OwnedExpire[id])
+		g_OwnedExpire[id] = TrieCreate();
+	if (!HasSkin(id, key))
+		ArrayPushString(g_Owned[id], key);
+	TrieSetCell(g_OwnedExpire[id], key, 0);
+}
+
+ResolveGrantKey(const spec[], key[], keyLen) {
+	key[0] = EOS;
+	if (!spec[0])
+		return 0;
+
+	new i, row[pool_e], szName[32], iPrice;
+	for (i = 0; i < g_iPoolSize; i++) {
+		ArrayGetArray(g_pPool, i, row, sizeof row);
+		if (equali(row[pool_key], spec)) {
+			copy(key, keyLen, row[pool_key]);
+			return 1;
+		}
+	}
+
+	if (equali(spec, "knife:", 6)) {
+		copy(key, keyLen, spec);
+		return 1;
+	}
+	new iKnifeNum = crxknives_get_knives_num();
+	for (i = 0; i < iKnifeNum; i++) {
+		KnifeInfo(i, szName, charsmax(szName), iPrice);
+		if (szName[0] && equali(szName, spec)) {
+			formatex(key, keyLen, "knife:%d", i);
+			return 1;
+		}
+	}
+	if (GrantSpecIsDigits(spec)) {
+		new iKnife = str_to_num(spec);
+		if (iKnife >= 0 && iKnife < iKnifeNum) {
+			formatex(key, keyLen, "knife:%d", iKnife);
+			return 1;
+		}
+	}
+
+	if (equali(spec, "nade:", 5)) {
+		copy(key, keyLen, spec);
+		return 1;
+	}
+	new nade[nade_e];
+	for (i = 0; i < g_iNadeSize; i++) {
+		ArrayGetArray(g_pNade, i, nade, sizeof nade);
+		if (equali(nade[nade_key], spec) || equali(nade[nade_name], spec)) {
+			formatex(key, keyLen, "nade:%s", nade[nade_key]);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+WriteGrantKey(Handle:conn, const authid[], pid, const key[], bool:bRemove) {
+	Db_WriteOwnedSync(conn, authid, key, bRemove);
+	TouchOwnedMemory(pid, key, bRemove);
+}
+
+// 返回发放/收回数量; 具体皮肤不存在返回 -1
+ApplyGrantSpec(Handle:conn, const authid[], const spec[], bool:bRemove) {
+	new i, n, pid, row[pool_e], key[SKIN_KEY_MAX], nade[nade_e];
+	pid = FindPlayerByAuth(authid);
+
+	if (equali(spec, "*") || equali(spec, "all")) {
+		for (i = 0; i < g_iPoolSize; i++) {
+			ArrayGetArray(g_pPool, i, row, sizeof row);
+			WriteGrantKey(conn, authid, pid, row[pool_key], bRemove);
+			n++;
+		}
+		new iKnifeNum = crxknives_get_knives_num();
+		for (i = 0; i < iKnifeNum; i++) {
+			formatex(key, charsmax(key), "knife:%d", i);
+			WriteGrantKey(conn, authid, pid, key, bRemove);
+			n++;
+		}
+		for (i = 0; i < g_iNadeSize; i++) {
+			ArrayGetArray(g_pNade, i, nade, sizeof nade);
+			formatex(key, charsmax(key), "nade:%s", nade[nade_key]);
+			WriteGrantKey(conn, authid, pid, key, bRemove);
+			n++;
+		}
+		return n;
+	}
+	if (equali(spec, "all_t") || equali(spec, "all_tt")) {
+		for (i = 0; i < g_iPoolSize; i++) {
+			ArrayGetArray(g_pPool, i, row, sizeof row);
+			if (row[pool_team] != TEAM_CHAR_T)
+				continue;
+			WriteGrantKey(conn, authid, pid, row[pool_key], bRemove);
+			n++;
+		}
+		return n;
+	}
+	if (equali(spec, "all_c") || equali(spec, "all_ct")) {
+		for (i = 0; i < g_iPoolSize; i++) {
+			ArrayGetArray(g_pPool, i, row, sizeof row);
+			if (row[pool_team] != TEAM_CHAR_C)
+				continue;
+			WriteGrantKey(conn, authid, pid, row[pool_key], bRemove);
+			n++;
+		}
+		return n;
+	}
+	if (equali(spec, "all_knife") || equali(spec, "knives")) {
+		new iKnifeNum = crxknives_get_knives_num();
+		for (i = 0; i < iKnifeNum; i++) {
+			formatex(key, charsmax(key), "knife:%d", i);
+			WriteGrantKey(conn, authid, pid, key, bRemove);
+			n++;
+		}
+		return n;
+	}
+	if (equali(spec, "all_nade") || equali(spec, "nades")) {
+		for (i = 0; i < g_iNadeSize; i++) {
+			ArrayGetArray(g_pNade, i, nade, sizeof nade);
+			formatex(key, charsmax(key), "nade:%s", nade[nade_key]);
+			WriteGrantKey(conn, authid, pid, key, bRemove);
+			n++;
+		}
+		return n;
+	}
+
+	if (!ResolveGrantKey(spec, key, charsmax(key)))
+		return -1;
+	WriteGrantKey(conn, authid, pid, key, bRemove);
+	return 1;
+}
+
+// 1=成功 0=没有变化 -1=SteamID无效 -2=皮肤不存在 -3=数据库失败
+ExecSteamGrant(const rawSteam[], const spec[], bool:bRemove, admin, note[], noteLen) {
+	new authid[MAX_AUTHID_LENGTH], steamid[64];
+	if (!NormalizeGrantSteam(rawSteam, authid, charsmax(authid), steamid, charsmax(steamid))) {
+		formatex(note, noteLen, "SteamID无效: %s", rawSteam);
+		return -1;
+	}
+	if (!spec[0]) {
+		formatex(note, noteLen, "缺少皮肤名");
+		return -2;
+	}
+	if (g_hSqlTuple == Empty_Handle) {
+		formatex(note, noteLen, "数据库未连接");
+		return -3;
+	}
+
+	new szErr[160], iErr;
+	new Handle:conn = SQL_Connect(g_hSqlTuple, iErr, szErr, charsmax(szErr));
+	if (conn == Empty_Handle) {
+		formatex(note, noteLen, "数据库未连接");
+		return -3;
+	}
+	new n = ApplyGrantSpec(conn, authid, spec, bRemove);
+	SQL_FreeHandle(conn);
+	if (n < 0) {
+		formatex(note, noteLen, "没有这个皮肤: %s", spec);
+		return -2;
+	}
+	formatex(note, noteLen, "%s %d 个 (%s)", bRemove ? "收回" : "发放", n, steamid);
+
+	new pid = FindPlayerByAuth(authid);
+	if (pid > 0 && pid != admin && is_user_connected(pid)) {
+		if (bRemove)
+			client_print_color(pid, print_team_default, "^4[皮肤]^1 管理员收回了你的皮肤");
+		else
+			client_print_color(pid, print_team_blue, "^4[皮肤]^1 管理员为你发放了皮肤, 打开 /skin 即可使用");
+	}
+	return n > 0 ? 1 : 0;
+}
+
+GrantTell(id, const msg[]) {
+	if (id && is_user_connected(id)) {
+		client_print_color(id, print_team_default, "^4[皮肤]^1 %s", msg);
+		return;
+	}
+	server_print("[Skin] %s", msg);
+}
+
+NotifyGrantTarget(const authid[], bool:bRemove) {
+	new pid = FindPlayerByAuth(authid);
+	if (pid < 1 || !is_user_connected(pid))
+		return;
+	if (bRemove)
+		client_print_color(pid, print_team_default, "^4[皮肤]^1 后台收回了你的皮肤");
+	else
+		client_print_color(pid, print_team_blue, "^4[皮肤]^1 后台为你发放了皮肤, 打开 /skin 即可使用");
+}
+
+// 删掉这个账号的全部拥有和当前选用. 返回删除前的拥有条数
+Db_ClearPlayerSync(Handle:conn, const authid[], const steamid[]) {
+	new szAuth[MAX_AUTHID_LENGTH * 2], szSteam[128], szQ[384];
+	EscapeSql(authid, szAuth, charsmax(szAuth));
+	EscapeSql(steamid, szSteam, charsmax(szSteam));
+	formatex(szQ, charsmax(szQ), "SELECT COUNT(*) FROM %s WHERE authid='%s' OR steamid='%s'", OWNS_TABLE, szAuth, szSteam);
+	new Handle:q = SQL_PrepareQuery(conn, "%s", szQ);
+	new n = 0;
+	if (q != Empty_Handle && SQL_Execute(q) && SQL_MoreResults(q))
+		n = SQL_ReadResult(q, 0);
+	if (q != Empty_Handle)
+		SQL_FreeHandle(q);
+	formatex(szQ, charsmax(szQ), "DELETE FROM %s WHERE authid='%s' OR steamid='%s'", OWNS_TABLE, szAuth, szSteam);
+	SQL_ExecSync(conn, "%s", szQ);
+	formatex(szQ, charsmax(szQ), "DELETE FROM %s WHERE authid='%s'", CUR_TABLE, szAuth);
+	SQL_ExecSync(conn, "%s", szQ);
+	return n;
+}
+
+// 在线玩家立刻脱掉模型/刀/投掷物, 并作废还没回来的旧库存查询
+WipeOnlineSkinMemory(id) {
+	if (id < 1 || id > MaxClients)
+		return;
+	g_iLoadGen[id]++;
+	ClearOwned(id);
+	g_bOwnedLoaded[id] = true;
+	g_CurT[id][0] = EOS;
+	g_CurC[id][0] = EOS;
+	g_NadeSmoke[id][0] = EOS;
+	g_NadeFlash[id][0] = EOS;
+	g_iCurKnife[id] = 0;
+	g_szAppliedKey[id][0] = EOS;
+	g_iLastTeam[id] = 0;
+	g_szAppliedTeam[id] = 0;
+	if (!is_user_connected(id))
+		return;
+	ForceSelectKnife(id, 0);
+	RefreshPlayerSkin(id);
+}
+
+// 1=已清除(含0条) -1=SteamID无效 -3=数据库失败. 返回值是清除前的拥有条数, 失败为负数
+ExecSteamClear(const rawSteam[], admin, note[], noteLen, bool:bTellTarget = true) {
+	new authid[MAX_AUTHID_LENGTH], steamid[64];
+	if (!NormalizeGrantSteam(rawSteam, authid, charsmax(authid), steamid, charsmax(steamid))) {
+		formatex(note, noteLen, "SteamID无效: %s", rawSteam);
+		return -1;
+	}
+	if (g_hSqlTuple == Empty_Handle) {
+		formatex(note, noteLen, "数据库未连接");
+		return -3;
+	}
+	new szErr[160], iErr;
+	new Handle:conn = SQL_Connect(g_hSqlTuple, iErr, szErr, charsmax(szErr));
+	if (conn == Empty_Handle) {
+		formatex(note, noteLen, "数据库未连接");
+		return -3;
+	}
+	new n = Db_ClearPlayerSync(conn, authid, steamid);
+	SQL_FreeHandle(conn);
+
+	new pid = FindPlayerByAuth(authid);
+	if (pid > 0)
+		WipeOnlineSkinMemory(pid);
+	formatex(note, noteLen, "已清除 %s 的全部皮肤 (%d款)", steamid, n);
+	log_amx("[Skin] 后台清除 %s (%d款)", steamid, n);
+	if (bTellTarget && pid > 0 && pid != admin && is_user_connected(pid))
+		client_print_color(pid, print_team_default, "^4[皮肤]^1 管理员清除了你的全部皮肤");
+	return n;
+}
+
+// onlySteam 为空则处理全部待发放; 否则只处理这个 SteamID (进服时用)
+PollSkinGrants(const onlySteam[]) {
+	if (!g_bSqlReady || g_hSqlTuple == Empty_Handle)
+		return;
+
+	new szErr[160], iErr;
+	new Handle:conn = SQL_Connect(g_hSqlTuple, iErr, szErr, charsmax(szErr));
+	if (conn == Empty_Handle)
+		return;
+
+	new szQ[512];
+	if (onlySteam[0]) {
+		new szSteam[128], szPref[96], szPrefEsc[160];
+		EscapeSql(onlySteam, szSteam, charsmax(szSteam));
+		formatex(szPref, charsmax(szPref), "STEAM:%s", onlySteam);
+		EscapeSql(szPref, szPrefEsc, charsmax(szPrefEsc));
+		formatex(szQ, charsmax(szQ), "SELECT id, steamid, skin_key, action FROM %s WHERE status=0 AND (steamid='%s' OR steamid='%s') ORDER BY id ASC LIMIT %d", GRANT_TABLE, szSteam, szPrefEsc, GRANT_BATCH);
+	} else
+		formatex(szQ, charsmax(szQ), "SELECT id, steamid, skin_key, action FROM %s WHERE status=0 ORDER BY id ASC LIMIT %d", GRANT_TABLE, GRANT_BATCH);
+
+	new Handle:q = SQL_PrepareQuery(conn, "%s", szQ);
+	if (q == Empty_Handle || !SQL_Execute(q)) {
+		if (q != Empty_Handle) {
+			SQL_QueryError(q, szErr, charsmax(szErr));
+			log_amx("[Skin] 读取发放队列失败: %s", szErr);
+			SQL_FreeHandle(q);
+		}
+		SQL_FreeHandle(conn);
+		return;
+	}
+
+	new nRows = 0;
+	while (SQL_MoreResults(q) && nRows < GRANT_BATCH) {
+		g_iGrantId[nRows] = SQL_ReadResult(q, 0);
+		SQL_ReadResult(q, 1, g_szGrantSteam[nRows], charsmax(g_szGrantSteam[]));
+		SQL_ReadResult(q, 2, g_szGrantKey[nRows], charsmax(g_szGrantKey[]));
+		SQL_ReadResult(q, 3, g_szGrantAct[nRows], charsmax(g_szGrantAct[]));
+		nRows++;
+		SQL_NextRow(q);
+	}
+	SQL_FreeHandle(q);
+
+	new i, status, bool:bRemove, bool:bClear, nGot, note[96], szNote[192];
+	new authid[MAX_AUTHID_LENGTH], steamid[64];
+	for (i = 0; i < nRows; i++) {
+		status = 2;
+		bRemove = false;
+		bClear = false;
+		note[0] = EOS;
+		if (!g_szGrantAct[i][0] || equali(g_szGrantAct[i], "give") || equali(g_szGrantAct[i], "add"))
+			bRemove = false;
+		else if (equali(g_szGrantAct[i], "take") || equali(g_szGrantAct[i], "remove") || equali(g_szGrantAct[i], "del"))
+			bRemove = true;
+		else if (equali(g_szGrantAct[i], "clear") || equali(g_szGrantAct[i], "wipe"))
+			bClear = true;
+		else
+			copy(note, charsmax(note), "action 只能是 give、take 或 clear");
+
+		if (!note[0]) {
+			if (!NormalizeGrantSteam(g_szGrantSteam[i], authid, charsmax(authid), steamid, charsmax(steamid)))
+				copy(note, charsmax(note), "SteamID无效");
+			else if (bClear) {
+				nGot = Db_ClearPlayerSync(conn, authid, steamid);
+				status = 1;
+				formatex(note, charsmax(note), "ok clear %d", nGot);
+				new pid = FindPlayerByAuth(authid);
+				if (pid > 0)
+					WipeOnlineSkinMemory(pid);
+			} else {
+				nGot = ApplyGrantSpec(conn, authid, g_szGrantKey[i], bRemove);
+				if (nGot < 0)
+					formatex(note, charsmax(note), "没有这个皮肤: %s", g_szGrantKey[i]);
+				else {
+					status = 1;
+					formatex(note, charsmax(note), "ok %d", nGot);
+					NotifyGrantTarget(authid, bRemove);
+				}
+			}
+		}
+
+		EscapeSql(note, szNote, charsmax(szNote));
+		formatex(szQ, charsmax(szQ), "UPDATE %s SET status=%d, done_at=UNIX_TIMESTAMP(), note='%s' WHERE id=%d", GRANT_TABLE, status, szNote, g_iGrantId[i]);
+		SQL_ExecSync(conn, "%s", szQ);
+		if (status == 1) {
+			new szAct[8];
+			if (bClear)
+				copy(szAct, charsmax(szAct), "清除");
+			else if (bRemove)
+				copy(szAct, charsmax(szAct), "收回");
+			else
+				copy(szAct, charsmax(szAct), "发放");
+			log_amx("[Skin] 后台%s %s -> %s (%s)", szAct, g_szGrantSteam[i], g_szGrantKey[i], note);
+		} else
+			log_amx("[Skin] 后台发放失败 id=%d steam=%s key=%s (%s)", g_iGrantId[i], g_szGrantSteam[i], g_szGrantKey[i], note);
+	}
+	SQL_FreeHandle(conn);
+}
+
+public TaskPollGrants() {
+	PollSkinGrants("");
+}
+
+PromptSteamGrant(id, bool:bRemove) {
+	if (!IsSkinAdmin(id))
+		return;
+	copy(g_pendingMode[id], charsmax(g_pendingMode[]), bRemove ? "stake" : "sgive");
+	client_cmd(id, "messagemode SkinGrantSteam");
+	client_print_color(id, print_team_default, "^4[皮肤]^1 输入: ^3STEAM_0:1:12345 皮肤名^1  (可用 all / all_t / all_c / all_knife / all_nade)");
+}
+
+public CmdGrantSteamInput(id) {
+	if (!IsSkinAdmin(id))
+		return PLUGIN_HANDLED;
+	new szArg[96], szSteam[40], szSpec[40];
+	read_args(szArg, charsmax(szArg));
+	trim(szArg);
+	remove_quotes(szArg);
+	strtok(szArg, szSteam, charsmax(szSteam), szSpec, charsmax(szSpec), ' ');
+	trim(szSpec);
+	new bool:bRemove = bool:equali(g_pendingMode[id], "stake");
+	new note[96];
+	new ret = ExecSteamGrant(szSteam, szSpec, bRemove, id, note, charsmax(note));
+	if (ret < 0)
+		SkinChat(id, print_team_default, "SKIN_CHAT_GRANT_FAIL", "发放失败: %s", note);
+	else if (bRemove)
+		SkinChat(id, print_team_blue, "SKIN_CHAT_GRANT_TOOK", "已按SteamID收回: %s", note);
+	else
+		SkinChat(id, print_team_blue, "SKIN_CHAT_GRANT_OK", "已按SteamID发放: %s", note);
+	return PLUGIN_HANDLED;
+}
+
+CmdAmxGrant(id, bool:bRemove) {
+	if (!cmd_access(id, ADMIN_IMMUNITY, 0, 0))
+		return PLUGIN_HANDLED;
+	if (read_argc() < 3) {
+		GrantTell(id, bRemove ? "用法: amx_takeskin <steamid> <皮肤名|all|all_t|all_c|all_knife|all_nade>" : "用法: amx_giveskin <steamid> <皮肤名|all|all_t|all_c|all_knife|all_nade>");
+		return PLUGIN_HANDLED;
+	}
+	new szSteam[40], szSpec[40], note[96];
+	read_argv(1, szSteam, charsmax(szSteam));
+	read_argv(2, szSpec, charsmax(szSpec));
+	new ret = ExecSteamGrant(szSteam, szSpec, bRemove, id, note, charsmax(note));
+	if (ret < 0)
+		GrantTell(id, note);
+	else
+		GrantTell(id, note);
+	return PLUGIN_HANDLED;
+}
+
+public CmdAmxGiveSkin(id) {
+	return CmdAmxGrant(id, false);
+}
+
+public CmdAmxTakeSkin(id) {
+	return CmdAmxGrant(id, true);
+}
+
+PromptSteamClear(id) {
+	if (!IsSkinAdmin(id))
+		return;
+	copy(g_pendingMode[id], charsmax(g_pendingMode[]), "sclear");
+	client_cmd(id, "messagemode SkinClearSteam");
+	client_print_color(id, print_team_default, "^4[皮肤]^1 输入要清空的 SteamID, 例如 ^3STEAM_0:1:12345^1  (该账号全部皮肤都会删掉, 可以不在线)");
+}
+
+public CmdClearSteamInput(id) {
+	if (!IsSkinAdmin(id))
+		return PLUGIN_HANDLED;
+	new szArg[64], note[96];
+	read_args(szArg, charsmax(szArg));
+	trim(szArg);
+	remove_quotes(szArg);
+	new ret = ExecSteamClear(szArg, id, note, charsmax(note), true);
+	if (ret < 0)
+		SkinChat(id, print_team_default, "SKIN_CHAT_CLEAR_FAIL", "清除失败: %s", note);
+	else
+		SkinChat(id, print_team_blue, "SKIN_CHAT_CLEAR_OK", "%s", note);
+	return PLUGIN_HANDLED;
+}
+
+public CmdAmxClearSkin(id) {
+	if (!cmd_access(id, ADMIN_IMMUNITY, 0, 0))
+		return PLUGIN_HANDLED;
+	if (read_argc() < 2) {
+		GrantTell(id, "用法: amx_clearskin <steamid>");
+		return PLUGIN_HANDLED;
+	}
+	new szSteam[40], note[96];
+	read_argv(1, szSteam, charsmax(szSteam));
+	new ret = ExecSteamClear(szSteam, id, note, charsmax(note), true);
+	if (ret < 0)
+		GrantTell(id, note);
+	else
+		GrantTell(id, note);
+	return PLUGIN_HANDLED;
+}
+
 /* 同步执行单条查询(预缓存阶段用)并释放, 支持 %s 等格式化。
  * 不要外包 fmt(): fmt() 只有 256 字节, 建表/INSERT 会被截断。 */
 SQL_ExecSync(Handle:conn, const szQuery[], any:...) {
@@ -1456,7 +2115,7 @@ SQL_ExecSync(Handle:conn, const szQuery[], any:...) {
 		new szErr[160];
 		SQL_QueryError(q, szErr, charsmax(szErr));
 		// 老库补列时列已存在, 不算故障
-		if (containi(szErr, "Duplicate column") == -1)
+		if (containi(szErr, "Duplicate column") == -1 && containi(szErr, "Duplicate key name") == -1)
 			log_amx("[Skin] SQL 执行失败: %s | %s", szErr, szQ);
 	}
 	SQL_FreeHandle(q);
@@ -1832,10 +2491,21 @@ CreateTablesSync(Handle:conn) {
 
 	SQL_ExecSync(conn, "CREATE TABLE IF NOT EXISTS %s (authid VARCHAR(64) NOT NULL, model_key VARCHAR(32) NOT NULL, bought_at INT NOT NULL DEFAULT 0, expire_at INT NOT NULL DEFAULT 0, PRIMARY KEY (authid, model_key), KEY idx_authid (authid))", OWNS_TABLE);
 
-	// 老库升级: 补 expire_at 列 (已存在则自动忽略错误)
+	// 老库升级: 补 expire_at / steamid (已存在则自动忽略错误)
 	SQL_ExecSync(conn, "ALTER TABLE %s ADD COLUMN expire_at INT NOT NULL DEFAULT 0", OWNS_TABLE);
+	SQL_ExecSync(conn, "ALTER TABLE %s ADD COLUMN steamid VARCHAR(64) NOT NULL DEFAULT ''", OWNS_TABLE);
+	SQL_ExecSync(conn, "ALTER TABLE %s ADD KEY idx_steamid (steamid)", OWNS_TABLE);
+	SQL_ExecSync(conn, "UPDATE %s SET steamid=SUBSTRING(authid,7) WHERE steamid='' AND authid LIKE 'STEAM:%%'", OWNS_TABLE);
+	SQL_ExecSync(conn, "UPDATE %s SET steamid=authid WHERE steamid='' AND authid NOT LIKE 'STEAM:%%'", OWNS_TABLE);
 
 	SQL_ExecSync(conn, "CREATE TABLE IF NOT EXISTS %s (authid VARCHAR(64) NOT NULL, team CHAR(1) NOT NULL DEFAULT '', model_key VARCHAR(32) NOT NULL DEFAULT '', updated INT NOT NULL DEFAULT 0, PRIMARY KEY (authid, team))", CUR_TABLE);
+
+	// HeidiSQL 后台发放队列: status 0=待处理 1=已写入 2=失败
+	SQL_ExecSync(conn, "CREATE TABLE IF NOT EXISTS %s (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, steamid VARCHAR(64) NOT NULL, skin_key VARCHAR(32) NOT NULL, action VARCHAR(8) NOT NULL DEFAULT 'give', status TINYINT NOT NULL DEFAULT 0, note VARCHAR(128) NOT NULL DEFAULT '', created INT NOT NULL DEFAULT 0, done_at INT NOT NULL DEFAULT 0, KEY idx_status (status, id))", GRANT_TABLE);
+
+	// HeidiSQL 直接打开这两个视图: 一个玩家一行 / 一个皮肤一行
+	SQL_ExecSync(conn, "CREATE OR REPLACE VIEW cpm_heidi_player_skins AS SELECT steamid, model_key AS skin, IF(expire_at=0,'永久',FROM_UNIXTIME(expire_at)) AS expire_text, FROM_UNIXTIME(bought_at) AS got_at FROM %s WHERE steamid<>'' AND (expire_at=0 OR expire_at>UNIX_TIMESTAMP())", OWNS_TABLE);
+	SQL_ExecSync(conn, "CREATE OR REPLACE VIEW cpm_heidi_player AS SELECT steamid, GROUP_CONCAT(DISTINCT model_key ORDER BY model_key SEPARATOR ', ') AS skins, COUNT(DISTINCT model_key) AS skin_count FROM %s WHERE steamid<>'' AND (expire_at=0 OR expire_at>UNIX_TIMESTAMP()) GROUP BY steamid", OWNS_TABLE);
 }
 
 bool:AddSkinToPool(row[pool_e]) {
@@ -2148,6 +2818,8 @@ DoBuy(id, idx) {
 		SkinChat(id, print_team_red, "SKIN_CHAT_SQL_BUY", "MySQL 未就绪, 暂不能购买");
 		return;
 	}
+	if (!GoldReady(id))
+		return;
 
 	new iGold = hns_gc_get_player(id);
 	if (iGold < row[pool_price]) {
@@ -2183,13 +2855,14 @@ DoBuy(id, idx) {
 
 KnifeInfo(knife, name[], nameLen, &price) {
 	name[0] = EOS;
-	price = 0;
+	price = -1;
 	crxknives_get_attribute_str(knife, "NAME", name, nameLen, false);
 	if (!name[0])
 		formatex(name, nameLen, "Knife %d", knife);
-	crxknives_get_attribute_int(knife, "PRICE", price, false);
-	if (price < 0)
-		price = 0;
+	// 第三个参数是引用。属性不存在时不要把“没标价”当成 0(免费)。
+	new iAttr;
+	if (crxknives_get_attribute_int(knife, "PRICE", iAttr, false))
+		price = iAttr;
 
 	// knife_skins.cfg 里有该刀(按名字)就覆盖商店价格, 方便单独管理
 	if (g_tKnifePrice != Invalid_Trie && name[0]) {
@@ -2197,6 +2870,8 @@ KnifeInfo(knife, name[], nameLen, &price) {
 		if (TrieGetCell(g_tKnifePrice, name, iOverride))
 			price = iOverride;
 	}
+	if (price < 0)
+		price = KNIFE_DEFAULT_PRICE;
 }
 
 DoBuyKnife(id, knife) {
@@ -2220,6 +2895,8 @@ DoBuyKnife(id, knife) {
 		SkinChat(id, print_team_red, "SKIN_CHAT_SQL_BUY", "MySQL 未就绪, 暂不能购买");
 		return;
 	}
+	if (price > 0 && !GoldReady(id))
+		return;
 
 	new iGold = hns_gc_get_player(id);
 	if (iGold < price) {
@@ -2319,6 +2996,8 @@ DoUpgrade(id, idx) {
 		SkinChat(id, print_team_red, "SKIN_CHAT_SQL_UP", "MySQL 未就绪, 暂不能升级");
 		return;
 	}
+	if (!GoldReady(id))
+		return;
 
 	new iGold = hns_gc_get_player(id);
 	if (iGold < g_iUpgradePrice) {
@@ -2512,25 +3191,15 @@ GiveAllNadesTo(target) {
 }
 
 ClearAllSkinsFrom(target) {
-	if (!g_Owned[target] || ArraySize(g_Owned[target]) <= 0)
+	if (!is_user_connected(target))
 		return 0;
-
-	new Array:tmp = ArrayCreate(SKIN_KEY_MAX);
-	new count = ArraySize(g_Owned[target]);
-	for (new i = 0; i < count; i++) {
-		new key[SKIN_KEY_MAX];
-		ArrayGetString(g_Owned[target], i, key, charsmax(key));
-		ArrayPushString(tmp, key);
-	}
-
-	new removed = ArraySize(tmp);
-	for (new i = 0; i < removed; i++) {
-		new key[SKIN_KEY_MAX];
-		ArrayGetString(tmp, i, key, charsmax(key));
-		RemoveSkinFrom(target, key);
-	}
-	ArrayDestroy(tmp);
-	return removed;
+	new authid[MAX_AUTHID_LENGTH], note[96];
+	GetPlayerAuth(target, authid, charsmax(authid));
+	if (!authid[0])
+		return 0;
+	// 按账号把 MySQL 里的拥有和当前选用整表删掉, 不依赖内存里是否已经载入
+	new n = ExecSteamClear(authid, 0, note, charsmax(note), false);
+	return n < 0 ? 0 : n;
 }
 
 RemoveSkinFrom(target, const key[]) {
@@ -2628,6 +3297,8 @@ MenuSkin(id, page = 0) {
 	menu_additem(menu, szItem, "checkin");
 	SkinLang(id, "SKIN_MENU_BUY", szItem, charsmax(szItem), "购买点数");
 	menu_additem(menu, szItem, "buy");
+	SkinLang(id, "SKIN_MENU_CLEAR", szItem, charsmax(szItem), "一键清除皮肤");
+	menu_additem(menu, szItem, "clear");
 	menu_addblank(menu, 0);
 	SkinLang(id, "SKIN_MENU_SQL", szItem, charsmax(szItem), "\yMySQL管理");
 	menu_additem(menu, szItem, "sql");
@@ -2920,6 +3591,8 @@ MenuAdmin(id) {
 		menu_additem(menu, szItem, "2");
 		SkinLang(id, "SKIN_ADMIN_REMOVE", szItem, charsmax(szItem), "移除玩家皮肤");
 		menu_additem(menu, szItem, "3");
+		SkinLang(id, "SKIN_ADMIN_CLEAR", szItem, charsmax(szItem), "一键清除在线玩家全部皮肤");
+		menu_additem(menu, szItem, "8");
 		SkinLang(id, "SKIN_ADMIN_POOL", szItem, charsmax(szItem), "查看皮肤池");
 		menu_additem(menu, szItem, "4");
 		SkinLang(id, "SKIN_ADMIN_OWNED", szItem, charsmax(szItem), "查看玩家已拥有皮肤");
@@ -2928,6 +3601,12 @@ MenuAdmin(id) {
 		menu_additem(menu, szItem, "6");
 		SkinLang(id, "SKIN_ADMIN_GIVEALL_NADE", szItem, charsmax(szItem), "发放全部投掷物皮肤给玩家");
 		menu_additem(menu, szItem, "7");
+		SkinLang(id, "SKIN_ADMIN_GIVE_STEAM", szItem, charsmax(szItem), "按SteamID发放(可离线)");
+		menu_additem(menu, szItem, "9");
+		SkinLang(id, "SKIN_ADMIN_TAKE_STEAM", szItem, charsmax(szItem), "按SteamID收回(可离线)");
+		menu_additem(menu, szItem, "10");
+		SkinLang(id, "SKIN_ADMIN_CLEAR_STEAM", szItem, charsmax(szItem), "按SteamID一键清除(可离线)");
+		menu_additem(menu, szItem, "11");
 	}
 	SkinMenuStyle(id, menu);
 	SkinMenuReturn(id, menu);
@@ -2989,6 +3668,8 @@ MenuPickPlayer(const mode[], id) {
 		SkinLang(id, "SKIN_PICK_KNIVES", szTitle, charsmax(szTitle), "\y选择玩家 \w· 发放全部刀皮");
 	else if (g_pendingMode[id][0] == 'n')
 		SkinLang(id, "SKIN_PICK_NADES", szTitle, charsmax(szTitle), "\y选择玩家 \w· 发放全部投掷物皮肤");
+	else if (g_pendingMode[id][0] == 'c')
+		SkinLang(id, "SKIN_PICK_CLEAR", szTitle, charsmax(szTitle), "\y选择玩家 \w· 一键清除皮肤");
 	else
 		SkinLang(id, "SKIN_PICK_REMOVE", szTitle, charsmax(szTitle), "\y选择玩家 \w· 移除皮肤");
 
@@ -3152,6 +3833,15 @@ PoolTeamChar(idx) {
    ============================================================ */
 public plugin_natives() {
 	hns_register_optional_sql();
+	set_native_filter("SkinNativeFilter");
+}
+
+public SkinNativeFilter(const szName[], iIndex, iTrap) {
+	if (equal(szName, "REU_GetAuthtype") || equal(szName, "has_reunion")) {
+		g_bHasReunion = false;
+		return PLUGIN_HANDLED;
+	}
+	return PLUGIN_CONTINUE;
 }
 
 public plugin_precache() {
@@ -3167,12 +3857,18 @@ public plugin_precache() {
 
 public plugin_init() {
 	register_plugin("HNS Match Skin", "1.0.0", "OpenHNS");
+	g_bHasReunion = has_reunion();
 
 	// crx 在 plugin_cfg 里缓存 km_select_message, 必须在它之前关掉英文选刀提示
 	MuteCrxKnifeSelectMessage();
 
 	for (new i = 0; i < sizeof(g_szClcmds); i++)
 		register_clcmd(g_szClcmds[i], "Cl_Cmd");
+	register_clcmd("SkinGrantSteam", "CmdGrantSteamInput");
+	register_clcmd("SkinClearSteam", "CmdClearSteamInput");
+	register_concmd("amx_giveskin", "CmdAmxGiveSkin", ADMIN_IMMUNITY, "<steamid> <skin|all|all_t|all_c|all_knife|all_nade>");
+	register_concmd("amx_takeskin", "CmdAmxTakeSkin", ADMIN_IMMUNITY, "<steamid> <skin|all|all_t|all_c|all_knife|all_nade>");
+	register_concmd("amx_clearskin", "CmdAmxClearSkin", ADMIN_IMMUNITY, "<steamid>");
 	register_clcmd("say /sign", "CmdCheckin");
 	register_clcmd("say_team /sign", "CmdCheckin");
 	register_clcmd("say /qd", "CmdCheckin");
@@ -3183,15 +3879,16 @@ public plugin_init() {
 	register_clcmd("say_team /签到", "CmdCheckin");
 
 	LoadDbCfg();
-	g_tAuthByIp = TrieCreate();
 	g_hSqlTuple = SQL_MakeDbTuple(g_eDb[db_host], g_eDb[db_user], g_eDb[db_pass], g_eDb[db_db]);
 	SQL_SetCharset(g_hSqlTuple, "utf8");
 
 	// 建表/导入目录放到后台, 不卡住 changelevel
 	set_task(0.1, "TaskSyncCatalog");
+	remove_task(TASK_GRANT_POLL);
+	set_task(8.0, "TaskPollGrants", TASK_GRANT_POLL, _, _, "b");
 
-	// 换队/进服时按当前阵营自动应用对应款式
-	register_forward(FM_PlayerPreThink, "fwd_PlayerPreThink");
+	// 不再每帧查皮肤。每秒看一次队伍变化，复活和读完库存时也会套
+	set_task(1.0, "TaskWatchSkins", TASK_SKIN_WATCH, _, _, "b");
 
 	// 拦截原版死亡音效, 换成皮肤音效 (否则会叠在一起)
 	register_forward(FM_EmitSound, "fwdEmitSoundDeath", 0);
@@ -3207,6 +3904,8 @@ public plugin_init() {
 
 public TaskSyncCatalog() {
 	DbSyncCatalog(false);
+	if (g_bSqlReady)
+		PollSkinGrants("");
 }
 
 public plugin_cfg() {
@@ -3223,9 +3922,9 @@ MuteCrxKnifeSelectMessage() {
 }
 
 public plugin_end() {
+	remove_task(TASK_GRANT_POLL);
 	if (g_pPool) { ArrayDestroy(g_pPool); g_pPool = Empty_Handle; }
 	if (g_pPoolIndex) { TrieDestroy(g_pPoolIndex); g_pPoolIndex = Invalid_Trie; }
-	if (g_tAuthByIp) { TrieDestroy(g_tAuthByIp); g_tAuthByIp = Invalid_Trie; }
 	if (g_pNade) { ArrayDestroy(g_pNade); g_pNade = Empty_Handle; }
 	if (g_iVaultReward != INVALID_HANDLE) {
 		nvault_close(g_iVaultReward);
@@ -3299,39 +3998,54 @@ public fwdEmitSoundDeath(id, iChannel, szSample[], Float:volume, Float:attenuati
 	return FMRES_SUPERCEDE;
 }
 
-/* 检测队伍变化(含进场), 自动把当前阵营的款应用上去 */
-public fwd_PlayerPreThink(id) {
-	if (!is_user_alive(id))
-		return FMRES_IGNORED;
+// 只在换队、复活、读完库存时调用。不再走每帧 PreThink
+RefreshPlayerSkin(id) {
+	if (!is_user_connected(id))
+		return;
 
 	new team = get_member(id, m_iTeam);
-	if (team != TEAM_TERRORIST && team != TEAM_CT)
-		return FMRES_IGNORED;
+	if (team != TEAM_TERRORIST && team != TEAM_CT) {
+		if (g_szAppliedKey[id][0])
+			custom_player_models_reset(id);
+		g_iLastTeam[id] = 0;
+		g_szAppliedTeam[id] = 0;
+		g_szAppliedKey[id][0] = EOS;
+		return;
+	}
 
 	new t = CharOfTeam(team);
 	new key[SKIN_KEY_MAX];
 	CurSlot(id, key, charsmax(key), t);
 
-	// 当前槽里想要显示的款: 有效的皮肤才应用, 否则视为空(原皮)
-	// 本图未预缓存的款式 (超过上限被跳过) 也不应用
 	new bool:bWantCustom = (key[0] && PoolIndexOf(key) != -1 && IsSkinValid(id, key) && IsSkinPrecached(key));
 	if (!bWantCustom)
 		key[0] = EOS;
 
-	// 队伍没变 且 已应用的款和当前槽一致 => 无需重复动作
-	// (异步DB加载晚了 / 换图 / 复活都会因为这里的差集被补上)
 	if (g_iLastTeam[id] == t && g_szAppliedTeam[id] == t && equal(g_szAppliedKey[id], key))
-		return FMRES_IGNORED;
+		return;
 
 	g_iLastTeam[id] = t;
-
 	if (bWantCustom)
 		custom_player_models_set(id, key);
 	else
 		custom_player_models_reset(id);
 	MarkAppliedSkin(id, t, key);
+}
 
-	return FMRES_IGNORED;
+public TaskWatchSkins() {
+	new players[MAX_PLAYERS], num;
+	get_players(players, num, "ch");
+	for (new i = 0; i < num; i++) {
+		new id = players[i];
+		if (!g_bOwnedLoaded[id])
+			continue;
+		new team = get_member(id, m_iTeam);
+		if (team != TEAM_TERRORIST && team != TEAM_CT)
+			continue;
+		if (g_iLastTeam[id] == CharOfTeam(team) && g_szAppliedKey[id][0])
+			continue;
+		RefreshPlayerSkin(id);
+	}
 }
 
 public client_authorized(id) {
@@ -3356,10 +4070,8 @@ TryLoadOwned(id) {
 	if (!is_user_connected(id) || !g_hSqlTuple || is_user_bot(id) || is_user_hltv(id))
 		return;
 
-	new szLive[MAX_AUTHID_LENGTH], szCached[MAX_AUTHID_LENGTH];
-	get_user_authid(id, szLive, charsmax(szLive));
-	LookupAuthByIp(id, szCached, charsmax(szCached));
-	if (IsPendingAuth(szLive) && !IsSteamAuth(g_szAuth[id]) && !IsSteamAuth(szCached) && g_iAuthRetry[id] < 15) {
+	// Reunion 还没判定、正版 SteamID 还在 PENDING、或盗版 IP 还没拿到: 继续等。
+	if (SkinIdentityPending(id) && g_iAuthRetry[id] < 30) {
 		ScheduleAuthRetry(id);
 		return;
 	}
@@ -3374,7 +4086,7 @@ TryLoadOwned(id) {
 
 	// SteamID 没变且已经读过库: 只重新贴模型, 不要 ClearOwned
 	if (equal(szOld, szAuth) && g_Owned[id] && g_bOwnedLoaded[id]) {
-		ApplyCurrentSkin(id);
+		RefreshPlayerSkin(id);
 		ScheduleKnifeReapply(id);
 		return;
 	}
@@ -3382,6 +4094,13 @@ TryLoadOwned(id) {
 	remove_task(id + TASK_AUTH_RETRY);
 	g_iAuthRetry[id] = 0;
 	g_bOwnedLoaded[id] = false;
+	// 先把 HeidiSQL / 控制台排队的发放写进拥有表, 下面的读取才能带上
+	if (g_bSqlReady) {
+		new szSteam[64];
+		SteamIdOfAuth(szAuth, szSteam, charsmax(szSteam));
+		if (szSteam[0])
+			PollSkinGrants(szSteam);
+	}
 	g_iLoadGen[id]++;
 	copy(g_szAuth[id], charsmax(g_szAuth[]), szAuth);
 	Db_LoadOwned(id, szAuth);
@@ -3391,7 +4110,7 @@ ScheduleAuthRetry(id) {
 	if (!is_user_connected(id))
 		return;
 	remove_task(id + TASK_AUTH_RETRY);
-	if (g_iAuthRetry[id] >= 15)
+	if (g_iAuthRetry[id] >= 30)
 		return;
 	set_task(0.5, "TaskAuthRetry", id + TASK_AUTH_RETRY);
 }
@@ -3401,21 +4120,14 @@ public TaskAuthRetry(taskid) {
 	if (!is_user_connected(id))
 		return;
 
-	new szLive[MAX_AUTHID_LENGTH];
-	get_user_authid(id, szLive, charsmax(szLive));
-	if (IsSteamAuth(szLive)) {
-		g_iAuthRetry[id] = 0;
-		TryLoadOwned(id);
+	if (SkinIdentityPending(id)) {
+		g_iAuthRetry[id]++;
+		if (g_iAuthRetry[id] < 30)
+			set_task(0.5, "TaskAuthRetry", taskid);
 		return;
 	}
 
-	g_iAuthRetry[id]++;
-	if (g_iAuthRetry[id] < 15) {
-		set_task(0.5, "TaskAuthRetry", taskid);
-		return;
-	}
-
-	// 一直拿不到 SteamID 才退回 LAN:IP, 避免换图瞬间用空账号把皮肤冲掉
+	g_iAuthRetry[id] = 0;
 	TryLoadOwned(id);
 }
 
@@ -3428,7 +4140,6 @@ public client_disconnected(id) {
 	g_legacyPendingAdmin[id] = 0;
 	g_iLoadGen[id]++;
 	StopPlaytimeTrack(id, true);
-	RememberAuthByIp(id, g_szAuth[id]);
 	g_szAuth[id][0] = EOS;
 	ClearOwned(id);
 	g_bOwnedLoaded[id] = false;
@@ -3561,13 +4272,13 @@ public SqlHandler(failstate, Handle:query, error[], errnum, data[], size, Float:
 					else if (szTeam[0] == 'K') {
 						new szKnifeKey[SKIN_KEY_MAX];
 						SQL_ReadResult(query, 1, szKnifeKey, charsmax(szKnifeKey));
-						if (containi(szKnifeKey, "knife:") == 0)
+						if (szKnifeKey[0] && containi(szKnifeKey, "knife:") == 0)
 							g_iCurKnife[id] = str_to_num(szKnifeKey[6]);
 					}
 					SQL_NextRow(query);
 				}
 			}
-			ApplyCurrentSkin(id);
+			RefreshPlayerSkin(id);
 			ReapplyKnife(id);
 			ScheduleKnifeReapply(id);
 			ScheduleHeldNadeApply(id);
@@ -3584,6 +4295,8 @@ public Cl_Cmd(id) {
 	if (containi(szArg, "/cpm") != -1 || containi(szArg, "/giveskin") != -1) {
 		if (IsSkinAdmin(id))
 			MenuAdmin(id);
+		else if (IsVipBlockedFromSkin(id))
+			SkinChat(id, print_team_red, "SKIN_CHAT_VIP_NO", "VIP不能使用皮肤管理");
 		else
 			SkinChat(id, print_team_red, "SKIN_CHAT_NO_ADMIN", "你没有管理权限");
 	} else {
@@ -3616,6 +4329,8 @@ public SkinHandler(id, menu, item) {
 	}
 	else if (equal(szInfo, "buy"))
 		MenuBuyGold(id);
+	else if (equal(szInfo, "clear"))
+		MenuClearSkins(id);
 	else if (equal(szInfo, "sql")) {
 		if (IsSkinSqlAdmin(id))
 			MenuSqlDebug(id);
@@ -3625,7 +4340,10 @@ public SkinHandler(id, menu, item) {
 		}
 	} else if (equal(szInfo, "admin")) {
 		if (IsSkinAdmin(id))
-			MenuAdmin(id);
+			if (IsVipBlockedFromSkin(id))
+				SkinChat(id, print_team_red, "SKIN_CHAT_VIP_NO", "VIP不能使用皮肤管理");
+			else
+				MenuAdmin(id);
 		else {
 			SkinChat(id, print_team_red, "SKIN_CHAT_NO_ADMIN", "你没有管理权限");
 			MenuSkin(id);
@@ -3767,6 +4485,55 @@ public crxknives_knife_updated(id, knife, bool:onconnect) {
 	}
 }
 
+ResetKnifeToDefault(id) {
+	if (!is_user_connected(id))
+		return;
+
+	g_iCurKnife[id] = 0;
+	ForceSelectKnife(id, 0);
+
+	new authid[MAX_AUTHID_LENGTH];
+	GetPlayerAuth(id, authid, charsmax(authid));
+	if (authid[0])
+		Db_SaveCurrent(id, authid, "", 'K');
+}
+
+MenuClearSkins(id) {
+	if (!is_user_connected(id))
+		return;
+
+	new szTitle[96], szItem[64];
+	SkinLang(id, "SKIN_CLEAR_TITLE", szTitle, charsmax(szTitle), "\y一键清除皮肤?");
+	new menu = menu_create(szTitle, "ClearSkinHandler");
+	SkinLang(id, "SKIN_CLEAR_OK", szItem, charsmax(szItem), "确认清除人物皮肤和刀皮");
+	menu_additem(menu, szItem, "yes");
+	SkinLang(id, "SKIN_CANCEL", szItem, charsmax(szItem), "取消");
+	menu_additem(menu, szItem, "cancel");
+	SkinMenuStyle(id, menu);
+	menu_setprop(menu, MPROP_EXIT, MEXIT_NEVER);
+	menu_display(id, menu, 0);
+}
+
+public ClearSkinHandler(id, menu, item) {
+	if (item == MENU_EXIT) {
+		menu_destroy(menu);
+		MenuSkin(id);
+		return PLUGIN_HANDLED;
+	}
+
+	new szInfo[12], access, callback;
+	menu_item_getinfo(menu, item, access, szInfo, charsmax(szInfo), _, _, callback);
+	menu_destroy(menu);
+
+	if (equal(szInfo, "yes")) {
+		new removed = ClearAllSkinsFrom(id);
+		SkinChat(id, print_team_default, "SKIN_CHAT_SELF_CLEARED", "已清除自己的皮肤和刀皮 (%d款)", removed);
+	}
+
+	MenuSkin(id);
+	return PLUGIN_HANDLED;
+}
+
 SelectKnife(id, knife) {
 	if (!IsKnifeShopItemValid(knife) || !IsKnifeOwned(id, knife))
 		return;
@@ -3810,6 +4577,7 @@ public TaskReapplyKnife(taskid) {
 
 public OnPlayerSpawnPost(id) {
 	if (is_user_alive(id)) {
+		RefreshPlayerSkin(id);
 		ReapplyKnife(id);
 		ScheduleHeldNadeApply(id);
 	}
@@ -3820,11 +4588,11 @@ ReapplyKnife(id) {
 		return;
 
 	new knife = g_iCurKnife[id];
-	if (knife <= 0)
-		return;
-	if (!IsKnifeShopItemValid(knife) || !IsKnifeOwned(id, knife)) {
+	// 没选过、或选的是没买的刀: 拉回默认刀。crxknives 会自己套上上次的刀, 这里要清掉。
+	if (knife <= 0 || !IsKnifeShopItemValid(knife) || !IsKnifeOwned(id, knife)) {
 		g_iCurKnife[id] = 0;
-		ForceSelectKnife(id, 0);
+		if (crxknives_get_user_knife(id) != 0)
+			ForceSelectKnife(id, 0);
 		return;
 	}
 	if (crxknives_get_user_knife(id) != knife)
@@ -4000,6 +4768,38 @@ public AdminHandler(id, menu, item) {
 			}
 			MenuPickPlayer("nades", id);
 		}
+		case 8: {
+			if (!IsSkinOwner(id)) {
+				SkinChat(id, print_team_red, "SKIN_CHAT_NO_ADMIN", "你没有移除皮肤权限");
+				MenuAdmin(id);
+				return PLUGIN_HANDLED;
+			}
+			MenuPickPlayer("clear", id);
+		}
+		case 9: {
+			if (!IsSkinOwner(id)) {
+				SkinChat(id, print_team_red, "SKIN_CHAT_NO_ADMIN", "你没有发放皮肤权限");
+				MenuAdmin(id);
+				return PLUGIN_HANDLED;
+			}
+			PromptSteamGrant(id, false);
+		}
+		case 10: {
+			if (!IsSkinOwner(id)) {
+				SkinChat(id, print_team_red, "SKIN_CHAT_NO_ADMIN", "你没有移除皮肤权限");
+				MenuAdmin(id);
+				return PLUGIN_HANDLED;
+			}
+			PromptSteamGrant(id, true);
+		}
+		case 11: {
+			if (!IsSkinOwner(id)) {
+				SkinChat(id, print_team_red, "SKIN_CHAT_NO_ADMIN", "你没有移除皮肤权限");
+				MenuAdmin(id);
+				return PLUGIN_HANDLED;
+			}
+			PromptSteamClear(id);
+		}
 	}
 	return PLUGIN_HANDLED;
 }
@@ -4050,6 +4850,10 @@ public PickPlayerHandler(id, menu, item) {
 	} else if (g_pendingMode[id][0] == 'n') {
 		new given = GiveAllNadesTo(target);
 		SkinChat(id, print_team_default, "SKIN_CHAT_GIVE_ALL_NADE", "已向 %n 发放全部投掷物皮肤 (%d款)", target, given);
+		MenuAdmin(id);
+	} else if (g_pendingMode[id][0] == 'c') {
+		new removed = ClearAllSkinsFrom(target);
+		SkinChat(id, print_team_default, "SKIN_CHAT_CLEARED", "已清除 %n 的全部皮肤 (%d款)", target, removed);
 		MenuAdmin(id);
 	} else
 		MenuRemoveSkin(id, target);

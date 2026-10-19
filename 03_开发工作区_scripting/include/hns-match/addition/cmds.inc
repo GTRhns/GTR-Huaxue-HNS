@@ -122,9 +122,13 @@ public sayHandle(id) {
 		if (!is_str_num(szTarget))
 			return PLUGIN_CONTINUE;
 
-		if (str_to_float(szTarget) >= 0.0) {
-			g_iSettings[WINTIME] = str_to_float(szTarget);
-			chat_print(0, "%l", "SET_WINTIME", id, str_to_num(szTarget));
+		if (str_to_float(szTarget) >= 1.0) {
+			new Float:flWin = str_to_float(szTarget);
+			if (flWin > 60.0)
+				flWin = 60.0;
+			cvar_update_wintime(flWin);
+			g_eMatchInfo[e_mWintime] = flWin;
+			chat_print(0, "%l", "SET_WINTIME", id, floatround(flWin));
 		}
 		return PLUGIN_CONTINUE;
 	}
@@ -133,10 +137,17 @@ public sayHandle(id) {
 }
 
 public blockCmd(id) {
-	// 只有训练模式允许玩家通过 M / chooseteam / jointeam / joinclass 自己换阵营。
-	if (g_iCurrentMode == MODE_TRAINING)
+	if (g_iCurrentMode == MODE_TRAINING || g_iCurrentMode == MODE_LOBBY)
 		return PLUGIN_CONTINUE;
-	return PLUGIN_HANDLED;
+
+	// 正式比赛开始后锁定阵营，避免玩家通过 jointeam/chooseteam 脱离比赛队伍。
+	if (g_iCurrentMode == MODE_MIX && g_iMatchStatus == MATCH_STARTED)
+		return PLUGIN_HANDLED;
+
+	if (g_iMatchStatus < MATCH_WAITCONNECT && g_iMatchStatus > MATCH_NONE)
+		return PLUGIN_HANDLED;
+
+	return PLUGIN_CONTINUE;
 }
 
 public cmdMrMode(id) {
@@ -156,8 +167,6 @@ public cmdMrMode(id) {
 
 	chat_print(0, "%l", "MODE_SET_MR", id);
 	g_iCurrentRules = RULES_MR;
-	PDS_SetCell("match_rules", _:RULES_MR);
-	PDS_SetCell("ai_match_rules", _:RULES_MR);
 
 	return PLUGIN_HANDLED;
 }
@@ -179,8 +188,6 @@ public cmdWintimeMode(id) {
 
 	chat_print(0, "%l", "MODE_SET_WT", id);
 	g_iCurrentRules = RULES_TIMER;
-	PDS_SetCell("match_rules", _:RULES_TIMER);
-	PDS_SetCell("ai_match_rules", _:RULES_TIMER);
 
 	return PLUGIN_HANDLED;
 }
@@ -205,8 +212,6 @@ public cmdDuelMode(id) {
 		return PLUGIN_HANDLED;
 	}
 
-	PDS_SetCell("match_rules", _:RULES_DUEL);
-	PDS_SetCell("ai_match_rules", _:RULES_DUEL);
 	chat_print(0, "%l", "MODE_SET_DUEL", id);
 	g_iCurrentRules = RULES_DUEL;
 
@@ -222,8 +227,6 @@ public cmdRoundsMode(id) {
 		return PLUGIN_HANDLED;
 	}
 
-	PDS_SetCell("match_rules", _:RULES_ROUNDS);
-	PDS_SetCell("ai_match_rules", _:RULES_ROUNDS);
 	g_iCurrentRules = RULES_ROUNDS;
 	g_iSettings[MAXROUNDS] = 7;
 	chat_print(0, "%l", "MODE_SET_ROUNDS", id);
@@ -510,9 +513,7 @@ public StartMatchMenuHandler(id, menu, item) {
 	new data[4], name[32], access, callback;
 	menu_item_getinfo(menu, item, access, data, charsmax(data), name, charsmax(name), callback);
 	menu_destroy(menu);
-PDS_SetCell("match_rules", _:g_iCurrentRules);
-	PDS_SetCell("ai_match_rules", _:g_iCurrentRules);
-	
+
 	g_iCurrentRules = NATCH_RULES:str_to_num(data);
 	if (g_iCurrentRules == RULES_ROUNDS)
 		g_iSettings[MAXROUNDS] = 7;
@@ -658,8 +659,13 @@ public cmdSkillMode(id) {
 	}
 
 	g_iSettings[HNSBOOST] = 0;
-	g_iSemiclipForceMode = -1;
-	apply_hns_semiclip();
+
+	if (!hns_semiclip_menu_set(0)) {
+		if (g_iCurrentMode == MODE_TRAINING)
+			set_semiclip(SEMICLIP_ON);
+		else
+			set_semiclip(SEMICLIP_ON, true);
+	}
 
 	return PLUGIN_HANDLED;
 }
@@ -678,8 +684,9 @@ public cmdBoostMode(id) {
 	}
 
 	g_iSettings[HNSBOOST] = 1;
-	g_iSemiclipForceMode = -1;
-	apply_hns_semiclip();
+
+	if (!hns_semiclip_menu_set(0))
+		set_semiclip(SEMICLIP_OFF);
 
 	return PLUGIN_HANDLED;
 }
@@ -823,7 +830,7 @@ public cmdShowTimers(id) {
 			}
 		}
 		case RULES_TIMER: {
-			new Float:flCapTime = floatmul(g_iSettings[WINTIME], 60.0);
+			new Float:flCapTime = hns_wintime_cap_seconds();
 			new Float:flTimeToWinA = floatsub(flCapTime, Float:g_eMatchInfo[e_flSidesTime][HNS_TEAM_A]);
 			new Float:flTimeToWinB = floatsub(flCapTime, Float:g_eMatchInfo[e_flSidesTime][HNS_TEAM_B]);
 			fnConvertTime(flTimeToWinA, szTimeToWin[HNS_TEAM_A], 23);

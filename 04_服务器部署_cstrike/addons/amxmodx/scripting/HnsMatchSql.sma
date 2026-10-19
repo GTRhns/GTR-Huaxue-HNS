@@ -42,6 +42,17 @@ WHERE \
 ) ON DUPLICATE KEY UPDATE \
 	`gc` = VALUES(`gc`)"
 
+// 进服时还没读到余额, 只把这段时间攒下的点数加到原余额上, 不能整段覆盖
+#define SQL_ADD_GC \
+"INSERT INTO `%s` ( \
+	steamid, \
+	gc \
+) VALUES ( \
+	'%s', \
+	%d \
+) ON DUPLICATE KEY UPDATE \
+	`gc` = `gc` + %d"
+
 #define SQL_CREATE_DATA \
 "INSERT INTO `%s` ( \
 	name, \
@@ -112,9 +123,17 @@ new bool:g_bSqlReady;
 
 new g_iPlayerID[MAX_PLAYERS + 1];
 
-// 赞助局 ICGB 缓存 (SQL 异步返回前先读缓存)
+// 赞助局 ICGB 缓存。没读完之前不能把缓存写回数据库, 否则会把真实余额盖成 0。
 new g_iGcCache[MAX_PLAYERS + 1];
 new bool:g_bGcLoaded[MAX_PLAYERS + 1];
+new g_iGcPending[MAX_PLAYERS + 1];
+new g_iGcGen[MAX_PLAYERS + 1];
+new g_iGcRetry[MAX_PLAYERS + 1];
+new bool:g_bGcLoading[MAX_PLAYERS + 1];
+new g_szGcAuth[MAX_PLAYERS + 1][MAX_AUTHID_LENGTH];
+
+#define TASK_GC_LOAD 24000
+#define GC_LOAD_RETRY_MAX 40
 
 new g_hSqlForward;
 new g_hAuthorizedForward;
@@ -174,6 +193,7 @@ public plugin_natives() {
 	register_native("hns_gc_sql_available", "native_gc_sql_available");
 	register_native("hns_gc_sql_get", "native_gc_sql_get");
 	register_native("hns_gc_sql_set", "native_gc_sql_set");
+	register_native("hns_gc_sql_loaded", "native_gc_sql_loaded");
 }
 
 stock bool:IsPlayerIndex(id) {
@@ -192,7 +212,17 @@ public native_gc_sql_get(amxx, params) {
 	new id = get_param(1);
 	if (!IsPlayerIndex(id))
 		return 0;
+	// 库还没回来时只返回这段时间暂存的加减, 不能把 0 当成真实余额
+	if (!g_bGcLoaded[id])
+		return g_iGcPending[id];
 	return g_iGcCache[id];
+}
+
+public native_gc_sql_loaded(amxx, params) {
+	new id = get_param(1);
+	if (!IsPlayerIndex(id))
+		return 0;
+	return g_bGcLoaded[id];
 }
 
 public native_gc_sql_set(amxx, params) {
@@ -204,11 +234,20 @@ public native_gc_sql_set(amxx, params) {
 	if (iNewAmount < 0)
 		iNewAmount = 0;
 
-	g_iGcCache[iPlayer] = iNewAmount;
-	g_bGcLoaded[iPlayer] = true;
+	// 调用方都是先 get 再 set。没读完时 get 只有暂存值, 这里继续暂存, 等 SELECT 回来再加到原余额上。
+	if (!g_bGcLoaded[iPlayer]) {
+		g_iGcPending[iPlayer] = iNewAmount;
+		return 1;
+	}
 
-	if (g_bSqlReady && is_user_connected(iPlayer))
-		GC_Set(iPlayer, iNewAmount);
+	g_iGcCache[iPlayer] = iNewAmount;
+
+	if (g_bSqlReady && is_user_connected(iPlayer)) {
+		new szAuthId[MAX_AUTHID_LENGTH];
+		get_user_authid(iPlayer, szAuthId, charsmax(szAuthId));
+		if (GcAuthUsable(szAuthId))
+			GC_Set(iPlayer, iNewAmount);
+	}
 	return 1;
 }
 
@@ -227,6 +266,13 @@ public native_sql_get_player_id(amxx, params) {
 public QueryHandler(iFailState, Handle:hQuery, szError[], iErrnum, cData[], iSize, Float:fQueueTime) {
 	if (iFailState != TQUERY_SUCCESS) {
 		log_amx("SQL Error #%d - %s", iErrnum, szError);
+		if (iSize >= 3 && cData[0] == SQL_GC_SELECT) {
+			new id = cData[1];
+			if (IsPlayerIndex(id) && cData[2] == g_iGcGen[id]) {
+				g_bGcLoading[id] = false;
+				ScheduleGcLoad(id);
+			}
+		}
 		return PLUGIN_HANDLED;
 	}
 
@@ -290,84 +336,142 @@ public QueryHandler(iFailState, Handle:hQuery, szError[], iErrnum, cData[], iSiz
 				ExecuteForward(g_hAuthorizedForward, _, id);
 		}
 		case SQL_GC_SELECT: {
-			if (iSize < 2)
+			if (iSize < 3)
 				return PLUGIN_HANDLED;
 
 			new id = cData[1];
-			if (!IsValidPlayer(id))
+			if (!IsValidPlayer(id) || cData[2] != g_iGcGen[id])
 				return PLUGIN_HANDLED;
 
+			new szAuthId[MAX_AUTHID_LENGTH];
+			get_user_authid(id, szAuthId, charsmax(szAuthId));
+			if (!GcAuthUsable(szAuthId) || !equal(szAuthId, g_szGcAuth[id]))
+				return PLUGIN_HANDLED;
+
+			new iBase = 0;
+			new bool:bHadRow = false;
 			if (SQL_NumResults(hQuery)) {
 				new index_gc = SQL_FieldNameToNum(hQuery, "gc");
-				if (index_gc >= 0)
-					g_iGcCache[id] = SQL_ReadResult(hQuery, index_gc);
-			} else {
-				GC_Insert(id);
+				if (index_gc >= 0) {
+					iBase = SQL_ReadResult(hQuery, index_gc);
+					bHadRow = true;
+				}
 			}
+			if (iBase < 0)
+				iBase = 0;
+
+			new iPending = g_iGcPending[id];
+			g_iGcPending[id] = 0;
+			g_iGcCache[id] = iBase + iPending;
 			g_bGcLoaded[id] = true;
+			g_bGcLoading[id] = false;
+			g_iGcRetry[id] = 0;
+			// 没有记录, 或读取期间有签到/在线奖励, 才写回。不要在 SteamID 未就绪时插入 0。
+			if (!bHadRow || iPending != 0)
+				GC_Set(id, g_iGcCache[id]);
 		}
 		case SQL_GC_INSERT: {
-			if (iSize < 2)
-				return PLUGIN_HANDLED;
-
-			new id = cData[1];
-			if (!IsValidPlayer(id))
-				return PLUGIN_HANDLED;
-
-			g_bGcLoaded[id] = true;
+			// 写入结果不改缓存, 也不要把玩家标成“已读取”。
 		}
 	}
 
 	return PLUGIN_HANDLED;
 }
-
-public GC_Select(id) {
-	if (!g_hSqlTuple || !IsValidPlayer(id))
-		return PLUGIN_HANDLED;
-
-	new szQuery[512];
-	new cData[2];
-	cData[0] = SQL_GC_SELECT;
-	cData[1] = id;
-
-	new szAuthId[MAX_AUTHID_LENGTH];
-	get_user_authid(id, szAuthId, charsmax(szAuthId));
-
-	formatex(szQuery, charsmax(szQuery), SQL_SELECT_GC, g_szTableGc, szAuthId);
-	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery, cData, sizeof(cData));
-
-	return PLUGIN_HANDLED;
+stock bool:GcAuthUsable(const szAuth[]) {
+	if (!szAuth[0])
+		return false;
+	if (containi(szAuth, "PENDING") != -1)
+		return false;
+	if (equal(szAuth, "STEAM_ID_LAN") || equal(szAuth, "VALVE_ID_LAN") || equal(szAuth, "BOT"))
+		return false;
+	return true;
 }
 
-public GC_Insert(id) {
-	if (!g_hSqlTuple || !IsValidPlayer(id))
-		return PLUGIN_HANDLED;
+stock ScheduleGcLoad(id) {
+	if (!IsPlayerIndex(id) || !is_user_connected(id))
+		return;
+	if (g_iGcRetry[id] >= GC_LOAD_RETRY_MAX)
+		return;
+	g_iGcRetry[id]++;
+	remove_task(id + TASK_GC_LOAD);
+	set_task(0.5, "TaskGcLoad", id + TASK_GC_LOAD);
+}
 
-	new szQuery[512];
-	new cData[2];
-	cData[0] = SQL_GC_INSERT;
-	cData[1] = id;
+public TaskGcLoad(taskid) {
+	new id = taskid - TASK_GC_LOAD;
+	if (!is_user_connected(id))
+		return;
+	TryLoadGc(id);
+}
+
+stock TryLoadGc(id) {
+	if (!IsValidPlayer(id) || is_user_bot(id))
+		return;
+
+	remove_task(id + TASK_GC_LOAD);
 
 	new szAuthId[MAX_AUTHID_LENGTH];
 	get_user_authid(id, szAuthId, charsmax(szAuthId));
+	if (!GcAuthUsable(szAuthId)) {
+		ScheduleGcLoad(id);
+		return;
+	}
 
-	formatex(szQuery, charsmax(szQuery), SQL_SET_GC, g_szTableGc, szAuthId, 0);
+	if (g_bGcLoaded[id] && equal(g_szGcAuth[id], szAuthId))
+		return;
+	if (g_bGcLoading[id] && equal(g_szGcAuth[id], szAuthId))
+		return;
+
+	if (!equal(g_szGcAuth[id], szAuthId)) {
+		g_bGcLoaded[id] = false;
+		g_iGcCache[id] = 0;
+		copy(g_szGcAuth[id], charsmax(g_szGcAuth[]), szAuthId);
+	}
+
+	if (!g_hSqlTuple) {
+		ScheduleGcLoad(id);
+		return;
+	}
+
+	g_bGcLoading[id] = true;
+	g_iGcGen[id]++;
+
+	new szQuery[512];
+	new cData[3];
+	cData[0] = SQL_GC_SELECT;
+	cData[1] = id;
+	cData[2] = g_iGcGen[id];
+	formatex(szQuery, charsmax(szQuery), SQL_SELECT_GC, g_szTableGc, szAuthId);
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery, cData, sizeof(cData));
+}
 
-	return PLUGIN_HANDLED;
+stock FlushGcPending(id) {
+	if (g_bGcLoaded[id] || g_iGcPending[id] <= 0)
+		return;
+	if (!g_hSqlTuple || !GcAuthUsable(g_szGcAuth[id]))
+		return;
+
+	new szQuery[512];
+	new cData[1] = SQL_GC_INSERT;
+	new iPending = g_iGcPending[id];
+	g_iGcPending[id] = 0;
+	formatex(szQuery, charsmax(szQuery), SQL_ADD_GC, g_szTableGc, g_szGcAuth[id], iPending, iPending);
+	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery, cData, sizeof(cData));
 }
 
 public GC_Set(id, iAmount) {
 	if (!g_hSqlTuple || !IsValidPlayer(id))
 		return;
 
+	new szAuthId[MAX_AUTHID_LENGTH];
+	get_user_authid(id, szAuthId, charsmax(szAuthId));
+	if (!GcAuthUsable(szAuthId))
+		return;
+
 	new szQuery[512];
 	new cData[2];
 	cData[0] = SQL_GC_INSERT;
 	cData[1] = id;
-
-	new szAuthId[MAX_AUTHID_LENGTH];
-	get_user_authid(id, szAuthId, charsmax(szAuthId));
 
 	formatex(szQuery, charsmax(szQuery), SQL_SET_GC, g_szTableGc, szAuthId, iAmount);
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery, cData, sizeof(cData));
@@ -447,14 +551,16 @@ SQL_Ip(id, szNewip[]) {
 }
 
 public rgSetClientUserInfoName(id, infobuffer[], szNewName[]) {
-	if (!IsValidPlayer(id))
+	#pragma unused infobuffer
+
+	if (!IsValidPlayer(id) || !szNewName[0])
 		return;
 
 	SQL_Name(id, szNewName);
 }
 
 public SQL_Save(id) {
-	if (!g_hSqlTuple || !IsPlayerIndex(id) || !is_user_connected(id))
+	if (!g_hSqlTuple || !IsPlayerIndex(id))
 		return PLUGIN_HANDLED;
 
 	new szQuery[512];
@@ -490,6 +596,12 @@ public SQL_SaveConn(id) {
 	return PLUGIN_HANDLED;
 }
 
+public client_authorized(id) {
+	if (!IsValidPlayer(id) || is_user_bot(id))
+		return;
+	TryLoadGc(id);
+}
+
 public client_putinserver(id) {
 	if (!IsValidPlayer(id) || is_user_bot(id))
 		return;
@@ -497,19 +609,32 @@ public client_putinserver(id) {
 	g_iPlayerID[id] = 0;
 	g_iGcCache[id] = 0;
 	g_bGcLoaded[id] = false;
+	g_bGcLoading[id] = false;
+	g_iGcPending[id] = 0;
+	g_iGcGen[id]++;
+	g_iGcRetry[id] = 0;
+	g_szGcAuth[id][0] = EOS;
+	remove_task(id + TASK_GC_LOAD);
 	SQL_Select(id);
-	GC_Select(id);
+	TryLoadGc(id);
 }
 
 public client_disconnected(id) {
 	if (!IsPlayerIndex(id))
 		return;
 
+	FlushGcPending(id);
 	SQL_Save(id);
 	SQL_SaveConn(id);
+	remove_task(id + TASK_GC_LOAD);
 	g_iPlayerID[id] = 0;
 	g_iGcCache[id] = 0;
 	g_bGcLoaded[id] = false;
+	g_bGcLoading[id] = false;
+	g_iGcPending[id] = 0;
+	g_iGcGen[id]++;
+	g_iGcRetry[id] = 0;
+	g_szGcAuth[id][0] = EOS;
 }
 
 public plugin_end() {

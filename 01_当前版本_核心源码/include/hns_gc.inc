@@ -21,6 +21,7 @@
 native hns_gc_sql_available();
 native hns_gc_sql_get(id);
 native hns_gc_sql_set(id, iAmount);
+native bool:hns_gc_sql_loaded(id);
 
 // ---- 本地提供方 natives (可选, 由 HnsSponsorLocal 提供) ----
 native hns_gc_local_available();
@@ -40,6 +41,16 @@ stock bool:hns_gc_is_sql() {
 /* 当前是否有任一提供方可用 */
 stock bool:hns_gc_available() {
 	return (LibraryExists("hns_gc_sql", LibType_Library) || LibraryExists("hns_gc_local", LibType_Library));
+}
+
+/* 这个玩家的余额是否已经从库里读出来。
+ * 没读出来时 get 会返回 0, 这时 set 会把真实余额盖成 0。 */
+stock bool:hns_gc_player_ready(id) {
+	if (hns_gc_is_sql())
+		return bool:hns_gc_sql_loaded(id);
+	if (LibraryExists("hns_gc_local", LibType_Library))
+		return true;
+	return false;
 }
 
 /* 读取玩家 ICGB 余额 (无提供方时返回 0)

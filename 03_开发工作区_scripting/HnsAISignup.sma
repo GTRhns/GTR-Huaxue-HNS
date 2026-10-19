@@ -13,7 +13,7 @@
 //
 //  流程:
 //   报名中(5分钟倒计时) -> 收团(只分一次队, 换图前不拉观战) -> 选模式/地图
-//   -> 换图后等 30 秒核对 ID/IP/名字 -> 确认报名玩家后拉观战 -> 按换图前分组上场 -> 开赛
+//   -> 换图后等 30 秒核对 SteamID -> 确认报名玩家后拉观战 -> 按换图前分组上场 -> 开赛
 //   比赛结束 -> 清除报名 + 20 秒报名 CD
 //   比赛终止 -> 清除报名
 // ============================================================
@@ -25,12 +25,13 @@
 #include <sqlx>
 #include <nvault>
 #include <hns_matchsystem>
+#include <hns_matchsystem_pts>
 #include <hns_matchsystem_sql>
 #include <hns_optional_sql>
 #include <hns_language>
 #include <PersistentDataStorage>
 
-#define PLUGIN_VERSION "1.17"
+#define PLUGIN_VERSION "1.19"
 
 // ---------------- 常量 ----------------
 #define SIGNUP_MIN         6        // 最少 6 人 (3v3)
@@ -52,12 +53,14 @@
 #define TASK_SETUP_MENU    92008
 #define TASK_PLACE_DELAY   92009
 #define TASK_SPEC_JOIN     92100    // +playerid: 处死后延迟进观战
+#define TASK_RANDOM_MAP    92011    // 随机地图 10 秒后才换图
 
 #define RULE_COUNT         4
 #define POOL_SKILL         0
 #define POOL_BOOST         1
 
 #define VOTE_TIME          20       // 比赛模式/地图投票时长 (秒)
+#define RANDOM_MAP_WAIT    10       // 随机地图先聊天提示, 10 秒后才换图
 #define MAP_MAX            256
 #define MAP_NAME_LEN       32
 #define SPONSOR_WAIT       30.0     // 赞助者输入等待 (秒)
@@ -67,7 +70,9 @@
 
 #define PTS_WIN            15
 #define PTS_LOSS           10
-#define PTS_BASE           1000
+#define PTS_BASE           50
+
+native hns_obc_knife_bonus(id);
 
 // ---------------- 全局变量 ----------------
 enum SIGNUP_STATE {
@@ -102,6 +107,9 @@ new bool:g_bSqlReady;
 new g_iGuestVault = INVALID_HANDLE;
 new bool:g_bGuest[MAX_PLAYERS + 1];
 new g_iGuestId[MAX_PLAYERS + 1];
+new g_iGuestRetry[MAX_PLAYERS + 1];
+new bool:g_bGuestSchema;
+#define TASK_GUEST_CHECK 93000
 
 new g_szLastMap[32];
 
@@ -114,6 +122,12 @@ new const g_szStateKeys[5][] = { "AI_STATE_IDLE", "AI_STATE_OPEN", "AI_STATE_CLO
 new NATCH_RULES:g_iMatchRules = RULES_MR;   // 当前选择的比赛规则
 new g_iTeamSizeFixed;                       // 0 = 自动(按报名人数), 3..6 = 固定人数
 new bool:g_bForceStart;                     // 管理员强制开赛: 允许 1 人测试
+new g_iAiMenuPage[MAX_PLAYERS + 1];         // 报名菜单页: 1 或 2
+new bool:g_bSignupMenuOpen[MAX_PLAYERS + 1]; // 当前是否正打开报名菜单
+new bool:g_bPtsLimit;                       // PTS 积分限制, 默认关闭
+new g_iPtsLimit = 50;                       // 开启后的最低 OBC
+new bool:g_bPtsBalance;                     // 按 PTS/胜率/场数平衡分组, 默认关闭
+new g_iBalanceMode = 1;                     // 0 关 / 1 自动 / 2 严格 / 3 宽松
 
 enum VOTE_KIND {
 	VOTE_NONE,
@@ -149,11 +163,14 @@ new g_iMapVoteTally[MAP_MAX];
 new g_iMapVoteChoice[MAX_PLAYERS + 1];
 new g_iPoolVoteTally[2];
 new bool:g_bPendingMatchStart;
+new bool:g_bLevelChanging;
 new bool:g_bMapWaitActive;
 new g_iMapWaitSeconds;
 new bool:g_bKeepSavedTeams;          // 换图恢复: 保留原 T/CT, 不再随机
 new bool:g_bPlayersPlaced;           // 已经按分组送上场
 new g_iSetupMenuTries;               // 收团后重试弹赛前菜单
+new bool:g_bRandomMapWait;           // 随机地图倒计时中, /nomaps 可取消
+new g_iRandomMapSeconds;
 
 // ============================================================
 //  插件初始化
@@ -163,6 +180,8 @@ public plugin_natives() {
 	register_library("hns_ai_signup");
 	register_native("hns_ai_force_signup", "native_force_signup");
 	register_native("hns_ai_get_state", "native_get_state");
+	register_native("hns_ai_get_team_size", "native_get_team_size");
+	register_native("hns_ai_set_team_size", "native_set_team_size");
 }
 
 public plugin_init() {
@@ -172,14 +191,17 @@ public plugin_init() {
 	RegisterSayCmd("cancel", "退", "cmdCancel", 0, "取消报名");
 	RegisterSayCmd("aistart", "开赛", "cmdAiStart", -1, "强制收团开赛");
 	RegisterSayCmd("aitype", "赛制", "cmdAiType", -1, "设置比赛类型 0娱乐/1赞助");
+	RegisterSayCmd("nomaps", "不换图", "cmdNoMaps", 0, "取消随机换图");
 	RegisterSayCmd("aiabort", "停赛", "cmdAiAbort", -1, "取消报名");
 	RegisterSayCmd("aivote", "投", "cmdAiVote", 0, "比赛模式投票");
 
 	register_clcmd("say", "aiSayHandle");
 	register_clcmd("say_team", "aiSayHandle");
+	register_menucmd(register_menuid("AISignupMenu"), 1023, "AiSignupMenuHandler");
 
 	RegisterHookChain(RG_ShowVGUIMenu, "hcShowVGUIMenu", false);
 	RegisterHookChain(RG_ShowMenu, "hcShowMenu", false);
+	// 对齐 10.6: 不挂 FM_ChangeLevel, 换图清理只走 plugin_end。
 
 	get_mapname(g_szLastMap, charsmax(g_szLastMap));
 	loadMapPools();
@@ -197,6 +219,9 @@ public hcShowVGUIMenu(const id, VGUIMenu:menuType) {
 }
 
 public hcShowMenu(const id, const keys, const time, const needMore, const menu[]) {
+	if (is_user_connected(id) && g_bSignupMenuOpen[id] && !equal(menu, "AISignupMenu"))
+		g_bSignupMenuOpen[id] = false;
+
 	if (!shouldBlockGameMenu())
 		return HC_CONTINUE;
 
@@ -230,7 +255,25 @@ public plugin_cfg() {
 		Local_GuestInit();
 }
 
+stock ai_stop_for_level_change() {
+	g_bLevelChanging = true;
+	remove_task(TASK_COUNTDOWN);
+	remove_task(TASK_PLACE);
+	remove_task(TASK_PLACE_DELAY);
+	remove_task(TASK_AFTER_MAP);
+	remove_task(TASK_VOTE);
+	remove_task(TASK_SIGNUP_HUD);
+	remove_task(TASK_SPONSOR_WAIT);
+	remove_task(TASK_SPONSOR_GC);
+	remove_task(TASK_MAP_WAIT);
+	remove_task(TASK_SETUP_MENU);
+	remove_task(TASK_RANDOM_MAP);
+	clearSpecJoinTasks();
+}
+
 public plugin_end() {
+	// 对齐 10.6: 不在 FM_ChangeLevel 里清理, 只在卸载时停任务。
+	ai_stop_for_level_change();
 	if (g_iGuestVault != INVALID_HANDLE) {
 		nvault_close(g_iGuestVault);
 		g_iGuestVault = INVALID_HANDLE;
@@ -262,8 +305,33 @@ public hns_sql_connection(hSqlTuple) {
 		`id` INT(11) NOT NULL PRIMARY KEY, \
 		`wins` INT(11) NOT NULL DEFAULT 0, \
 		`loss` INT(11) NOT NULL DEFAULT 0, \
-		`pts` INT(11) NOT NULL DEFAULT 1000 \
+		`pts` INT(11) NOT NULL DEFAULT 50, \
+		`obc_ready` TINYINT NOT NULL DEFAULT 1 \
 	);");
+	SQL_ThreadQuery(g_hSqlTuple, "cbGuestDropIp", "ALTER TABLE `hns_ai_guest` DROP INDEX `ip`");
+}
+
+public cbGuestDropIp(failstate, Handle:query, error[], errnum, data[], size, Float:queuetime) {
+	if (g_hSqlTuple == Empty_Handle)
+		return;
+	SQL_ThreadQuery(g_hSqlTuple, "cbGuestNameKey", "ALTER TABLE `hns_ai_guest` ADD UNIQUE KEY `uk_name` (`name`)");
+}
+
+public cbGuestNameKey(failstate, Handle:query, error[], errnum, data[], size, Float:queuetime) {
+	g_bGuestSchema = true;
+	for (new id = 1; id <= MaxClients; id++) {
+		if (is_user_connected(id) && g_bGuest[id] && !g_iGuestId[id])
+			guestSqlRegister(id);
+	}
+	if (g_hSqlTuple != Empty_Handle)
+		SQL_ThreadQuery(g_hSqlTuple, "cbGuestPtsReady", "ALTER TABLE `hns_ai_guest_pts` ADD COLUMN `obc_ready` TINYINT NOT NULL DEFAULT 0");
+}
+
+public cbGuestPtsReady(failstate, Handle:query, error[], errnum, data[], size, Float:queuetime) {
+	if (g_hSqlTuple == Empty_Handle)
+		return;
+	SQL_ThreadQuery(g_hSqlTuple, "cbVoid", "ALTER TABLE `hns_ai_guest_pts` ALTER COLUMN `pts` SET DEFAULT 50");
+	SQL_ThreadQuery(g_hSqlTuple, "cbVoid", "UPDATE `hns_ai_guest_pts` SET `pts`=GREATEST(50 + `wins`*15 - `loss`*10, 0), `obc_ready`=1 WHERE `obc_ready`=0");
 }
 
 public cbVoid(failstate, Handle:query, error[], errnum, data[], size, Float:queuetime) {
@@ -272,34 +340,30 @@ public cbVoid(failstate, Handle:query, error[], errnum, data[], size, Float:queu
 	}
 }
 
-// ============================================================
-//  盗版玩家管理
-// ============================================================
 stock bool:isGuestPlayer(id) {
 	new szAuth[32];
 	get_user_authid(id, szAuth, charsmax(szAuth));
 
 	if (!szAuth[0])
 		return true;
-	if (containi(szAuth, "STEAM_ID") != -1)            // STEAM_ID_LAN
+	if (containi(szAuth, "STEAM_ID") != -1)
+		return true;
+	if (containi(szAuth, "PENDING") != -1)
 		return true;
 	if (containi(szAuth, "BOT") != -1)
 		return true;
 	if (equali(szAuth, "STEAM_0:0:0") || equali(szAuth, "STEAM_1:0:0"))
 		return true;
 
-	return false;
-}
-
-public client_putinserver(id) {
-	if (isGuestPlayer(id)) {
-		g_bGuest[id] = true;
-		guestSqlRegister(id);
-	} else {
-		g_bGuest[id] = false;
+	if (has_reunion()) {
+		new client_auth_type:t = REU_GetAuthtype(id);
+		if (t == CA_TYPE_NONE)
+			return false;
+		if (t != CA_TYPE_STEAM && t != CA_TYPE_HLTV)
+			return true;
 	}
 
-	// 换图后等人期间不拉观战, 满 60 秒再统一拉
+	return false;
 }
 
 stock Local_GuestInit() {
@@ -307,25 +371,55 @@ stock Local_GuestInit() {
 		g_iGuestVault = nvault_open("hns_ai_guest");
 }
 
-// 盗版玩家自动注册 (以 IP 为稳定标识)
+public client_putinserver(id) {
+	g_iGuestRetry[id] = 0;
+	g_bGuest[id] = false;
+	g_iGuestId[id] = 0;
+	set_task(1.0, "taskGuestCheck", id + TASK_GUEST_CHECK);
+}
+
+public taskGuestCheck(taskid) {
+	new id = taskid - TASK_GUEST_CHECK;
+	if (!is_user_connected(id) || is_user_bot(id) || is_user_hltv(id))
+		return;
+	if (has_reunion() && REU_GetAuthtype(id) == CA_TYPE_NONE && g_iGuestRetry[id] < 20) {
+		g_iGuestRetry[id]++;
+		set_task(0.5, "taskGuestCheck", taskid);
+		return;
+	}
+	if (isGuestPlayer(id)) {
+		g_bGuest[id] = true;
+		guestSqlRegister(id);
+	} else {
+		g_bGuest[id] = false;
+		g_iGuestId[id] = 0;
+	}
+}
+
+// 盗版按名字登记, 不使用 IP。
 stock guestSqlRegister(id) {
 	if (!g_bSqlReady || g_hSqlTuple == Empty_Handle) {
 		Local_GuestInit();
 		g_iGuestId[id] = 1;
 		return;
 	}
+	if (!g_bGuestSchema) {
+		set_task(1.0, "taskGuestCheck", id + TASK_GUEST_CHECK);
+		return;
+	}
 
-	new szName[32], szIp[32], szSafe[96];
+	new szName[32], szSafe[96];
 	get_user_name(id, szName, charsmax(szName));
-	get_user_ip(id, szIp, charsmax(szIp), 1);
+	if (!szName[0])
+		copy(szName, charsmax(szName), "unnamed");
 	// SQL_QuoteString 第一个参数仅用于本地化, 传 tuple 句柄会报 Invalid database handle
 	SQL_QuoteString(Empty_Handle, szSafe, charsmax(szSafe), szName);
 
 	new szQuery[256];
 	formatex(szQuery, charsmax(szQuery),
-		"INSERT INTO `hns_ai_guest` (name, ip, lastconnect) VALUES ('%s','%s',%d) \
-		ON DUPLICATE KEY UPDATE name=VALUES(name), lastconnect=VALUES(lastconnect)",
-		szSafe, szIp, get_systime());
+		"INSERT INTO `hns_ai_guest` (name, ip, lastconnect) VALUES ('%s','',%d) \
+		ON DUPLICATE KEY UPDATE lastconnect=VALUES(lastconnect)",
+		szSafe, get_systime());
 
 	new data[1];
 	data[0] = id;
@@ -340,11 +434,14 @@ public cbGuestRegister(failstate, Handle:query, error[], errnum, data[], size, F
 	if (!is_user_connected(id))
 		return;
 
-	new szIp[32];
-	get_user_ip(id, szIp, charsmax(szIp), 1);
+	new szName[32], szSafe[96];
+	get_user_name(id, szName, charsmax(szName));
+	if (!szName[0])
+		copy(szName, charsmax(szName), "unnamed");
+	SQL_QuoteString(Empty_Handle, szSafe, charsmax(szSafe), szName);
 
 	new szQuery[192];
-	formatex(szQuery, charsmax(szQuery), "SELECT `id` FROM `hns_ai_guest` WHERE `ip`='%s'", szIp);
+	formatex(szQuery, charsmax(szQuery), "SELECT `id` FROM `hns_ai_guest` WHERE `name`='%s' ORDER BY `id` ASC LIMIT 1", szSafe);
 
 	new data2[1];
 	data2[0] = id;
@@ -425,6 +522,12 @@ stock bool:canSignup(id, bool:bSilent = false) {
 		return false;
 	}
 
+	if (g_bPtsLimit && !passesPtsLimit(id)) {
+		if (!bSilent)
+			ai_print_lang(id, "AI_CHAT_ERR_PTS_LIMIT", "OBS不足, 报名需要 %d 分 (当前 %d)", g_iPtsLimit, getPlayerPts(id));
+		return false;
+	}
+
 	return true;
 }
 
@@ -459,84 +562,213 @@ public cmdSignupMenu(id) {
 }
 
 public showMainMenu(id) {
-	new szTitle[192], szItem[96], szTmp[64];
-	new szType[32], szSignup[64], szCancel[64], szGroup[64];
-	new szReshuffle[64], szForce[64], szRules[64], szSize[64], szTypeMenu[64], szExit[32];
+	new szMenu[1024], szTitle[192], szItem[160], szTmp[64], szLabel[64], szState[32];
+	new szNext[32], szBack[32];
+	new iLen, iNeed, iKeys;
 
+	if (!is_user_connected(id))
+		return;
+
+	g_bSignupMenuOpen[id] = true;
+	g_iAiMenuPage[id] = 1;
 	ai_lang(id, "AI_TYPE_SPONSOR", szTmp, charsmax(szTmp));
 	if (!g_bSponsorMatch)
 		ai_lang(id, "AI_TYPE_CASUAL", szTmp, charsmax(szTmp));
-	copy(szType, charsmax(szType), szTmp);
-
 	ai_lang(id, "AI_MENU_TITLE", szTitle, charsmax(szTitle));
-	format(szTitle, charsmax(szTitle), szTitle, szType, g_iSignupCount, getOnlineCount());
+	// AI_MENU_TITLE = ...[%s]...%d...%d → type + signup + online
+	format(szTitle, charsmax(szTitle), szTitle, szTmp, g_iSignupCount, getOnlineCount());
+	iLen = formatex(szMenu, charsmax(szMenu), "%s^n", szTitle);
 
-	new menu = menu_create(szTitle, "MainMenuHandler");
+	iNeed = getSignupNeed();
+	ai_lang(id, g_bSignedUp[id] ? "AI_MENU_CANCEL" : "AI_MENU_SIGNUP", szLabel, charsmax(szLabel));
+	formatex(szItem, charsmax(szItem), "%s \r[%d/%d]", szLabel, g_iSignupCount, iNeed);
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r1. %s^n", szItem);
 
-	ai_lang(id, "AI_MENU_GROUP", szGroup, charsmax(szGroup));
-	ai_lang(id, "AI_MENU_SIGNUP", szSignup, charsmax(szSignup));
-	ai_lang(id, "AI_MENU_CANCEL", szCancel, charsmax(szCancel));
-	ai_lang(id, "AI_MENU_RESHUFFLE", szReshuffle, charsmax(szReshuffle));
-	ai_lang(id, "AI_MENU_FORCE", szForce, charsmax(szForce));
-	ai_lang(id, "AI_MENU_RULES", szRules, charsmax(szRules));
-	ai_lang(id, "AI_MENU_SIZE", szSize, charsmax(szSize));
-	ai_lang(id, "AI_MENU_TYPE", szTypeMenu, charsmax(szTypeMenu));
-	ai_lang(id, "AI_MENU_EXIT", szExit, charsmax(szExit));
+	ai_lang(id, "AI_MENU_GROUP", szLabel, charsmax(szLabel));
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r2. \w%s^n^n", szLabel);
 
-	menu_additem(menu, szGroup, "group");
-	menu_additem(menu, g_bSignedUp[id] ? szCancel : szSignup, "signup");
-	menu_additem(menu, szTypeMenu, "type");
-
-	menu_addblank(menu, 0);
-
-	menu_additem(menu, szReshuffle, "reshuffle");
-	menu_additem(menu, szForce, "forcestart");
-
-	menu_addblank(menu, 0);
-
+	ai_lang(id, "AI_MENU_RULES", szLabel, charsmax(szLabel));
 	ai_ruleName(id, _:g_iMatchRules, szTmp, charsmax(szTmp));
-	formatex(szItem, charsmax(szItem), "%s \y[%s]", szRules, szTmp);
-	menu_additem(menu, szItem, "rules");
+	if (isUserVipOrAdmin(id))
+		formatex(szItem, charsmax(szItem), "\y%s \y[%s]", szLabel, szTmp);
+	else
+		formatex(szItem, charsmax(szItem), "\d%s \d[%s]", szLabel, szTmp);
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r3. %s^n", szItem);
 
-	formatex(szItem, charsmax(szItem), "%s \y[%d : %d]", szSize, getEffectiveTeamSize(), getEffectiveTeamSize());
-	menu_additem(menu, szItem, "size");
+	ai_lang(id, "AI_MENU_FORCE", szLabel, charsmax(szLabel));
+	if (isUserAdmin(id))
+		formatex(szItem, charsmax(szItem), "\r%s", szLabel);
+	else
+		formatex(szItem, charsmax(szItem), "\d%s", szLabel);
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r4. %s^n", szItem);
 
-	menu_setprop(menu, MPROP_EXIT, MEXIT_ALL);
-	menu_setprop(menu, MPROP_EXITNAME, szExit);
-	menu_display(id, menu);
+	ai_lang(id, "AI_MENU_RESHUFFLE", szLabel, charsmax(szLabel));
+	if (isUserVipOrAdmin(id))
+		formatex(szItem, charsmax(szItem), "\y%s", szLabel);
+	else
+		formatex(szItem, charsmax(szItem), "\d%s", szLabel);
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r5. %s^n^n", szItem);
+
+	ai_lang(id, "AI_MENU_PTS", szLabel, charsmax(szLabel));
+	if (g_bPtsLimit)
+		formatex(szState, charsmax(szState), "%d", g_iPtsLimit);
+	else
+		ai_lang(id, "AI_MENU_PTS_OFF", szState, charsmax(szState));
+	formatex(szItem, charsmax(szItem), "\d%s \d[%s]", szLabel, szState);
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r6. %s^n", szItem);
+
+	ai_lang(id, "AI_MENU_SIZE", szLabel, charsmax(szLabel));
+	formatex(szItem, charsmax(szItem), "\y%s \y[%d vs %d]", szLabel, getEffectiveTeamSize(), getEffectiveTeamSize());
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r7. %s^n", szItem);
+
+	ai_lang(id, "AI_MENU_SQL", szLabel, charsmax(szLabel));
+	if (isUserAdmin(id)) {
+		ai_lang(id, g_bSqlReady ? "AI_MENU_SQL_ON" : "AI_MENU_SQL_OFF", szState, charsmax(szState));
+		formatex(szItem, charsmax(szItem), "\y%s \y[%s]", szLabel, szState);
+	} else {
+		formatex(szItem, charsmax(szItem), "\d%s", szLabel);
+	}
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r8. %s^n^n", szItem);
+
+	ai_lang(id, "AI_MENU_NEXT", szNext, charsmax(szNext));
+	ai_lang(id, "AI_MENU_BACK", szBack, charsmax(szBack));
+	formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r9. \w%s^n\r0. \w%s", szNext, szBack);
+
+	iKeys = MENU_KEY_1|MENU_KEY_2|MENU_KEY_3|MENU_KEY_4|MENU_KEY_5|MENU_KEY_6|MENU_KEY_7|MENU_KEY_8|MENU_KEY_9|MENU_KEY_0;
+	show_menu(id, iKeys, szMenu, -1, "AISignupMenu");
 }
 
-public MainMenuHandler(id, menu, item) {
-	if (item == MENU_EXIT) {
-		menu_destroy(menu);
+public showMainMenu2(id) {
+	new szMenu[768], szTitle[128], szItem[160], szLabel[64], szState[32], szBack[32];
+	new iLen;
+
+	if (!is_user_connected(id))
+		return;
+	g_bSignupMenuOpen[id] = true;
+
+	g_iAiMenuPage[id] = 2;
+	ai_lang(id, "AI_MENU_TITLE_2", szTitle, charsmax(szTitle));
+	iLen = formatex(szMenu, charsmax(szMenu), "%s^n", szTitle);
+
+	ai_lang(id, "AI_MENU_MATCH", szLabel, charsmax(szLabel));
+	ai_lang(id, g_bSponsorMatch ? "AI_MATCH_SPONSOR" : "AI_MATCH_CASUAL", szState, charsmax(szState));
+	if (!szState[0] || contain(szState, "AI_MATCH_") != -1)
+		copy(szState, charsmax(szState), g_bSponsorMatch ? "赞助" : "娱乐");
+	if (isUserVipOrAdmin(id))
+		formatex(szItem, charsmax(szItem), "\y%s \y[%s]", szLabel, szState);
+	else
+		formatex(szItem, charsmax(szItem), "\d%s \d[%s]", szLabel, szState);
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r1. %s^n", szItem);
+
+	ai_lang(id, "AI_MENU_POOL", szLabel, charsmax(szLabel));
+	if (!szLabel[0] || contain(szLabel, "AI_MENU_POOL") != -1)
+		copy(szLabel, charsmax(szLabel), "当前地图池");
+	ai_poolName(id, g_iActivePool, szState, charsmax(szState));
+	if (isUserVipOrAdmin(id))
+		formatex(szItem, charsmax(szItem), "\y%s \y[%s]", szLabel, szState);
+	else
+		formatex(szItem, charsmax(szItem), "\d%s \d[%s]", szLabel, szState);
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r2. %s^n^n", szItem);
+
+	ai_lang(id, "AI_MENU_STATUS", szLabel, charsmax(szLabel));
+	if (!szLabel[0] || contain(szLabel, "AI_MENU_STATUS") != -1)
+		copy(szLabel, charsmax(szLabel), "报名状态");
+	ai_stateName(id, szState, charsmax(szState));
+	iLen += formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r3. \w%s \y[%s]^n^n", szLabel, szState);
+
+	ai_lang(id, "AI_MENU_BACK", szBack, charsmax(szBack));
+	formatex(szMenu[iLen], charsmax(szMenu) - iLen, "\r0. \w%s", szBack);
+	show_menu(id, MENU_KEY_1|MENU_KEY_2|MENU_KEY_3|MENU_KEY_0, szMenu, -1, "AISignupMenu");
+}
+
+public AiSignupMenuHandler(id, key) {
+	if (!is_user_connected(id))
+		return PLUGIN_HANDLED;
+
+	if (g_iAiMenuPage[id] == 2) {
+		switch (key) {
+			case 0: {
+				if (isUserVipOrAdmin(id))
+					showTypeMenu(id);
+				else {
+					ai_print_lang(id, "AI_CHAT_ERR_TYPE_VIP", "只有管理员/VIP 才能选择比赛类型");
+					showMainMenu2(id);
+				}
+			}
+			case 1: {
+				announceCurrentPool(id, g_iActivePool);
+				showMainMenu2(id);
+			}
+			case 2: {
+				ai_printModeInfo(id);
+				showMainMenu2(id);
+			}
+			case 9: showMainMenu(id);
+		}
 		return PLUGIN_HANDLED;
 	}
 
-	new data[16], name[64], access, callback;
-	menu_item_getinfo(menu, item, access, data, charsmax(data), name, charsmax(name), callback);
-	menu_destroy(menu);
-
-	if (equal(data, "group")) {
-		showGroups(id);
-		showMainMenu(id);
-	} else if (equal(data, "signup")) {
-		doSignupToggle(id);
-		if (is_user_connected(id) && g_eState != MATCH_RUNNING && g_eState != SIGNUP_CLOSE && g_eState != SIGNUP_SETUP)
+	switch (key) {
+		case 0: {
+			doSignupToggle(id);
+			if (is_user_connected(id) && g_eState != MATCH_RUNNING && g_eState != SIGNUP_CLOSE && g_eState != SIGNUP_SETUP)
+				showMainMenu(id);
+		}
+		case 1: {
+			showGroups(id);
 			showMainMenu(id);
-	} else if (equal(data, "type")) {
-		showTypeMenu(id);
-	} else if (equal(data, "reshuffle")) {
-		cmdReshuffle(id);
-		if (is_user_connected(id) && g_eState != MATCH_RUNNING && g_eState != SIGNUP_SETUP)
+		}
+		case 2: {
+			if (isUserVipOrAdmin(id))
+				showRulesMenu(id);
+			else {
+				ai_print_lang(id, "AI_CHAT_ERR_RULES_VIP", "只有VIP和管理员可以设置比赛模式");
+				showMainMenu(id);
+			}
+		}
+		case 3: {
+			if (isUserAdmin(id))
+				cmdForceStart(id);
+			else {
+				ai_print_lang(id, "AI_CHAT_ERR_FORCE_ADMIN", "只有管理员可以强制开启比赛");
+				showMainMenu(id);
+			}
+		}
+		case 4: {
+			if (isUserVipOrAdmin(id))
+				cmdReshuffle(id);
 			showMainMenu(id);
-	} else if (equal(data, "forcestart")) {
-		cmdForceStart(id);
-	} else if (equal(data, "rules")) {
-		showRulesMenu(id);
-	} else if (equal(data, "size")) {
-		showSizeMenu(id);
+		}
+		case 5: {
+			if (isUserVipOrAdmin(id))
+				showPtsMenu(id);
+			else {
+				ai_print_lang(id, "AI_CHAT_ERR_PTS_ADMIN", "只有VIP和管理员可以设置OBS限制");
+				showMainMenu(id);
+			}
+		}
+		case 6: {
+			if (isUserVipOrAdmin(id))
+				showSizeMenu(id);
+			else {
+				ai_print_lang(id, "AI_CHAT_ERR_SIZE_ADMIN", "人数管理由管理员设置 (当前: %d v %d)", getEffectiveTeamSize(), getEffectiveTeamSize());
+				showMainMenu(id);
+			}
+		}
+		case 7: {
+			if (isUserAdmin(id))
+				showSqlMenu(id);
+			else {
+				ai_print_lang(id, "AI_CHAT_ERR_SQL_ADMIN", "只有管理员可以查看MySQL连接");
+				showMainMenu(id);
+			}
+		}
+		case 8: showMainMenu2(id);
+		case 9: {
+			g_bSignupMenuOpen[id] = false;
+			return PLUGIN_HANDLED;
+		}
 	}
-
 	return PLUGIN_HANDLED;
 }
 
@@ -655,6 +887,11 @@ stock doSignupToggle(id) {
 //  重新分配队伍 / 强制开启
 // ============================================================
 public cmdReshuffle(id) {
+	if (!isUserVipOrAdmin(id)) {
+		ai_print_lang(id, "AI_CHAT_ERR_NEED_ADMIN", "需要管理员权限才能重新分配队伍");
+		return PLUGIN_HANDLED;
+	}
+
 	if (g_eState == MATCH_RUNNING) {
 		ai_print_lang(id, "AI_CHAT_ERR_RESHUFFLE_MATCH", "比赛进行中, 无法重新分配队伍");
 		return PLUGIN_HANDLED;
@@ -667,14 +904,16 @@ public cmdReshuffle(id) {
 
 	shuffleTeamsNow();
 
-	ai_print_lang(0, "AI_CHAT_RESHUFFLED", "队伍已重新随机分配 (^3%d^1 人)", g_iSignupCount);
+	new szMode[32];
+	balanceModeName(0, szMode, charsmax(szMode));
+	ai_print_lang(0, "AI_CHAT_RESHUFFLED", "队伍已按 ^3%s^1 重新分配 (^3%d^1 人)", szMode, g_iSignupCount);
 	showGroups(0);
 	return PLUGIN_HANDLED;
 }
 
 public cmdForceStart(id) {
-	if (!isUserVipOrAdmin(id)) {
-		ai_print_lang(id, "AI_CHAT_ERR_NEED_ADMIN", "需要管理员权限才能强制开启比赛");
+	if (!isUserAdmin(id)) {
+		ai_print_lang(id, "AI_CHAT_ERR_FORCE_ADMIN", "只有管理员可以强制开启比赛");
 		return PLUGIN_HANDLED;
 	}
 
@@ -762,7 +1001,9 @@ public RulesMenuHandler(id, menu, item) {
 stock applyMatchRules(iRule) {
 	g_iMatchRules = NATCH_RULES:iRule;
 	PDS_SetCell("ai_match_rules", iRule);
-	// 立即同步核心, 让当前地图的分组和开赛流程使用所选规则
+	PDS_SetCell("match_rules", iRule);
+	// 赛制状态只有一份：AI 菜单选择后立即同步到 MatchSystem。
+	// 无论是否 pending、是否正在比赛，都不再允许两套状态分叉。
 	hns_external_set_match_mode(_:g_iMatchRules);
 }
 
@@ -1008,6 +1249,298 @@ public SizeMenuHandler(id, menu, item) {
 	return PLUGIN_HANDLED;
 }
 
+public showPtsMenu(id) {
+	if (!is_user_connected(id) || !isUserVipOrAdmin(id)) {
+		showMainMenu(id);
+		return;
+	}
+
+	new szTitle[192], szItem[128], szData[16], szOff[32], szMode[32];
+	ai_lang(id, "AI_MENU_PTS_TITLE", szTitle, charsmax(szTitle));
+	new menu = menu_create(szTitle, "PtsMenuHandler");
+
+	ai_lang(id, "AI_MENU_PTS_OFF", szOff, charsmax(szOff));
+	formatex(szItem, charsmax(szItem), "%s%s", g_bPtsLimit ? "\w" : "\r* ", szOff);
+	menu_additem(menu, szItem, "pts_0");
+
+	new const iLimits[] = { 30, 50, 70, 100 };
+	for (new i = 0; i < sizeof(iLimits); i++) {
+		ai_lang(id, "AI_MENU_PTS_MIN", szOff, charsmax(szOff));
+		if (!szOff[0] || contain(szOff, "AI_MENU_PTS_MIN") != -1)
+			copy(szOff, charsmax(szOff), "最低OBS %d");
+		formatex(szItem, charsmax(szItem), "%s", (g_bPtsLimit && g_iPtsLimit == iLimits[i]) ? "\r* " : "\w");
+		new iMark = strlen(szItem);
+		formatex(szItem[iMark], charsmax(szItem) - iMark, szOff, iLimits[i]);
+		formatex(szData, charsmax(szData), "pts_%d", iLimits[i]);
+		menu_additem(menu, szItem, szData);
+		if (i == 1)
+			menu_addblank(menu, 0);
+	}
+	menu_addblank(menu, 0);
+
+	balanceModeName(id, szMode, charsmax(szMode));
+	ai_lang(id, "AI_MENU_BALANCE", szOff, charsmax(szOff));
+	if (!szOff[0] || contain(szOff, "AI_MENU_BALANCE") != -1)
+		copy(szOff, charsmax(szOff), "OBS平衡分组");
+	formatex(szItem, charsmax(szItem), "\y%s \y[%s]", szOff, szMode);
+	menu_additem(menu, szItem, "pts_balance");
+
+	ai_lang(id, "AI_MENU_BALANCE_NOW", szOff, charsmax(szOff));
+	if (!szOff[0] || contain(szOff, "AI_MENU_BALANCE_NOW") != -1)
+		copy(szOff, charsmax(szOff), "立即按当前设置重新分组");
+	menu_additem(menu, szOff, "pts_now");
+
+	ai_lang(id, "AI_MENU_BACK", szOff, charsmax(szOff));
+	menu_setprop(menu, MPROP_EXITNAME, szOff);
+	menu_display(id, menu);
+}
+
+public PtsMenuHandler(id, menu, item) {
+	if (item == MENU_EXIT) {
+		showMainMenu(id);
+		menu_destroy(menu);
+		return PLUGIN_HANDLED;
+	}
+
+	new data[16], name[64], access, callback;
+	menu_item_getinfo(menu, item, access, data, charsmax(data), name, charsmax(name), callback);
+	menu_destroy(menu);
+
+	if (!isUserVipOrAdmin(id)) {
+		ai_print_lang(id, "AI_CHAT_ERR_PTS_ADMIN", "只有VIP和管理员可以设置OBS限制");
+		showMainMenu(id);
+		return PLUGIN_HANDLED;
+	}
+
+	if (equal(data, "pts_balance")) {
+		showBalanceMenu(id);
+		return PLUGIN_HANDLED;
+	}
+
+	if (equal(data, "pts_now")) {
+		if (g_iSignupCount < 1)
+			ai_print_lang(id, "AI_CHAT_ERR_NO_PLAYERS", "当前没有报名玩家");
+		else if (g_eState == MATCH_RUNNING)
+			ai_print_lang(id, "AI_CHAT_ERR_RESHUFFLE_MATCH", "比赛进行中, 无法重新分配队伍");
+		else {
+			shuffleTeamsNow();
+			new szMode[32];
+			balanceModeName(0, szMode, charsmax(szMode));
+			ai_print_lang(0, "AI_CHAT_BALANCE_DONE", "已按 ^3%s^1 重新分组 (^3%d^1 人)", szMode, g_iSignupCount);
+			showGroups(0);
+		}
+		showPtsMenu(id);
+		return PLUGIN_HANDLED;
+	}
+
+	new iLimit = str_to_num(data[4]);
+	if (iLimit <= 0) {
+		g_bPtsLimit = false;
+		ai_print_lang(0, "AI_CHAT_PTS_OFF", "OBS积分限制已关闭");
+	} else {
+		g_bPtsLimit = true;
+		g_iPtsLimit = iLimit;
+		ai_print_lang(0, "AI_CHAT_PTS_ON", "OBS积分限制已开启: 最低 ^3%d^1 分", g_iPtsLimit);
+	}
+
+	showMainMenu(id);
+	return PLUGIN_HANDLED;
+}
+
+public showBalanceMenu(id) {
+	if (!is_user_connected(id) || !isUserVipOrAdmin(id)) {
+		showMainMenu(id);
+		return;
+	}
+
+	new szTitle[192], szItem[96], szLine[64];
+	ai_lang(id, "AI_MENU_BALANCE_TITLE", szTitle, charsmax(szTitle));
+	if (!szTitle[0] || contain(szTitle, "AI_MENU_BALANCE_TITLE") != -1)
+		copy(szTitle, charsmax(szTitle), "\rOBS平衡分组");
+
+	new menu = menu_create(szTitle, "BalanceMenuHandler");
+
+	ai_lang(id, "AI_MENU_BALANCE_OFF", szLine, charsmax(szLine));
+	if (!szLine[0] || contain(szLine, "AI_MENU_BALANCE_OFF") != -1)
+		copy(szLine, charsmax(szLine), "关闭 (随机分组)");
+	formatex(szItem, charsmax(szItem), "%s%s", (!g_bPtsBalance) ? "\r* " : "\w", szLine);
+	menu_additem(menu, szItem, "bal_0");
+
+	ai_lang(id, "AI_MENU_BALANCE_AUTO", szLine, charsmax(szLine));
+	if (!szLine[0] || contain(szLine, "AI_MENU_BALANCE_AUTO") != -1)
+		copy(szLine, charsmax(szLine), "自动平衡");
+	formatex(szItem, charsmax(szItem), "%s%s", (g_bPtsBalance && g_iBalanceMode == 1) ? "\r* " : "\w", szLine);
+	menu_additem(menu, szItem, "bal_1");
+
+	ai_lang(id, "AI_MENU_BALANCE_STRICT", szLine, charsmax(szLine));
+	if (!szLine[0] || contain(szLine, "AI_MENU_BALANCE_STRICT") != -1)
+		copy(szLine, charsmax(szLine), "严格平衡");
+	formatex(szItem, charsmax(szItem), "%s%s", (g_bPtsBalance && g_iBalanceMode == 2) ? "\r* " : "\w", szLine);
+	menu_additem(menu, szItem, "bal_2");
+
+	ai_lang(id, "AI_MENU_BALANCE_LOOSE", szLine, charsmax(szLine));
+	if (!szLine[0] || contain(szLine, "AI_MENU_BALANCE_LOOSE") != -1)
+		copy(szLine, charsmax(szLine), "宽松平衡");
+	formatex(szItem, charsmax(szItem), "%s%s", (g_bPtsBalance && g_iBalanceMode == 3) ? "\r* " : "\w", szLine);
+	menu_additem(menu, szItem, "bal_3");
+
+	ai_lang(id, "AI_MENU_BALANCE_NEW", szLine, charsmax(szLine));
+	if (!szLine[0] || contain(szLine, "AI_MENU_BALANCE_NEW") != -1)
+		copy(szLine, charsmax(szLine), "新人: 按中位估算");
+	menu_additem(menu, szLine, "bal_info");
+
+	ai_lang(id, "AI_MENU_BALANCE_FEW", szLine, charsmax(szLine));
+	if (!szLine[0] || contain(szLine, "AI_MENU_BALANCE_FEW") != -1)
+		copy(szLine, charsmax(szLine), "少于5场: 往中位靠");
+	menu_additem(menu, szLine, "bal_info");
+	menu_addblank(menu, 0);
+
+	ai_lang(id, "AI_MENU_BALANCE_SRC", szLine, charsmax(szLine));
+	if (!szLine[0] || contain(szLine, "AI_MENU_BALANCE_SRC") != -1)
+		copy(szLine, charsmax(szLine), "数据: MySQL OBS/胜率/场数");
+	menu_additem(menu, szLine, "bal_info");
+
+	ai_lang(id, "AI_MENU_BALANCE_NOW", szLine, charsmax(szLine));
+	if (!szLine[0] || contain(szLine, "AI_MENU_BALANCE_NOW") != -1)
+		copy(szLine, charsmax(szLine), "立即按当前设置重新分组");
+	menu_additem(menu, szLine, "bal_now");
+
+	ai_lang(id, "AI_MENU_BACK", szLine, charsmax(szLine));
+	menu_setprop(menu, MPROP_EXITNAME, szLine);
+	menu_display(id, menu);
+}
+
+public BalanceMenuHandler(id, menu, item) {
+	if (item == MENU_EXIT) {
+		showMainMenu(id);
+		menu_destroy(menu);
+		return PLUGIN_HANDLED;
+	}
+
+	new data[16], name[64], access, callback;
+	menu_item_getinfo(menu, item, access, data, charsmax(data), name, charsmax(name), callback);
+	menu_destroy(menu);
+
+	if (!isUserVipOrAdmin(id)) {
+		ai_print_lang(id, "AI_CHAT_ERR_BALANCE_ADMIN", "只有VIP和管理员可以设置OBS平衡分组");
+		showMainMenu(id);
+		return PLUGIN_HANDLED;
+	}
+
+	if (equal(data, "bal_info")) {
+		ai_print_lang(id, "AI_CHAT_BALANCE_INFO", "没打过按本局中位估算, 少于5场会往中位靠, 不会把新人当高手");
+		showBalanceMenu(id);
+		return PLUGIN_HANDLED;
+	}
+
+	if (equal(data, "bal_now")) {
+		if (g_iSignupCount < 1)
+			ai_print_lang(id, "AI_CHAT_ERR_NO_PLAYERS", "当前没有报名玩家");
+		else if (g_eState == MATCH_RUNNING)
+			ai_print_lang(id, "AI_CHAT_ERR_RESHUFFLE_MATCH", "比赛进行中, 无法重新分配队伍");
+		else {
+			shuffleTeamsNow();
+			new szMode[32];
+			balanceModeName(0, szMode, charsmax(szMode));
+			ai_print_lang(0, "AI_CHAT_BALANCE_DONE", "已按 ^3%s^1 重新分组 (^3%d^1 人)", szMode, g_iSignupCount);
+			showGroups(0);
+		}
+		showBalanceMenu(id);
+		return PLUGIN_HANDLED;
+	}
+
+	new iMode = str_to_num(data[4]);
+	if (iMode <= 0) {
+		g_bPtsBalance = false;
+		g_iBalanceMode = 0;
+		ai_print_lang(0, "AI_CHAT_BALANCE_OFF", "OBS平衡分组已关闭, 改为随机分组");
+	} else {
+		g_bPtsBalance = true;
+		g_iBalanceMode = iMode;
+		new szMode[32];
+		balanceModeName(0, szMode, charsmax(szMode));
+		ai_print_lang(0, "AI_CHAT_BALANCE_ON", "OBS平衡分组已开启: ^3%s", szMode);
+	}
+
+	showBalanceMenu(id);
+	return PLUGIN_HANDLED;
+}
+
+public showSqlMenu(id) {
+	if (!is_user_connected(id) || !isUserAdmin(id)) {
+		showMainMenu(id);
+		return;
+	}
+
+	new szHost[48], szUser[32], szDb[32], szStatus[32];
+	new szTitle[192], szItem[128], szBack[32];
+	get_cvar_string("hns_host", szHost, charsmax(szHost));
+	get_cvar_string("hns_user", szUser, charsmax(szUser));
+	get_cvar_string("hns_db", szDb, charsmax(szDb));
+	if (!szHost[0])
+		copy(szHost, charsmax(szHost), "127.0.0.1");
+	if (!szUser[0])
+		copy(szUser, charsmax(szUser), "root");
+	if (!szDb[0])
+		copy(szDb, charsmax(szDb), "hns");
+
+	ai_lang(id, g_bSqlReady ? "AI_MENU_SQL_ON" : "AI_MENU_SQL_OFF", szStatus, charsmax(szStatus));
+	ai_lang(id, "AI_MENU_SQL_TITLE", szTitle, charsmax(szTitle));
+	format(szTitle, charsmax(szTitle), szTitle, g_bSqlReady ? "\y" : "\r", szStatus, szHost, szDb, szUser);
+
+	new menu = menu_create(szTitle, "SqlMenuHandler");
+	ai_lang(id, "AI_MENU_SQL_TEST", szItem, charsmax(szItem));
+	menu_additem(menu, szItem, "sql_test");
+	ai_lang(id, "AI_MENU_BACK", szBack, charsmax(szBack));
+	menu_setprop(menu, MPROP_EXITNAME, szBack);
+	menu_display(id, menu);
+}
+
+public SqlMenuHandler(id, menu, item) {
+	if (item == MENU_EXIT) {
+		showMainMenu(id);
+		menu_destroy(menu);
+		return PLUGIN_HANDLED;
+	}
+
+	new data[16], name[64], access, callback;
+	menu_item_getinfo(menu, item, access, data, charsmax(data), name, charsmax(name), callback);
+	menu_destroy(menu);
+
+	if (!isUserAdmin(id)) {
+		ai_print_lang(id, "AI_CHAT_ERR_SQL_ADMIN", "只有管理员可以查看MySQL连接");
+		showMainMenu(id);
+		return PLUGIN_HANDLED;
+	}
+
+	if (equal(data, "sql_test")) {
+		if (!g_bSqlReady || g_hSqlTuple == Empty_Handle) {
+			ai_print_lang(id, "AI_CHAT_SQL_FAIL", "MySQL未连接");
+			showSqlMenu(id);
+		} else {
+			new iData[1];
+			iData[0] = id;
+			SQL_ThreadQuery(g_hSqlTuple, "cbSqlPing", "SELECT 1", iData, sizeof(iData));
+		}
+	}
+	return PLUGIN_HANDLED;
+}
+
+public cbSqlPing(failstate, Handle:query, error[], errnum, data[], size, Float:queuetime) {
+	new id = (size > 0) ? data[0] : 0;
+	if (!is_user_connected(id))
+		return;
+
+	if (failstate) {
+		g_bSqlReady = false;
+		ai_print_lang(id, "AI_CHAT_SQL_FAIL", "MySQL未连接");
+	} else {
+		g_bSqlReady = true;
+		ai_print_lang(id, "AI_CHAT_SQL_OK", "MySQL连接正常");
+	}
+	showSqlMenu(id);
+}
+
 // 设置比赛类型 0娱乐/1赞助 (管理员)
 public cmdAiType(id) {
 	if (!isUserVipOrAdmin(id))
@@ -1065,11 +1598,8 @@ public signupPlayer(id) {
 	g_iSignupList[g_iSignupCount++] = id;
 	g_bSignedUp[id] = true;
 
-	// 第一个报名: 激活大厅模式 + 启动 5 分钟倒计时
+	// 第一个报名: 保持训练模式, 不进大厅/比赛模式
 	if (g_iSignupCount == 1) {
-		if (hns_get_mode() == MODE_TRAINING)
-			hns_ai_enter_lobby();
-
 		g_eState = SIGNUP_OPEN;
 		g_flSignupTimer = SIGNUP_TIMER;
 		set_task(1.0, "taskCountdown", TASK_COUNTDOWN, .flags = "b");
@@ -1081,6 +1611,7 @@ public signupPlayer(id) {
 
 	ai_print_lang(id, "AI_CHAT_SIGNED", "报名成功 (已报名 %d 人 | 在线 %d 人)", g_iSignupCount, getOnlineCount());
 	broadcastSignupCount();
+	refreshSignupMenus();
 	tryCloseWhenFull();
 }
 
@@ -1104,6 +1635,24 @@ public native_get_state(plugin, params) {
 	return _:g_eState;
 }
 
+public native_get_team_size(plugin, params) {
+	return g_iTeamSizeFixed;
+}
+
+// size: 3..6 固定人数, 0 恢复自动。比赛中、收团、赛前选择时拒绝。
+public native_set_team_size(plugin, params) {
+	new iSize = get_param(1);
+	if (iSize != 0 && (iSize < 3 || iSize > 6))
+		return 0;
+	if (g_eState == SIGNUP_CLOSE || g_eState == SIGNUP_SETUP || g_eState == MATCH_RUNNING)
+		return 0;
+
+	g_iTeamSizeFixed = iSize;
+	if (iSize > 0 && g_eState == SIGNUP_OPEN)
+		tryCloseWhenFull();
+	return 1;
+}
+
 public cancelSignup(id) {
 	if (!g_bSignedUp[id])
 		return;
@@ -1117,15 +1666,22 @@ public cancelSignup(id) {
 	}
 
 	g_bSignedUp[id] = false;
+	g_bSignupMenuOpen[id] = false;
 	g_iSignupTeam[id] = 0;
 
 	if (stopSignupIfEmpty())
 		return;
 
+	refreshSignupMenus();
 	ai_print_lang(id, "AI_CHAT_CANCELLED", "已取消报名 (剩余 %d 人 | 在线 %d 人)", g_iSignupCount, getOnlineCount());
 }
 
 public client_disconnected(id) {
+	g_bGuest[id] = false;
+	g_iGuestId[id] = 0;
+	g_iGuestRetry[id] = 0;
+	remove_task(id + TASK_GUEST_CHECK);
+
 	if (g_bWaitingSponsorGc && id == g_iSponsorAskId) {
 		g_bWaitingSponsorGc = false;
 		remove_task(TASK_SPONSOR_GC);
@@ -1145,15 +1701,16 @@ public client_disconnected(id) {
 		}
 		g_bSignedUp[id] = false;
 		// 队伍记忆保留, 掉线重连/下张图仍可恢复
+		// 换图 pending 时人会先掉线, 不要把报名状态清成 IDLE, 否则 PDS_Save 会用空名单覆盖分组
 
-		if (stopSignupIfEmpty())
+		if (!g_bPendingMatchStart && stopSignupIfEmpty())
 			return;
 	}
 }
 
 // 报名人数广播和菜单刷新
 public broadcastSignupCount() {
-	ai_print(0, "[HNSai]当前报名人数 %d", g_iSignupCount);
+	ai_print(0, "[^4HNSai^1]当前报名人数 ^3%d", g_iSignupCount);
 }
 
 stock refreshSignupMenus() {
@@ -1163,15 +1720,14 @@ stock refreshSignupMenus() {
 	new iPlayers[MAX_PLAYERS], iNum;
 	get_players(iPlayers, iNum, "ch");
 	for (new i = 0; i < iNum; i++) {
-		if (hns_get_state() == STATE_PAUSED)
+		new id = iPlayers[i];
+		if (!g_bSignupMenuOpen[id])
 			continue;
 
-		new iMode = hns_get_mode();
-		if (iMode != MODE_TRAINING && iMode != MODE_LOBBY)
-			continue;
-
-		closeGameMenu(iPlayers[i]);
-		showMainMenu(iPlayers[i]);
+		if (g_iAiMenuPage[id] == 2)
+			showMainMenu2(id);
+		else
+			showMainMenu(id);
 	}
 }
 
@@ -1245,6 +1801,7 @@ public closeSignup() {
 		ai_print_lang(0, "AI_CHAT_CLOSE_SETUP", "收团! 先记分组, 换图前不拉观战, 先选模式和地图");
 		shuffleTeamsNow();
 	}
+	saveSignupTeams();
 	buildPlaceQueue(g_iPlaceTeamSize);
 
 	// ★ 人数达标 -> 聊天框播报当前分组 (蓝 CT / 红 TT)
@@ -1501,6 +2058,7 @@ public startMatch() {
 	}
 
 	ai_print_lang(0, "AI_CHAT_MATCH_START", "^2比赛启动!^1 T队 ^2%d^1 人 v CT队 ^2%d^1 人", iT, iCT);
+	announceMapStyle(0);
 	ai_print_match_info(0, iT + iCT);
 	showGroups(0);
 
@@ -1512,7 +2070,8 @@ public startMatch() {
 		hns_external_set_sponsor_name(g_szSponsorName);
 	if (g_bSponsorMatch && g_iSponsorGC >= 5)
 		hns_external_set_sponsor_gc(g_iSponsorGC);
-	hns_begin_external_match(g_bSponsorMatch, g_iSponsorAskId);
+	// 报名阶段不切公共/死斗/僵尸; 人到齐并选完地图后才正式开赛
+	hns_begin_external_match(g_bSponsorMatch, 0);
 
 	g_bForceStart = false;
 	g_bPlayersPlaced = false;
@@ -1540,8 +2099,8 @@ public hns_match_finished(iWinTeam) {
 		if (!is_user_connected(id) || !g_bGuest[id])
 			continue;
 
-		new iTeam = getUserTeam(id) == TEAM_TERRORIST ? 1 : 2;
-		if (iTeam == iWinTeam)
+		new iTeam = hns_get_player_match_team(id);
+		if (iTeam > 0 && iTeam == iWinTeam)
 			guestAddPts(id, 1, 0);
 		else
 			guestAddPts(id, 0, 1);
@@ -1557,43 +2116,63 @@ public hns_match_canceled() {
 	ai_print_lang(0, "AI_CHAT_MATCH_CANCEL", "比赛已终止, 报名已清除");
 }
 
+stock GuestKnifeBonus(id) {
+	if (!LibraryExists("hns_obc", LibType_Library))
+		return 0;
+	return hns_obc_knife_bonus(id);
+}
+
+stock GuestUnpack(const szData[], &iWins, &iLoss, &iPts) {
+	new szA[16], szB[16], szC[16], szD[16];
+	parse(szData, szA, charsmax(szA), szB, charsmax(szB), szC, charsmax(szC), szD, charsmax(szD));
+	if (equal(szA, "v2")) {
+		iWins = str_to_num(szB);
+		iLoss = str_to_num(szC);
+		iPts = str_to_num(szD);
+		return;
+	}
+	iWins = str_to_num(szA);
+	iLoss = str_to_num(szB);
+	iPts = PTS_BASE + iWins * PTS_WIN - iLoss * PTS_LOSS;
+	if (iPts < 0)
+		iPts = 0;
+}
+
 stock guestAddPts(id, iWins, iLoss) {
 	if (!g_bSqlReady || g_hSqlTuple == Empty_Handle) {
 		Local_GuestInit();
 		if (g_iGuestVault == INVALID_HANDLE)
 			return;
 
-		new szIp[32], szData[64];
-		get_user_ip(id, szIp, charsmax(szIp), 1);
+		new szName[32], szData[64];
+		get_user_name(id, szName, charsmax(szName));
+		if (!szName[0])
+			copy(szName, charsmax(szName), "unnamed");
 
 		new iCurWins, iCurLoss, iCurPts = PTS_BASE;
-		if (nvault_get(g_iGuestVault, szIp, szData, charsmax(szData)) && szData[0]) {
-			new szWins[16], szLoss[16], szPts[16];
-			parse(szData, szWins, charsmax(szWins), szLoss, charsmax(szLoss), szPts, charsmax(szPts));
-			iCurWins = str_to_num(szWins);
-			iCurLoss = str_to_num(szLoss);
-			iCurPts = str_to_num(szPts);
-		}
+		if (nvault_get(g_iGuestVault, szName, szData, charsmax(szData)) && szData[0])
+			GuestUnpack(szData, iCurWins, iCurLoss, iCurPts);
 
 		iCurWins += iWins;
 		iCurLoss += iLoss;
-		iCurPts += iWins * PTS_WIN - iLoss * PTS_LOSS;
+		iCurPts += iWins * PTS_WIN - iLoss * PTS_LOSS + GuestKnifeBonus(id);
 		if (iCurPts < 0)
 			iCurPts = 0;
 
-		nvault_set(g_iGuestVault, szIp, fmt("%d %d %d", iCurWins, iCurLoss, iCurPts));
+		nvault_set(g_iGuestVault, szName, fmt("v2 %d %d %d", iCurWins, iCurLoss, iCurPts));
 		return;
 	}
 
 	if (!g_iGuestId[id])
 		return;
 
-	new szQuery[192];
+	new iDelta = iWins * PTS_WIN - iLoss * PTS_LOSS + GuestKnifeBonus(id);
+	new szQuery[384];
 	formatex(szQuery, charsmax(szQuery),
-		"INSERT INTO `hns_ai_guest_pts` (id, wins, loss, pts) VALUES (%d, %d, %d, %d) \
-		ON DUPLICATE KEY UPDATE wins=wins+%d, loss=loss+%d, pts=pts+%d",
-		g_iGuestId[id], iWins, iLoss, PTS_BASE + iWins * PTS_WIN - iLoss * PTS_LOSS,
-		iWins, iLoss, iWins * PTS_WIN - iLoss * PTS_LOSS);
+		"INSERT INTO `hns_ai_guest_pts` (id, wins, loss, pts, obc_ready) VALUES (%d, %d, %d, %d, 1) \
+		ON DUPLICATE KEY UPDATE wins=wins+%d, loss=loss+%d, pts=GREATEST(pts+%d, 0), obc_ready=1",
+		g_iGuestId[id], iWins, iLoss, PTS_BASE + iDelta,
+		iWins, iLoss, iDelta);
 
 	SQL_ThreadQuery(g_hSqlTuple, "cbVoid", szQuery);
 }
@@ -1611,6 +2190,7 @@ public onMapChange() {
 	remove_task(TASK_SPONSOR_GC);
 	remove_task(TASK_MAP_WAIT);
 	remove_task(TASK_SETUP_MENU);
+	remove_task(TASK_RANDOM_MAP);
 	clearSpecJoinTasks();
 
 	g_bVoteActive = false;
@@ -1620,6 +2200,7 @@ public onMapChange() {
 	g_bWaitingSponsorGc = false;
 	g_bMapWaitActive = false;
 	g_bPlayersPlaced = false;
+	g_bRandomMapWait = false;
 
 	new iPending;
 	if (PDS_GetCell("ai_pending_start", iPending) && iPending) {
@@ -1629,8 +2210,8 @@ public onMapChange() {
 		new iRules, iSponsor, iForce, iSize;
 		if (PDS_GetCell("ai_match_rules", iRules) && iRules >= 0 && iRules < RULE_COUNT) {
 			g_iMatchRules = NATCH_RULES:iRules;
+			PDS_SetCell("match_rules", iRules);
 			hns_external_set_match_mode(_:g_iMatchRules);
-			set_task(1.0, "taskRestorePendingRules", TASK_SETUP_MENU);
 		}
 		if (PDS_GetCell("ai_sponsor_match", iSponsor))
 			g_bSponsorMatch = bool:iSponsor;
@@ -1655,6 +2236,10 @@ public onMapChange() {
 		g_iPlaceIndex = 0;
 		g_bMapWaitActive = true;
 		g_iMapWaitSeconds = floatround(MAP_CHANGE_WAIT);
+		// 换图后先等人核对, 不在这里切公共模式。
+		// pub_start 会马上 hns_restart_round, 和换图加载、玩家重进叠在一起会把进程打崩。
+		log_amx("[HNSai] map wait %d sec on %s, skip pub restart", g_iMapWaitSeconds, g_szLastMap);
+		ai_print_lang(0, "AI_CHAT_MAP_PUB", "换图完成, 已切换公共模式");
 		ai_print_lang(0, "AI_CHAT_MAP_WAIT", "换图完成, 先等 ^3%d^1 秒核对报名玩家, 确认后再拉观战", g_iMapWaitSeconds);
 		set_task(1.0, "taskMapWaitTick", TASK_MAP_WAIT, .flags = "b");
 		return;
@@ -1670,11 +2255,6 @@ public onMapChange() {
 		g_bSignedUp[i] = false;
 		g_iSignupTeam[i] = 0;
 	}
-}
-
-public taskRestorePendingRules() {
-	if (g_bPendingMatchStart)
-		hns_external_set_match_mode(_:g_iMatchRules);
 }
 
 public taskMapWaitTick() {
@@ -1711,7 +2291,9 @@ public taskPendingResume() {
 	if (g_iPlaceTeamSize < 1)
 		g_iPlaceTeamSize = getEffectiveTeamSize();
 	ai_print_lang(0, "AI_CHAT_MAP_CONFIRMED", "已确认报名玩家 ^3%d^1 人, 先拉观战, 等 5 秒再 1 秒 1 人上场", g_iSignupCount);
-	if (!g_bKeepSavedTeams) {
+	if (g_bKeepSavedTeams) {
+		ai_print_lang(0, "AI_CHAT_CLOSE_KEEP", "收团! 按换图前分组上场, 不再重新随机");
+	} else {
 		ai_print_lang(0, "AI_CHAT_MAP_RESHUFFLE", "没对上换图前名单, 只能重新分一次");
 		shuffleTeamsNow();
 	}
@@ -1753,11 +2335,10 @@ stock rebuildSignupFromOnline() {
 		if (iTeam == TEAM_T || iTeam == TEAM_CT)
 			g_bKeepSavedTeams = true;
 
-		new szName[32], szAuth[32], szIp[32];
+		new szName[32], szAuth[32];
 		get_user_name(id, szName, charsmax(szName));
 		get_user_authid(id, szAuth, charsmax(szAuth));
-		get_user_ip(id, szIp, charsmax(szIp), 1);
-		log_amx("[HNSai] confirm %s | %s | %s | %s", szName, szAuth, szIp, (iTeam == TEAM_T) ? "T" : "CT");
+		log_amx("[HNSai] confirm %s | %s | %s", szName, szAuth, (iTeam == TEAM_T) ? "T" : "CT");
 	}
 }
 
@@ -1796,6 +2377,7 @@ public taskAfterMapCooldown() {
 	remove_task(TASK_SPONSOR_GC);
 	remove_task(TASK_MAP_WAIT);
 	remove_task(TASK_SETUP_MENU);
+	remove_task(TASK_RANDOM_MAP);
 	clearSpecJoinTasks();
 
 	g_bVoteActive = false;
@@ -1804,6 +2386,7 @@ public taskAfterMapCooldown() {
 	g_bWaitingSponsor = false;
 	g_bWaitingSponsorGc = false;
 	g_bMapWaitActive = false;
+	g_bRandomMapWait = false;
 
 	for (new i = 0; i < MAX_PLAYERS + 1; i++) {
 	g_bSignedUp[i] = false;
@@ -1844,7 +2427,7 @@ public taskAfterMapCooldown() {
 
 	public PDS_Save() {
 	if (!g_bPendingMatchStart)
-	return;
+		return;
 
 	savePendingMatch();
 	saveSignupTeams();
@@ -1884,6 +2467,18 @@ public taskAfterMapCooldown() {
 	copy(szOut, iLen, szAuth);
 	}
 
+	stock countConnectedSignedWithTeam() {
+	new iCount;
+	for (new i = 0; i < g_iSignupCount; i++) {
+		new id = g_iSignupList[i];
+		if (!is_user_connected(id))
+			continue;
+		if (g_iSignupTeam[id] == TEAM_T || g_iSignupTeam[id] == TEAM_CT)
+			iCount++;
+	}
+	return iCount;
+	}
+
 	stock saveSignupTeams() {
 	new iCount;
 	for (new i = 0; i < g_iSignupCount; i++) {
@@ -1902,17 +2497,14 @@ public taskAfterMapCooldown() {
 	if (iTeam != TEAM_T && iTeam != TEAM_CT)
 	continue;
 
-	new szKey[32], szId[48], szName[32], szIp[32];
+	new szKey[32], szId[48], szName[32];
 	getPlayerPersistId(id, szId, charsmax(szId));
 	get_user_name(id, szName, charsmax(szName));
-	get_user_ip(id, szIp, charsmax(szIp), 1);
 
 	formatex(szKey, charsmax(szKey), "ai_saved_k%d", iCount);
 	PDS_SetString(szKey, szId);
 	formatex(szKey, charsmax(szKey), "ai_saved_nm%d", iCount);
 	PDS_SetString(szKey, szName);
-	formatex(szKey, charsmax(szKey), "ai_saved_i%d", iCount);
-	PDS_SetString(szKey, szIp);
 	formatex(szKey, charsmax(szKey), "ai_saved_t%d", iCount);
 	PDS_SetCell(szKey, iTeam);
 	iCount++;
@@ -1927,21 +2519,14 @@ public taskAfterMapCooldown() {
 	formatex(szKey, charsmax(szKey), "ai_saved_k%d", iSlot);
 	if (PDS_GetString(szKey, szSaved, charsmax(szSaved)) && szSaved[0]) {
 		getPlayerPersistId(id, szCur, charsmax(szCur));
-		if (equal(szCur, szSaved))
-			return true;
-	}
-
-	formatex(szKey, charsmax(szKey), "ai_saved_i%d", iSlot);
-	if (PDS_GetString(szKey, szSaved, charsmax(szSaved)) && szSaved[0] && !equal(szSaved, "loopback") && !equal(szSaved, "127.0.0.1")) {
-		get_user_ip(id, szCur, charsmax(szCur), 1);
-		if (equal(szCur, szSaved))
+		if (equali(szCur, szSaved))
 			return true;
 	}
 
 	formatex(szKey, charsmax(szKey), "ai_saved_nm%d", iSlot);
 	if (PDS_GetString(szKey, szSaved, charsmax(szSaved)) && szSaved[0]) {
 		get_user_name(id, szCur, charsmax(szCur));
-		if (equal(szCur, szSaved))
+		if (equali(szCur, szSaved))
 			return true;
 	}
 
@@ -2007,7 +2592,7 @@ public taskFinishMoveToSpec(iTaskId) {
 }
 
 stock finishMoveToSpec(id) {
-	if (!is_user_connected(id))
+	if (g_bLevelChanging || !is_user_connected(id))
 		return;
 
 	set_member(id, m_bTeamChanged, false);
@@ -2039,7 +2624,7 @@ stock clearSpecJoinTasks() {
 }
 
 stock moveToTeam(id, TeamName:iTeam) {
-	if (!is_user_connected(id))
+	if (g_bLevelChanging || !is_user_connected(id))
 		return;
 
 	remove_task(TASK_SPEC_JOIN + id);
@@ -2122,9 +2707,144 @@ stock tryCloseWhenFull() {
 	if (g_iSignupCount < iNeed)
 		return;
 
-	ai_print_lang(0, "AI_CHAT_FULL_CLOSE", "人数已满 (^3%d^1 人 = %d v %d), 开始收团", g_iSignupCount, getEffectiveTeamSize(), getEffectiveTeamSize());
+	ai_print_lang(0, "AI_CHAT_FULL", "报名已满 ^3%d^1 人, 开始收团", g_iSignupCount, getEffectiveTeamSize(), getEffectiveTeamSize());
 	g_flSignupTimer = 0.0;
 	closeSignup();
+}
+
+stock getSignupNeed() {
+	if (g_iTeamSizeFixed > 0)
+		return g_iTeamSizeFixed * 2;
+	return SIGNUP_MAX;
+}
+
+stock getPlayerPts(id) {
+	if (id < 1 || id > MaxClients)
+		return PTS_BASE;
+	if (g_ePlayerPtsData[id][e_bInit])
+		return g_ePlayerPtsData[id][e_iPts];
+	return PTS_BASE;
+}
+
+stock bool:useModeBucket(id, &iPts, &iWins, &iLoss) {
+	if (id < 1 || id > MaxClients || !g_ePlayerPtsData[id][e_bInit])
+		return false;
+
+	if (g_iActivePool == POOL_BOOST && (g_ePlayerPtsData[id][e_iBoostWins] + g_ePlayerPtsData[id][e_iBoostLoss]) > 0) {
+		iPts = g_ePlayerPtsData[id][e_iBoostPts];
+		iWins = g_ePlayerPtsData[id][e_iBoostWins];
+		iLoss = g_ePlayerPtsData[id][e_iBoostLoss];
+		return true;
+	}
+	if (g_iActivePool == POOL_SKILL && (g_ePlayerPtsData[id][e_iSkillWins] + g_ePlayerPtsData[id][e_iSkillLoss]) > 0) {
+		iPts = g_ePlayerPtsData[id][e_iSkillPts];
+		iWins = g_ePlayerPtsData[id][e_iSkillWins];
+		iLoss = g_ePlayerPtsData[id][e_iSkillLoss];
+		return true;
+	}
+
+	iPts = g_ePlayerPtsData[id][e_iPts];
+	iWins = g_ePlayerPtsData[id][e_iWins];
+	iLoss = g_ePlayerPtsData[id][e_iLoss];
+	return true;
+}
+
+stock getTrackedPts(id) {
+	new iPts, iWins, iLoss;
+	if (!useModeBucket(id, iPts, iWins, iLoss))
+		return PTS_BASE;
+	return iPts;
+}
+
+stock getPlayerMatches(id) {
+	new iPts, iWins, iLoss;
+	if (!useModeBucket(id, iPts, iWins, iLoss))
+		return 0;
+	return iWins + iLoss;
+}
+
+stock getPlayerWinRate(id) {
+	new iPts, iWins, iLoss;
+	if (!useModeBucket(id, iPts, iWins, iLoss))
+		return 50;
+	new iGames = iWins + iLoss;
+	if (iGames < 1)
+		return 50;
+	return (iWins * 100) / iGames;
+}
+
+// 赢 +15、输 -10。50% 胜率每场仍会涨 2.5, 先扣掉, 避免场次越多分越高
+stock getRawSkill(id) {
+	new iGames = getPlayerMatches(id);
+	if (iGames < 1)
+		return PTS_BASE;
+	return getTrackedPts(id) - (iGames * 5) / 2;
+}
+
+// 0 场 = 基准。5 场只信一半, 之后才逐渐接近自己的实力分
+stock getBalanceScore(id, iPrior) {
+	new iGames = getPlayerMatches(id);
+	if (id < 1 || id > MaxClients || !g_ePlayerPtsData[id][e_bInit] || iGames < 1)
+		return iPrior;
+
+	return (getRawSkill(id) * iGames + iPrior * 5) / (iGames + 5);
+}
+
+// 基准只用打满 5 场的人。没有这样的人时, 新人统一按 50, 不拿 1 场胜率当中位
+stock getSignupPrior() {
+	new iScores[SIGNUP_MAX], iCount;
+	for (new i = 0; i < g_iSignupCount && iCount < SIGNUP_MAX; i++) {
+		new p = g_iSignupList[i];
+		if (getPlayerMatches(p) < 5)
+			continue;
+		iScores[iCount++] = getRawSkill(p);
+	}
+
+	if (iCount < 1)
+		return PTS_BASE;
+
+	for (new i = 1; i < iCount; i++) {
+		new v = iScores[i], j = i - 1;
+		while (j >= 0 && iScores[j] > v) {
+			iScores[j + 1] = iScores[j];
+			j--;
+		}
+		iScores[j + 1] = v;
+	}
+
+	if (iCount % 2)
+		return iScores[iCount / 2];
+	return (iScores[iCount / 2 - 1] + iScores[iCount / 2]) / 2;
+}
+
+stock balanceModeName(id, szOut[], iLen) {
+	new szKey[32];
+	if (!g_bPtsBalance || g_iBalanceMode <= 0)
+		copy(szKey, charsmax(szKey), "AI_MENU_BALANCE_OFF");
+	else if (g_iBalanceMode == 2)
+		copy(szKey, charsmax(szKey), "AI_MENU_BALANCE_STRICT");
+	else if (g_iBalanceMode == 3)
+		copy(szKey, charsmax(szKey), "AI_MENU_BALANCE_LOOSE");
+	else
+		copy(szKey, charsmax(szKey), "AI_MENU_BALANCE_AUTO");
+
+	ai_lang(id, szKey, szOut, iLen);
+	if (!szOut[0] || contain(szOut, "AI_MENU_BALANCE") != -1) {
+		if (!g_bPtsBalance || g_iBalanceMode <= 0)
+			copy(szOut, iLen, "关闭");
+		else if (g_iBalanceMode == 2)
+			copy(szOut, iLen, "严格");
+		else if (g_iBalanceMode == 3)
+			copy(szOut, iLen, "宽松");
+		else
+			copy(szOut, iLen, "自动");
+	}
+}
+
+stock bool:passesPtsLimit(id) {
+	if (!g_bPtsLimit || isUserVipOrAdmin(id))
+		return true;
+	return getPlayerPts(id) >= g_iPtsLimit;
 }
 
 stock bool:isFakeOrBot(id) {
@@ -2146,7 +2866,7 @@ stock bool:isUserVipOrAdmin(id) {
 	if (!is_user_connected(id) || isFakeOrBot(id))
 		return false;
 
-	return isUserWatcher(id) || isUserAdmin(id) || is_user_admin(id);
+	return isUserFullWatcher(id) || isUserAdmin(id) || is_user_admin(id);
 }
 
 stock bool:isAdminOnline() {
@@ -2190,8 +2910,15 @@ stock countVoted() {
 	return iVoted;
 }
 
-// 纯随机分组: 每人独立抽 T/CT, 某队满了才进另一边 (不要 T/CT 交替)
+// 关闭平衡: 随机分组. 开启平衡: 按估算分从高到低轮流, 并在宽松度内随机
 stock shuffleTeamsNow() {
+	if (g_bPtsBalance)
+		balanceTeamsNow();
+	else
+		randomTeamsNow();
+}
+
+stock randomTeamsNow() {
 	new iSize = getEffectiveTeamSize();
 	new iPool[SIGNUP_MAX], iCount;
 
@@ -2226,6 +2953,70 @@ stock shuffleTeamsNow() {
 	}
 }
 
+stock balanceTeamsNow() {
+	new iSize = getEffectiveTeamSize();
+	new iPool[SIGNUP_MAX], iScore[SIGNUP_MAX], iCount;
+	new iPrior = getSignupPrior();
+	new iNoise;
+	if (g_iBalanceMode == 3)
+		iNoise = 60;
+	else if (g_iBalanceMode != 2)
+		iNoise = 15;
+
+	for (new i = 0; i < g_iSignupCount && iCount < SIGNUP_MAX; i++) {
+		new p = g_iSignupList[i];
+		iPool[iCount] = p;
+		iScore[iCount] = getBalanceScore(p, iPrior);
+		if (iNoise > 0)
+			iScore[iCount] += random(iNoise * 2 + 1) - iNoise;
+		iCount++;
+	}
+
+	for (new i = 1; i < iCount; i++) {
+		new p = iPool[i], s = iScore[i], j = i - 1;
+		while (j >= 0 && iScore[j] < s) {
+			iScore[j + 1] = iScore[j];
+			iPool[j + 1] = iPool[j];
+			j--;
+		}
+		iScore[j + 1] = s;
+		iPool[j + 1] = p;
+	}
+
+	for (new i = 0; i <= MAX_PLAYERS; i++)
+		g_iSignupTeam[i] = 0;
+
+	new iT, iCT, iSumT, iSumCT;
+	for (new i = 0; i < iCount; i++) {
+		if (iT >= iSize && iCT >= iSize)
+			break;
+
+		new p = iPool[i];
+		new iTeam;
+		if (iT >= iSize)
+			iTeam = TEAM_CT;
+		else if (iCT >= iSize)
+			iTeam = TEAM_T;
+		else if (iT != iCT)
+			iTeam = (iT < iCT) ? TEAM_T : TEAM_CT;
+		else if (iSumT < iSumCT)
+			iTeam = TEAM_T;
+		else if (iSumCT < iSumT)
+			iTeam = TEAM_CT;
+		else
+			iTeam = random(2) ? TEAM_T : TEAM_CT;
+
+		g_iSignupTeam[p] = iTeam;
+		if (iTeam == TEAM_T) {
+			iT++;
+			iSumT += iScore[i];
+		} else {
+			iCT++;
+			iSumCT += iScore[i];
+		}
+	}
+}
+
 // [HNSai] 当前比赛模式 / 人数 / 类型 / 状态
 stock ai_printModeInfo(const id) {
 	new szRule[32], szType[32], szState[32];
@@ -2249,9 +3040,9 @@ stock ai_print_send(const id, const msgFormated[]) {
 		return;
 
 	if (msgFormated[0] == '[')
-		client_print_color(id, print_team_blue, "%s", msgFormated);
+		client_print_color(id, print_team_default, "%s", msgFormated);
 	else
-		client_print_color(id, print_team_blue, "[^3HNSai^1] %s", msgFormated);
+		client_print_color(id, print_team_default, "[^4HNS^1] %s", msgFormated);
 }
 
 stock ai_print(const id, const message[], any:...) {
@@ -2631,13 +3422,51 @@ stock setActivePool(iPool) {
 	applyActivePool();
 }
 
+stock mapPoolOf(const szMap[]) {
+	if (!szMap[0])
+		return -1;
+
+	for (new i = 0; i < g_iSkillMapCount; i++) {
+		if (equali(g_szSkillMaps[i], szMap))
+			return POOL_SKILL;
+	}
+	for (new i = 0; i < g_iBoostMapCount; i++) {
+		if (equali(g_szBoostMaps[i], szMap))
+			return POOL_BOOST;
+	}
+	return -1;
+}
+
+stock announceMapStyle(const id) {
+	if (g_iSkillMapCount <= 0 && g_iBoostMapCount <= 0)
+		loadMapPools();
+
+	new szMap[MAP_NAME_LEN];
+	if (g_szPickedMap[0])
+		copy(szMap, charsmax(szMap), g_szPickedMap);
+	else
+		get_mapname(szMap, charsmax(szMap));
+
+	new iPool = mapPoolOf(szMap);
+	if (iPool < 0)
+		iPool = g_iActivePool;
+	announceCurrentPool(id, iPool);
+}
+
+stock announceCurrentPool(const id, iPool) {
+	if (iPool == POOL_SKILL)
+		ai_print_lang(id, "AI_CHAT_SKILL_MATCH", "当前池: ^3Skill");
+	else
+		ai_print_lang(id, "AI_CHAT_BOOST_MATCH", "当前池: ^4Boost");
+}
+
 public showTypeMenu(id) {
 	if (!is_user_connected(id))
 		return;
 
 	if (!isUserVipOrAdmin(id)) {
 		ai_print_lang(id, "AI_CHAT_ERR_TYPE_VIP", "只有管理员/VIP 才能选择比赛类型");
-		showMainMenu(id);
+		showMainMenu2(id);
 		return;
 	}
 
@@ -2657,7 +3486,7 @@ public showTypeMenu(id) {
 public TypeMenuHandler(id, menu, item) {
 	if (item == MENU_EXIT) {
 		menu_destroy(menu);
-		showMainMenu(id);
+		showMainMenu2(id);
 		return PLUGIN_HANDLED;
 	}
 
@@ -2666,7 +3495,7 @@ public TypeMenuHandler(id, menu, item) {
 	menu_destroy(menu);
 
 	if (!isUserVipOrAdmin(id)) {
-		showMainMenu(id);
+		showMainMenu2(id);
 		return PLUGIN_HANDLED;
 	}
 
@@ -2684,7 +3513,7 @@ public TypeMenuHandler(id, menu, item) {
 	}
 
 	ai_print_type(0, "AI_CHAT_TYPE_SET", "比赛类型已设为: ^3%s");
-	showMainMenu(id);
+	showMainMenu2(id);
 	return PLUGIN_HANDLED;
 }
 
@@ -2729,7 +3558,7 @@ public beginPostGroupSetup() {
 	g_bPostGroupSetup = true;
 	g_szPickedMap[0] = EOS;
 
-	ai_print_lang(0, "AI_CHAT_SETUP_DONE", "分组完成, 使用报名菜单已选择的比赛模式, 现在选择地图");
+	ai_print_lang(0, "AI_CHAT_SETUP_DONE", "分组完成, 现在选择地图");
 	remove_task(TASK_SETUP_MENU);
 	beginMapSelect();
 }
@@ -2783,6 +3612,7 @@ public beginMapSelect() {
 
 	if (!isSkillOrTimerRules()) {
 		setActivePool(POOL_BOOST);
+		announceCurrentPool(0, POOL_BOOST);
 		ai_print_rule(0, "AI_CHAT_BOOST_POOL", "%s 使用 Boost 地图池, 请选择随机 / 投票 / 指定地图", _:g_iMatchRules);
 		offerMapChoice();
 		return;
@@ -2854,6 +3684,7 @@ public PoolChoiceHandler(id, menu, item) {
 	else
 		setActivePool(POOL_SKILL);
 
+	announceCurrentPool(0, g_iActivePool);
 	ai_print_pool(0, "AI_CHAT_POOL_SET", "地图池已设为: ^3%s", g_iActivePool);
 	showMapChoiceMenu(id);
 	return PLUGIN_HANDLED;
@@ -2957,6 +3788,7 @@ public finishPoolVote() {
 		iPool = POOL_SKILL;
 
 	setActivePool(iPool);
+	announceCurrentPool(0, g_iActivePool);
 	ai_print_pool_end(0, g_iActivePool, g_iPoolVoteTally[POOL_SKILL], g_iPoolVoteTally[POOL_BOOST]);
 
 	offerMapChoice();
@@ -3000,8 +3832,7 @@ public MapChoiceHandler(id, menu, item) {
 
 	if (equal(data, "random")) {
 		pickRandomMap();
-		ai_print_lang(0, "AI_CHAT_MAP_RANDOM", "地图已随机选择: ^3%s", g_szPickedMap);
-		afterMapChosen();
+		beginRandomMapWait();
 	} else if (equal(data, "vote")) {
 		ai_print_lang(0, "AI_CHAT_MAP_VOTE_ADMIN", "管理员发起地图投票");
 		startMapVote();
@@ -3235,6 +4066,54 @@ public afterMapChosen() {
 		startMatch();
 }
 
+
+stock beginRandomMapWait() {
+	remove_task(TASK_RANDOM_MAP);
+	g_bRandomMapWait = true;
+	g_iRandomMapSeconds = RANDOM_MAP_WAIT;
+	ai_print_lang(0, "AI_CHAT_MAP_RANDOM_WAIT", "随机地图: ^3%s^1, ^3%d^1 秒后换图. 管理员输入 ^3/nomaps^1 可取消", g_szPickedMap, g_iRandomMapSeconds);
+	set_task(1.0, "taskRandomMapWait", TASK_RANDOM_MAP, .flags = "b");
+}
+
+public taskRandomMapWait() {
+	if (!g_bRandomMapWait) {
+		remove_task(TASK_RANDOM_MAP);
+		return;
+	}
+
+	g_iRandomMapSeconds--;
+	if (g_iRandomMapSeconds > 0) {
+		ai_print_lang(0, "AI_CHAT_MAP_RANDOM_TICK", "随机地图 ^3%s^1, 剩余 ^3%d^1 秒换图. 管理员 ^3/nomaps^1 取消", g_szPickedMap, g_iRandomMapSeconds);
+		return;
+	}
+
+	remove_task(TASK_RANDOM_MAP);
+	g_bRandomMapWait = false;
+	ai_print_lang(0, "AI_CHAT_MAP_RANDOM", "地图已随机选择: ^3%s", g_szPickedMap);
+	afterMapChosen();
+}
+
+public cmdNoMaps(id) {
+	if (!isUserAdmin(id)) {
+		ai_print_lang(id, "AI_CHAT_ERR_NOMAPS_ADMIN", "只有管理员可以取消随机换图");
+		return PLUGIN_HANDLED;
+	}
+
+	if (!g_bRandomMapWait) {
+		ai_print_lang(id, "AI_CHAT_ERR_NOMAPS_NONE", "当前没有正在倒计时的随机换图");
+		return PLUGIN_HANDLED;
+	}
+
+	remove_task(TASK_RANDOM_MAP);
+	g_bRandomMapWait = false;
+	g_iRandomMapSeconds = 0;
+	g_szPickedMap[0] = EOS;
+
+	ai_print_lang(0, "AI_CHAT_MAP_RANDOM_STOP", "管理员取消了随机换图, 重新选择地图");
+	if (is_user_connected(id))
+		showMapChoiceMenu(id);
+	return PLUGIN_HANDLED;
+}
 public beginSponsorInput() {
 	new iAdmin = getFirstVipOrAdmin();
 	if (!iAdmin) {

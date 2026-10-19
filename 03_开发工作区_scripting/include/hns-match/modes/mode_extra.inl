@@ -88,6 +88,29 @@ stock cvar_update_wintime(Float:fTime) {
 }
 stock save_reset_data() {}
 stock getRoundsScore(&iCT, &iTT) {
-	iCT = g_iRoundsScore[HNS_TEAM_B];
-	iTT = g_iRoundsScore[HNS_TEAM_A];
+	// Scores follow the current CS sides after mix_swap flips g_isTeamTT.
+	iTT = g_iRoundsScore[g_isTeamTT];
+	iCT = g_iRoundsScore[HNS_TEAM:!g_isTeamTT];
+}
+
+stock applyRoundsScoreboard() {
+	if (g_iCurrentMode != MODE_MIX || g_iCurrentRules != RULES_ROUNDS)
+		return;
+
+	new iCT, iTT;
+	getRoundsScore(iCT, iTT);
+	rg_update_teamscores(iCT, iTT, false);
+}
+
+stock queueRoundsScoreboard() {
+	if (g_iCurrentMode != MODE_MIX || g_iCurrentRules != RULES_ROUNDS)
+		return;
+
+	remove_task(TASK_ROUNDS_SCORE);
+	applyRoundsScoreboard();
+	set_task(0.05, "taskApplyRoundsScoreboard", TASK_ROUNDS_SCORE);
+}
+
+public taskApplyRoundsScoreboard() {
+	applyRoundsScoreboard();
 }

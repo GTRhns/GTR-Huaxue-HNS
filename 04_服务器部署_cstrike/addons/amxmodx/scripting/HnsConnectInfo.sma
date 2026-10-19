@@ -3,12 +3,12 @@
    ------------------------------------------------------------
    玩家进入服务器时，按每人 /lang 发送聊天提示:
      [HNS] 房主 LINNA 已连接 (中国) [正版]
-     [HNS] PTS / 段位 / 胜负 / 胜率 / GBIC
+     [HNS] OBS / 胜率 / 胜负 / GBIC
      [HNS] SteamID / 排名 / 延迟 / 在线
 
    依赖:
      - HnsLanguage.amxx   (/lang 简体/繁体/英语/俄语)
-     - HnsMatchPts.amxx   (PTS, 可选; 未加载时显示默认 1000)
+     - HnsMatchPts.amxx   (OBS, 可选; 未加载时显示默认 50)
      - hns_gc             (GBIC, 可选)
      - Reunion            (正版/盗版, 可选)
      - geoip              (国家, 可选; 无模块时显示未知地区)
@@ -22,8 +22,10 @@
 #include <hns_gc>
 
 #define PLUGIN_NAME    "HNS Connect Info"
-#define PLUGIN_VERSION "1.4.1"
+#define PLUGIN_VERSION "1.5.1"
 #define PLUGIN_AUTHOR  "GTR"
+
+#pragma loadlib geoip
 
 #define TASK_ANNOUNCE  54000
 #define ANNOUNCE_DELAY 1.80
@@ -184,6 +186,8 @@ register_plugin(PLUGIN_NAME, PLUGIN_VERSION, PLUGIN_AUTHOR);
 g_pEnabled = register_cvar("hns_connect_info", "1");
 g_pSound = register_cvar("hns_connect_sound", "1");
 g_bHasReunion = has_reunion();
+if (!g_bHasGeoIP)
+log_amx("[HnsConnectInfo] geoip 没加载, 地区会显示未知");
 }
 
 public client_connect(id) {
@@ -219,6 +223,12 @@ g_ePlayerPtsData[id][e_iWins] = 0;
 g_ePlayerPtsData[id][e_iLoss] = 0;
 g_ePlayerPtsData[id][e_iTop] = 0;
 g_ePlayerPtsData[id][e_szRank][0] = EOS;
+g_ePlayerPtsData[id][e_iBoostPts] = 0;
+g_ePlayerPtsData[id][e_iBoostWins] = 0;
+g_ePlayerPtsData[id][e_iBoostLoss] = 0;
+g_ePlayerPtsData[id][e_iSkillPts] = 0;
+g_ePlayerPtsData[id][e_iSkillWins] = 0;
+g_ePlayerPtsData[id][e_iSkillLoss] = 0;
 }
 
 public TaskAnnounce(taskid) {
@@ -252,13 +262,20 @@ new szName[NAME_MAX];
 get_user_name(id, szName, charsmax(szName));
 
 new iPts = g_ePlayerPtsData[id][e_iPts];
-if (!g_ePlayerPtsData[id][e_bInit] && iPts <= 0)
-iPts = 1000;
-
-new szRank[10];
-copy(szRank, charsmax(szRank), g_ePlayerPtsData[id][e_szRank]);
-if (!szRank[0])
-copy(szRank, charsmax(szRank), get_skill_player(iPts));
+new iBoostPts = g_ePlayerPtsData[id][e_iBoostPts];
+new iBoostWins = g_ePlayerPtsData[id][e_iBoostWins];
+new iBoostLoss = g_ePlayerPtsData[id][e_iBoostLoss];
+new iSkillPts = g_ePlayerPtsData[id][e_iSkillPts];
+new iSkillWins = g_ePlayerPtsData[id][e_iSkillWins];
+new iSkillLoss = g_ePlayerPtsData[id][e_iSkillLoss];
+if (!g_ePlayerPtsData[id][e_bInit]) {
+if (iPts <= 0)
+iPts = 50;
+if (iBoostPts <= 0 && iBoostWins + iBoostLoss == 0)
+iBoostPts = 50;
+if (iSkillPts <= 0 && iSkillWins + iSkillLoss == 0)
+iSkillPts = 50;
+}
 
 new iWins = g_ePlayerPtsData[id][e_iWins];
 new iLoss = g_ePlayerPtsData[id][e_iLoss];
@@ -280,6 +297,23 @@ if (iGames <= 0)
 copy(szRate, charsmax(szRate), "--");
 else
 formatex(szRate, charsmax(szRate), "%d%%", floatround((float(iWins) * 100.0) / float(iGames)));
+
+new szRank[10];
+copy(szRank, charsmax(szRank), g_ePlayerPtsData[id][e_szRank]);
+if (!szRank[0])
+copy(szRank, charsmax(szRank), szRate);
+
+new szBoostRate[8], szSkillRate[8];
+new iBoostGames = iBoostWins + iBoostLoss;
+new iSkillGames = iSkillWins + iSkillLoss;
+if (iBoostGames < 1)
+copy(szBoostRate, charsmax(szBoostRate), "--");
+else
+formatex(szBoostRate, charsmax(szBoostRate), "%d%%", (iBoostWins * 100) / iBoostGames);
+if (iSkillGames < 1)
+copy(szSkillRate, charsmax(szSkillRate), "--");
+else
+formatex(szSkillRate, charsmax(szSkillRate), "%d%%", (iSkillWins * 100) / iSkillGames);
 
 new szTop[12];
 if (iTop > 0)
@@ -303,20 +337,23 @@ else
 formatex(szAccountTag, charsmax(szAccountTag), "^3%s", szAccount);
 GetPlayerCountry(id, viewer, szIP, szCountry, charsmax(szCountry));
 
-new szLine1[MSG_MAX], szLine2[MSG_MAX], szLine3[MSG_MAX];
+new szLine1[MSG_MAX], szLine2[MSG_MAX], szLine3[MSG_MAX], szLine4[MSG_MAX];
 if (szCountry[0])
 LangFormat(viewer, "CONNECT_JOIN", "^4[HNS] ^4%s ^3%s^1 已连接 ^1(^4%s^1) ^1[%s^1]",
 szLine1, charsmax(szLine1), szRole, szShowName, szCountry, szAccountTag);
 else
 LangFormat(viewer, "CONNECT_JOIN_NOLOC", "^4[HNS] ^4%s ^3%s^1 已连接 ^1[%s^1]",
 szLine1, charsmax(szLine1), szRole, szShowName, szAccountTag);
-LangFormat(viewer, "CONNECT_INFO", "^4[HNS]^1 PTS: ^4%d^1 (^3%s^1)  胜/负: ^4%d^1/^3%d^1  胜率: ^4%s^1  GBIC: ^4%d",
+LangFormat(viewer, "CONNECT_INFO", "^4[HNS]^1 OBS: ^4%d^1 (^3%s^1)  胜/负: ^4%d^1/^3%d^1  胜率: ^4%s^1  GBIC: ^4%d",
 szLine2, charsmax(szLine2), iPts, szRank, iWins, iLoss, szRate, iGold);
+LangFormat(viewer, "CONNECT_OBC", "^4[HNS]^1 Boost: ^4%d^1  ^4%d^1场  ^4%s^1    Skill: ^4%d^1  ^4%d^1场  ^4%s",
+szLine4, charsmax(szLine4), iBoostPts, iBoostGames, szBoostRate, iSkillPts, iSkillGames, szSkillRate);
 LangFormat(viewer, "CONNECT_DETAIL", "^4[HNS]^1 SteamID: ^3%s^1  排名: ^4%s^1  延迟: ^4%dms^1  在线: ^4%d",
 szLine3, charsmax(szLine3), szAuth, szTop, iPing, iNum);
 
 client_print_color(viewer, print_team_default, "%s", szLine1);
 client_print_color(viewer, print_team_default, "%s", szLine2);
+client_print_color(viewer, print_team_default, "%s", szLine4);
 client_print_color(viewer, print_team_default, "%s", szLine3);
 }
 
@@ -410,6 +447,7 @@ if (geoip_country_ex(szIP, szRaw, charsmax(szRaw), viewer) && szRaw[0]
 copy(szOut, iLen, szRaw);
 return;
 }
+log_amx("[HnsConnectInfo] %s 查不到国家", szIP);
 }
 
 LangGet(viewer, "CONNECT_UNKNOWN", szOut, iLen, "未知地区");

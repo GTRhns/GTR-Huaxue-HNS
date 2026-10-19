@@ -1,0 +1,154 @@
+Windows PowerShell
+版权所有（C） Microsoft Corporation。保留所有权利。
+
+安装最新的 PowerShell，了解新功能和改进！https://aka.ms/PSWindows
+
+PS C:\Users\Administrator>
+PS C:\Users\Administrator> # GTR HNS - CS 1.6 Shared Resources
+PS C:\Users\Administrator> # Main: hlds
+PS C:\Users\Administrator> # Server: hlds2
+PS C:\Users\Administrator>
+PS C:\Users\Administrator> $ErrorActionPreference = "Stop"
+PS C:\Users\Administrator>
+PS C:\Users\Administrator> $Main = "C:\Users\Administrator\Desktop\hlds\cstrike"
+PS C:\Users\Administrator> $Server = "C:\Users\Administrator\Desktop\hlds2\cstrike"
+PS C:\Users\Administrator>
+PS C:\Users\Administrator> $ResourceDirs = @(
+>>     "maps",
+>>     "models",
+>>     "gfx",
+>>     "overviews",
+>>     "resources",
+>>     "sprites",
+>>     "sound"
+>> )
+PS C:\Users\Administrator>
+PS C:\Users\Administrator> Write-Host ""
+
+PS C:\Users\Administrator> Write-Host "=========================================="
+==========================================
+PS C:\Users\Administrator> Write-Host " GTR HNS Shared Resource Manager"
+ GTR HNS Shared Resource Manager
+PS C:\Users\Administrator> Write-Host "=========================================="
+==========================================
+PS C:\Users\Administrator> Write-Host "Main:   $Main"
+Main:   C:\Users\Administrator\Desktop\hlds\cstrike
+PS C:\Users\Administrator> Write-Host "Server: $Server"
+Server: C:\Users\Administrator\Desktop\hlds2\cstrike
+PS C:\Users\Administrator> Write-Host ""
+
+PS C:\Users\Administrator>
+PS C:\Users\Administrator> # Check server paths
+PS C:\Users\Administrator> if (!(Test-Path "$Main\liblist.gam")) {
+>>     Write-Host "[ERROR] Main server cstrike folder not found."
+>>     Read-Host "Press Enter to exit"
+>>     exit 1
+>> }
+PS C:\Users\Administrator>
+PS C:\Users\Administrator> if (!(Test-Path "$Server\liblist.gam")) {
+>>     Write-Host "[ERROR] Second server cstrike folder not found."
+>>     Read-Host "Press Enter to exit"
+>>     exit 1
+>> }
+PS C:\Users\Administrator>
+PS C:\Users\Administrator> # Check administrator permission
+PS C:\Users\Administrator> $Identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+PS C:\Users\Administrator> $Principal = New-Object Security.Principal.WindowsPrincipal($Identity)
+PS C:\Users\Administrator>
+PS C:\Users\Administrator> if (!$Principal.IsInRole(
+>>     [Security.Principal.WindowsBuiltInRole]::Administrator
+>> )) {
+>>     Write-Host "[ERROR] Run PowerShell as Administrator."
+>>     Read-Host "Press Enter to exit"
+>>     exit 1
+>> }
+PS C:\Users\Administrator>
+PS C:\Users\Administrator> Write-Host "[INFO] Checking resource directories..."
+[INFO] Checking resource directories...
+PS C:\Users\Administrator> Write-Host ""
+
+PS C:\Users\Administrator>
+PS C:\Users\Administrator> foreach ($Dir in $ResourceDirs) {
+>>     $Source = Join-Path $Main $Dir
+>>     $Target = Join-Path $Server $Dir
+>>
+>>     Write-Host "------------------------------------------"
+>>     Write-Host "Resource: $Dir"
+>>
+>>     if (!(Test-Path $Source -PathType Container)) {
+>>         Write-Host "[SKIP] Main resource folder does not exist."
+>>         continue
+>>     }
+>>
+>>     if (Test-Path $Target) {
+>>         $Item = Get-Item -LiteralPath $Target -Force
+>>
+>>         if (($Item.Attributes -band
+>>             [IO.FileAttributes]::ReparsePoint) -ne 0) {
+>>             Write-Host "[SKIP] Target is already a link."
+>>             continue
+>>         }
+>>
+>>         Write-Host "[SKIP] Target folder already exists."
+>>         Write-Host "       No files were deleted or overwritten."
+>>         Write-Host "       Review and merge this folder manually."
+>>         continue
+>>     }
+>>
+>>     try {
+>>         New-Item -ItemType Junction `
+>>             -Path $Target `
+>>             -Target $Source | Out-Null
+>>
+>>         Write-Host "[OK] Junction created."
+>>         Write-Host "     $Target"
+>>         Write-Host "  -> $Source"
+>>     }
+>>     catch {
+>>         Write-Host "[ERROR] Failed: $($_.Exception.Message)"
+>>     }
+>> }
+------------------------------------------
+Resource: maps
+[SKIP] Target folder already exists.
+       No files were deleted or overwritten.
+       Review and merge this folder manually.
+------------------------------------------
+Resource: models
+[SKIP] Target folder already exists.
+       No files were deleted or overwritten.
+       Review and merge this folder manually.
+------------------------------------------
+Resource: gfx
+[SKIP] Target folder already exists.
+       No files were deleted or overwritten.
+       Review and merge this folder manually.
+------------------------------------------
+Resource: overviews
+[SKIP] Target folder already exists.
+       No files were deleted or overwritten.
+       Review and merge this folder manually.
+------------------------------------------
+Resource: resources
+[SKIP] Main resource folder does not exist.
+------------------------------------------
+Resource: sprites
+[SKIP] Target folder already exists.
+       No files were deleted or overwritten.
+       Review and merge this folder manually.
+------------------------------------------
+Resource: sound
+[SKIP] Target folder already exists.
+       No files were deleted or overwritten.
+       Review and merge this folder manually.
+PS C:\Users\Administrator>
+PS C:\Users\Administrator> Write-Host ""
+
+PS C:\Users\Administrator> Write-Host "=========================================="
+==========================================
+PS C:\Users\Administrator> Write-Host " Finished. Review all results above."
+ Finished. Review all results above.
+PS C:\Users\Administrator> Write-Host "=========================================="
+==========================================
+PS C:\Users\Administrator> Read-Host "Press Enter to exit"
+Press Enter to exit:

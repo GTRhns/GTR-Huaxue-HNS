@@ -128,6 +128,28 @@ native hns_frost_get_force();
 native hns_frost_set_force(iMode);
 
 /*
+* 多重闪光 强制开关 (可选原生, 由 hns_multiflash 提供)
+*
+* @return -1 自动(仅比赛), 0 强制关, 1 强制开
+*/
+native hns_mflash_get_force();
+
+/*
+* 设置多重闪光强制开关
+*
+* @param iMode  -1 自动(仅比赛), 0 强制关, 1 强制开
+* @noreturn
+*/
+native hns_mflash_set_force(iMode);
+
+/*
+* 多重闪光数量 (含原闪光, 2-9)
+*/
+native hns_mflash_get_count();
+native hns_mflash_set_count(iCount);
+native hns_mflash_is_active();
+
+/*
 * Set mode system.
 *
 * @noreturn

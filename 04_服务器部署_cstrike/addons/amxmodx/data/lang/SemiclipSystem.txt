@@ -1,0 +1,20 @@
+[cn]
+SEMICLIP_MSG_ACCESS = 你没有权限使用此命令
+SEMICLIP_MSG_MODE   = 穿透模式已切换为: %s
+SEMICLIP_MSG_OFF    = 关闭
+SEMICLIP_MSG_SAME   = 仅同队
+SEMICLIP_MSG_ALL    = 全员
+
+[en]
+SEMICLIP_MSG_ACCESS = You are not allowed to use this command
+SEMICLIP_MSG_MODE   = Pass-through mode set to: %s
+SEMICLIP_MSG_OFF    = Off
+SEMICLIP_MSG_SAME   = Teammates only
+SEMICLIP_MSG_ALL    = Everyone
+
+[ru]
+SEMICLIP_MSG_ACCESS = Недостаточно прав для этой команды
+SEMICLIP_MSG_MODE   = Режим сквозного прохода: %s
+SEMICLIP_MSG_OFF    = Выкл
+SEMICLIP_MSG_SAME   = Только команда
+SEMICLIP_MSG_ALL    = Все

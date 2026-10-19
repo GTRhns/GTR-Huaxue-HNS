@@ -325,8 +325,10 @@ public wait_function(id)
 	}
 
 	RandomPickTime -= 1.0;
-	  
-	setTaskHud(0, 0.0, 1, 255, 255, 255, 1.0, "%L", LANG_SERVER, "HUD_WAITPICK", g_iCaptainPick, RandomPickTime);
+
+	new szCapName[32];
+	get_user_name(g_iCaptainPick, szCapName, charsmax(szCapName));
+	showLangDhudFmt(0, 0.0, 255, 255, 255, 1.0, "HUD_WAITPICK", "等待 %s 选人^n%.0f", szCapName, RandomPickTime);
 
 	if(RandomPickTime <= 0.0) {
 		new randomaizer = GetPickRandom();

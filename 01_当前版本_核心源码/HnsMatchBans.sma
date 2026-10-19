@@ -76,7 +76,7 @@ VALUES \
 		`expired`, \
 		Unix_timestamp(expired) AS expired_date_unix \
 FROM `%s` \
-WHERE (`player_steamid` = '%s' OR `player_ip` = '%s') AND (`expired` > now() OR `expired` IS NULL);"
+WHERE `player_steamid` = '%s' AND (`expired` > now() OR `expired` IS NULL);"
 
 #define SQL_GET_BANNED \
 "SELECT	`player_name`, \
@@ -89,7 +89,7 @@ FROM `%s` \
 WHERE `expired` > now() OR `expired` IS NULL"
 
 #define SQL_DELETE_OFFICIAL_BAN \
-"DELETE FROM `%s` WHERE `player_steamid` = '%s' OR `player_ip` = '%s';"
+"DELETE FROM `%s` WHERE `player_steamid` = '%s';"
 
 #define BAN_TASK 22100
 
@@ -133,7 +133,7 @@ new g_eBanData[MAX_PLAYERS + 1][BAN_DATA];
 enum _: PLAYER_DATA{
 	bool:IS_BANNED,
 	PLAYER_NAME[MAX_NAME_LENGTH],
-	PLAYER_STEAM[24],
+	PLAYER_STEAM[48],
 	PLAYER_IP[16],
 	ADMIN_NAME[MAX_NAME_LENGTH],
 	ADMIN_STEAM[24],
@@ -145,7 +145,7 @@ new g_eBanPlayer[MAX_PLAYERS + 1][PLAYER_DATA];
 
 enum _: DISC_PLAYERS {
 	DISC_PLAYERS_NAME[MAX_NAME_LENGTH],
-	DISC_PLAYERS_STEAM[24],
+	DISC_PLAYERS_STEAM[48],
 	DISC_PLAYERS_IP[16]
 };
 
@@ -155,6 +155,7 @@ new Array:g_aBannedPlayers;
 new g_sPrefix[24];
 new g_hBanForwards;
 new g_hBanForwardsInit;
+new g_iBanRetry[MAX_PLAYERS + 1];
 
 public plugin_natives() {
 	hns_register_optional_sql();
@@ -205,8 +206,8 @@ public client_putinserver(id) {
 	
 	SQL_Load(id);
 
-	new szAuth[24];
-	get_user_authid(id, szAuth, charsmax(szAuth));
+	new szAuth[48];
+	BanKey(id, szAuth, charsmax(szAuth));
 	new index = FindDisconnectedAuthIndex(szAuth);
 
 	if (index == -1) {
@@ -224,8 +225,8 @@ public rgDropClient(const id, bool:crash) {
 	new TempPlayer[DISC_PLAYERS];
 
 	get_user_name(id, TempPlayer[DISC_PLAYERS_NAME], charsmax(TempPlayer[DISC_PLAYERS_NAME]));
-	get_user_authid(id, TempPlayer[DISC_PLAYERS_STEAM], charsmax(TempPlayer[DISC_PLAYERS_STEAM]));
-	get_user_ip(id, TempPlayer[DISC_PLAYERS_IP], charsmax(TempPlayer[DISC_PLAYERS_IP]), true);
+	BanKey(id, TempPlayer[DISC_PLAYERS_STEAM], charsmax(TempPlayer[DISC_PLAYERS_STEAM]));
+	TempPlayer[DISC_PLAYERS_IP][0] = EOS;
 
 	ArrayPushArray(g_aDisconnectedPlayers, TempPlayer);
 }
@@ -250,6 +251,7 @@ public hns_sql_connection(hSqlTuple) {
 	if (g_bDebugMode) server_print("MATCHBAN [SQL 1] %s", szQuery)
 	
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery, cData, sizeof(cData));
+	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", "ALTER TABLE `hns_bans` MODIFY `player_steamid` VARCHAR(64) NOT NULL", cData, sizeof(cData));
 	SQL_BannedPlayers();
 }
 
@@ -265,11 +267,11 @@ public SQL_BanPlayer(admin_id, player_id) {
 	
 	new szAdminAuth[24];
 	get_user_authid(admin_id, szAdminAuth, charsmax(szAdminAuth));
-	get_user_authid(player_id, g_eBanPlayer[admin_id][PLAYER_STEAM], charsmax(g_eBanPlayer[][PLAYER_STEAM]));
+	BanKey(player_id, g_eBanPlayer[admin_id][PLAYER_STEAM], charsmax(g_eBanPlayer[][PLAYER_STEAM]));
+	g_eBanPlayer[admin_id][PLAYER_IP][0] = EOS;
 
-	new szAdminIp[16];
-	get_user_ip(admin_id, szAdminIp, charsmax(szAdminIp), true);
-	get_user_ip(player_id, g_eBanPlayer[admin_id][PLAYER_IP], charsmax(g_eBanPlayer[][PLAYER_IP]), true);
+	new szAdminIp[4];
+	szAdminIp[0] = EOS;
 
 	new szTime[64];
 	if (g_eBanData[admin_id][BAN_TIME]) {
@@ -312,8 +314,8 @@ public SQL_Offban(admin_id, player_name[], player_steamid[], player_ip[]) {
 	new szAdminAuth[24];
 	get_user_authid(admin_id, szAdminAuth, charsmax(szAdminAuth));
 
-	new szAdminIp[16];
-	get_user_ip(admin_id, szAdminIp, charsmax(szAdminIp), true);
+	new szAdminIp[4];
+	szAdminIp[0] = EOS;
 
 	new szTime[64];
 	if (g_eBanData[admin_id][BAN_TIME])
@@ -323,7 +325,7 @@ public SQL_Offban(admin_id, player_name[], player_steamid[], player_ip[]) {
 	formatex(szQuery, charsmax(szQuery), SQL_SET_OFFBAN_PLAYER, g_szTable, 
 	szPlayerName, 
 	player_steamid, 
-	player_ip, 
+	"", 
 	szAdminName, 
 	szAdminAuth, 
 	szAdminIp, 
@@ -356,19 +358,30 @@ public SQL_UnbanPlayer(admin_id, player_steamid[]) {
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", szQuery, cData, sizeof(cData));
 }
 
+public TaskBanLoad(taskid) {
+	SQL_Load(taskid - 22150);
+}
+
 public SQL_Load(id) {
+	if (!is_user_connected(id))
+		return;
+	if (has_reunion() && REU_GetAuthtype(id) == CA_TYPE_NONE && g_iBanRetry[id] < 8) {
+		g_iBanRetry[id]++;
+		set_task(0.5, "TaskBanLoad", id + 22150);
+		return;
+	}
+	g_iBanRetry[id] = 0;
+
 	if (!g_bSqlReady) {
 		Local_Load(id);
 		return;
 	}
 
-	new szAuth[24];
-	new szIp[16];
-	get_user_authid(id, szAuth, charsmax(szAuth));
-	get_user_ip(id, szIp, charsmax(szIp), true);
+	new szAuth[48];
+	BanKey(id, szAuth, charsmax(szAuth));
 
 	new szQuery[512];
-	formatex(szQuery, charsmax(szQuery), SQL_LOAD_PLAYER, g_szTable, szAuth, szIp);
+	formatex(szQuery, charsmax(szQuery), SQL_LOAD_PLAYER, g_szTable, szAuth);
 
 	new cData[2];
 	cData[0] = SQL_LOAD;
@@ -391,14 +404,12 @@ public NativeSyncOfficialBan(plugin, params) {
 	if (!g_bSqlReady)
 		return 0;
 
-	new player_name[MAX_NAME_LENGTH], player_steam[24], player_ip[16];
-	new admin_name[MAX_NAME_LENGTH], admin_steam[24], admin_ip[16];
+	new player_name[MAX_NAME_LENGTH], player_steam[48];
+	new admin_name[MAX_NAME_LENGTH], admin_steam[24];
 	get_user_name(player_id, player_name, charsmax(player_name));
-	get_user_authid(player_id, player_steam, charsmax(player_steam));
-	get_user_ip(player_id, player_ip, charsmax(player_ip), true);
+	BanKey(player_id, player_steam, charsmax(player_steam));
 	get_user_name(admin_id, admin_name, charsmax(admin_name));
 	get_user_authid(admin_id, admin_steam, charsmax(admin_steam));
-	get_user_ip(admin_id, admin_ip, charsmax(admin_ip), true);
 
 	new escaped_name[MAX_NAME_LENGTH], escaped_admin[MAX_NAME_LENGTH];
 	SQL_QuoteString(Empty_Handle, escaped_name, charsmax(escaped_name), player_name);
@@ -412,7 +423,7 @@ public NativeSyncOfficialBan(plugin, params) {
 
 	new query[768];
 	formatex(query, charsmax(query), SQL_SET_BAN_PLAYER, g_szTable,
-		escaped_name, player_steam, player_ip, escaped_admin, admin_steam, admin_ip, expiry);
+		escaped_name, player_steam, "", escaped_admin, admin_steam, "", expiry);
 	new cData[1];
 	cData[0] = SQL_TABLE;
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", query, cData, sizeof(cData));
@@ -428,7 +439,7 @@ public NativeSyncOfficialUnban(plugin, params) {
 	get_string(1, value, charsmax(value));
 
 	new query[256];
-	formatex(query, charsmax(query), SQL_DELETE_OFFICIAL_BAN, g_szTable, value, value);
+	formatex(query, charsmax(query), SQL_DELETE_OFFICIAL_BAN, g_szTable, value);
 	new cData[1];
 	cData[0] = SQL_TABLE;
 	SQL_ThreadQuery(g_hSqlTuple, "QueryHandler", query, cData, sizeof(cData));
@@ -565,8 +576,8 @@ public QueryHandler(iFailState, Handle:hQuery, szError[], iErrnum, cData[], iSiz
 
 				ExecuteForward(g_hBanForwards, _, id, g_ePlayerInfo[id][IS_BANNED], g_ePlayerInfo[id][TIME_EXPIRED]);
 			} else {
-				new szAuth[24];
-				get_user_authid(id, szAuth, charsmax(szAuth));
+				new szAuth[48];
+				BanKey(id, szAuth, charsmax(szAuth));
 				new index = FindBannedAuthIndex(szAuth);
 
 				if (index != -1)
@@ -604,8 +615,8 @@ public BanCheckSecond() {
 		}
 
 		if (g_ePlayerInfo[id][TIME_EXPIRED] && get_systime() >= g_ePlayerInfo[id][TIME_EXPIRED]) {
-			new szAuth[24];
-			get_user_authid(id, szAuth, charsmax(szAuth));
+			new szAuth[48];
+			BanKey(id, szAuth, charsmax(szAuth));
 			new index = FindBannedAuthIndex(szAuth);
 
 			if (index != -1) {
@@ -1013,7 +1024,7 @@ Local_PushBanned(const szName[], const szSteam[], const szIp[], const szAdminNam
 	else
 		formatex(TempPlayer[DATE_EXPIRED], charsmax(TempPlayer[DATE_EXPIRED]), "%L", LANG_PLAYER, "BAN_DATE_EXPIRED_P");
 
-	new szSteamKey[24];
+	new szSteamKey[48];
 	copy(szSteamKey, charsmax(szSteamKey), szSteam);
 	new index = FindBannedAuthIndex(szSteamKey);
 	if (index != -1)
@@ -1061,8 +1072,8 @@ Local_BanPlayer(admin_id, player_id) {
 	get_user_authid(admin_id, szAdminAuth, charsmax(szAdminAuth));
 
 	get_user_name(player_id, g_eBanPlayer[admin_id][PLAYER_NAME], charsmax(g_eBanPlayer[][PLAYER_NAME]));
-	get_user_authid(player_id, g_eBanPlayer[admin_id][PLAYER_STEAM], charsmax(g_eBanPlayer[][PLAYER_STEAM]));
-	get_user_ip(player_id, g_eBanPlayer[admin_id][PLAYER_IP], charsmax(g_eBanPlayer[][PLAYER_IP]), true);
+	BanKey(player_id, g_eBanPlayer[admin_id][PLAYER_STEAM], charsmax(g_eBanPlayer[][PLAYER_STEAM]));
+	g_eBanPlayer[admin_id][PLAYER_IP][0] = EOS;
 
 	new iExpired = g_eBanData[admin_id][BAN_TIME] ? (get_systime() + g_eBanData[admin_id][BAN_TIME]) : 0;
 	Local_SaveRecord(g_eBanPlayer[admin_id][PLAYER_STEAM], g_eBanPlayer[admin_id][PLAYER_NAME], g_eBanPlayer[admin_id][PLAYER_IP], szAdminName, szAdminAuth, iExpired);
@@ -1079,11 +1090,11 @@ Local_Offban(admin_id, player_name[], player_steamid[], player_ip[]) {
 
 	copy(g_eBanPlayer[admin_id][PLAYER_NAME], charsmax(g_eBanPlayer[][PLAYER_NAME]), player_name);
 	copy(g_eBanPlayer[admin_id][PLAYER_STEAM], charsmax(g_eBanPlayer[][PLAYER_STEAM]), player_steamid);
-	copy(g_eBanPlayer[admin_id][PLAYER_IP], charsmax(g_eBanPlayer[][PLAYER_IP]), player_ip);
+	g_eBanPlayer[admin_id][PLAYER_IP][0] = EOS;
 
 	new iExpired = g_eBanData[admin_id][BAN_TIME] ? (get_systime() + g_eBanData[admin_id][BAN_TIME]) : 0;
-	Local_SaveRecord(player_steamid, player_name, player_ip, szAdminName, szAdminAuth, iExpired);
-	Local_PushBanned(player_name, player_steamid, player_ip, szAdminName, szAdminAuth, iExpired);
+	Local_SaveRecord(player_steamid, player_name, "", szAdminName, szAdminAuth, iExpired);
+	Local_PushBanned(player_name, player_steamid, "", szAdminName, szAdminAuth, iExpired);
 	Local_ApplyBanResult(admin_id, 0, true);
 }
 
@@ -1121,8 +1132,8 @@ Local_Load(id) {
 	Local_Init();
 	arrayset(g_ePlayerInfo[id], 0, PLAYER_DATA);
 
-	new szAuth[24];
-	get_user_authid(id, szAuth, charsmax(szAuth));
+	new szAuth[48];
+	BanKey(id, szAuth, charsmax(szAuth));
 
 	new szName[MAX_NAME_LENGTH], szIp[16], szAdminName[MAX_NAME_LENGTH], szAdminSteam[24], iExpired;
 	if (!Local_ReadRecord(szAuth, szName, charsmax(szName), szIp, charsmax(szIp), szAdminName, charsmax(szAdminName), szAdminSteam, charsmax(szAdminSteam), iExpired)) {
@@ -1143,7 +1154,7 @@ Local_Load(id) {
 		formatex(g_ePlayerInfo[id][DATE_EXPIRED], charsmax(g_ePlayerInfo[][DATE_EXPIRED]), "%d", iExpired);
 
 	get_user_name(id, szName, charsmax(szName));
-	get_user_ip(id, szIp, charsmax(szIp), true);
+	szIp[0] = EOS;
 	Local_PushBanned(szName, szAuth, szIp, szAdminName, szAdminSteam, iExpired);
 
 	Task_ShowHud(id);
@@ -1151,6 +1162,32 @@ Local_Load(id) {
 }
 
 /* Stocks */
+
+stock BanKey(id, dest[], len) {
+	new szAuth[32], szName[32];
+	get_user_authid(id, szAuth, charsmax(szAuth));
+	if (BanIsPirate(id, szAuth)) {
+		get_user_name(id, szName, charsmax(szName));
+		if (!szName[0])
+			copy(szName, charsmax(szName), "unnamed");
+		formatex(dest, len, "N:%s", szName);
+		return;
+	}
+	copy(dest, len, szAuth);
+}
+
+stock bool:BanIsPirate(id, const szAuth[]) {
+	if (!szAuth[0] || containi(szAuth, "STEAM_ID") != -1 || containi(szAuth, "PENDING") != -1 || containi(szAuth, "BOT") != -1)
+		return true;
+	if (equali(szAuth, "STEAM_0:0:0") || equali(szAuth, "STEAM_1:0:0"))
+		return true;
+	if (has_reunion()) {
+		new client_auth_type:t = REU_GetAuthtype(id);
+		if (t != CA_TYPE_NONE && t != CA_TYPE_STEAM && t != CA_TYPE_HLTV)
+			return true;
+	}
+	return false;
+}
 
 stock FindDisconnectedAuthIndex(szAuth[]) {
 	new iSize = ArraySize(g_aDisconnectedPlayers);
@@ -1185,8 +1222,8 @@ public find_player_by_steam(const steam_id[]) {
 	for (new i = 0; i < iNum; i++) {
 		new id = iPlayers[i];
 
-		new szAuth[24];
-		get_user_authid(id, szAuth, charsmax(szAuth));
+		new szAuth[48];
+		BanKey(id, szAuth, charsmax(szAuth));
 
 		if (equal(szAuth, steam_id)) {
 			return id;

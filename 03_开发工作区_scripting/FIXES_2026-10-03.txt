@@ -1,0 +1,20 @@
+GTR HNS 修复说明 - 2026-10-03
+
+1. HnsAISignup.sma
+- 修复换图后比赛模式恢复为 MR 的问题。
+- 从 PDS 恢复 ai_match_rules 后，立即同步到 HnsMatchSystem 的 g_iCurrentRules。
+- applyMatchRules() 不再根据 pending/running 分支调用 native，而是统一立即同步。
+- AI 报名菜单状态与 MatchSystem 实际赛制保持单一同步链路。
+
+2. HnsMatchSkin.sma
+- 重做 /skin 主菜单层级：角色皮肤、刀皮、投掷物、GBIC 分开。
+- 普通玩家隐藏管理员设置和 MySQL/调试入口。
+- 管理员菜单继续按权限显示写操作。
+- g_iBrowseTeam 改为按玩家保存，避免多人同时打开皮肤菜单时互相覆盖。
+- g_pendingTarget / g_pendingAdmin / g_pendingMode / g_pendingGiveTeam 全部改为按玩家保存。
+- 旧 callfunc 公共接口的管理员状态也改为按目标玩家保存，避免不同管理员互相串状态。
+- 玩家断开时清理所有菜单暂存状态。
+- 统一保留原有子菜单分页、返回和购买逻辑。
+
+注意：本环境无法直接执行 ZIP 内 Windows 版 amxxpc.exe，因此没有生成新的 AMXX 二进制文件。
+请在 Windows/AMXX 编译环境中重新编译 HnsAISignup.sma 和 HnsMatchSkin.sma，再替换对应 .amxx。

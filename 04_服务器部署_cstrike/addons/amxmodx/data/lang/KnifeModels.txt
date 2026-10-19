@@ -1,0 +1,183 @@
+[en] -- OciXCrom
+KM_CHAT_PREFIX = &x04[Knife Models]&x01
+KM_CHAT_SELECTED = You have selected the knife &x04%s&x01.
+KM_MENU_TITLE = \y< \rChoose your knife model \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \yPage:\r
+KM_MENU_SELECTED = \y~ \rSELECTED \y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[LVL %i]
+KM_MENU_RANK = \r[RANK: %s]
+KM_MENU_XP = \r[XP: %i]
+KM_ONLY_DEAD = You can't change your knife while you're alive.
+KM_INVALID_KNIFE = * That knife doesn't exist. Valid range is from 0 to %i.
+KM_NO_ACCESS = * You have no access to that knife.
+
+[mk] -- OciXCrom
+KM_CHAT_PREFIX = &x04[Knife Models]&x01
+KM_CHAT_SELECTED = Go izbra nozhot &x04%s&x01.
+KM_MENU_TITLE = \y< \rIzberi model za nozh \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \yStranica:\r
+KM_MENU_SELECTED = \y~ \rIZBRAN \y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[LVL %i]
+KM_MENU_RANK = \r[RANK: %s]
+KM_MENU_XP = \r[XP: %i]
+KM_ONLY_DEAD = Ne mozhesh da si go menuvash nozhot dodeka si zhiv.
+KM_INVALID_KNIFE = * Nozhot ne postoi. Validni nozhevi se od 0 do %i.
+KM_NO_ACCESS = * Nemash dostap do toj nozh.
+
+[bg] -- OciXCrom
+KM_CHAT_PREFIX = &x04[Knife Models]&x01
+KM_CHAT_SELECTED = Izbra noja &x04%s&x01.
+KM_MENU_TITLE = \y< \rIzberi model za noja \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \yStranica:\r
+KM_MENU_SELECTED = \y~ \rIZBRAN \y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[LVL %i]
+KM_MENU_RANK = \r[RANK: %s]
+KM_MENU_XP = \r[XP: %i]
+KM_ONLY_DEAD = Ne mojesh da promenqsh noja si dokato si jiv.
+KM_INVALID_KNIFE = * Nojut ne sushtestvuva. Validni nojove sa ot 0 do %i.
+KM_NO_ACCESS = * Nqmash dostup do tozi noj.
+
+[ro] -- Visinescu
+KM_CHAT_PREFIX = &x04[Modele cutit]&x01
+KM_CHAT_SELECTED = Ai ales cutitul &x04%s&x01.
+KM_MENU_TITLE = \y< \rAlegeti modelul de cutit \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \yPagina:\r
+KM_MENU_SELECTED = \y~ \rSELECTAT \y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[LVL %i]
+KM_MENU_RANK = \r[RANK: %s]
+KM_MENU_XP = \r[XP: %i]
+
+[pl]
+KM_CHAT_PREFIX = &x04[Modele Kos]&x01
+KM_CHAT_SELECTED = Wybrales Kose &x04%s&x01.
+KM_MENU_TITLE = \y< \rWybierz swoj model Kosy \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \yStrona:\r
+KM_MENU_SELECTED = \y~ \rWybrano \y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[LVL %i]
+KM_MENU_RANK = \r[RANK: %s]
+KM_MENU_XP = \r[XP: %i]
+
+[bp] -- EFFx
+KM_CHAT_PREFIX = &x04[Knife Models]&x01
+KM_CHAT_SELECTED = Voce selecionou a faca &x04%s&x01.
+KM_MENU_TITLE = \y< \rEscolha sua skin \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \yPagina:\r
+KM_MENU_SELECTED = \y~ \rSELECIONADA \y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[LVL %i]
+KM_MENU_RANK = \r[RANK: %s]
+KM_MENU_XP = \r[XP: %i]
+
+[es] -- ACM1PT
+KM_CHAT_PREFIX = &x04[Modelos de cuchillos]&x01
+KM_CHAT_SELECTED = Seleccionaste el cuchillo &x04%s&x01.
+KM_MENU_TITLE = \y< \rElige el modelo de tu cuchillo \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \yPagina:\r
+KM_MENU_SELECTED = \y~ \rSELECCIONADO \y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[LVL %i]
+KM_MENU_RANK = \r[RANK: %s]
+KM_MENU_XP = \r[XP: %i]
+
+[lt] -- Adomaz1
+KM_CHAT_PREFIX = &x04[Peiliu modeliai]&x01
+KM_CHAT_SELECTED = Pasirinkote peili &x04%s&x01.
+KM_MENU_TITLE = \y< \rPasirinkite peilio modeli \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \yPuslapis:\r
+KM_MENU_SELECTED = \y~ \rPASIRINKTA\y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[LVL %i]
+KM_MENU_RANK = \r[RANK: %s]
+KM_MENU_XP = \r[XP: %i]
+
+[hu] -- norbee.16
+KM_CHAT_PREFIX = &x04[Kes Modellek]&x01
+KM_CHAT_SELECTED = Kivalasztottad a &x04%s &x01kes-t.
+KM_MENU_TITLE = \y< \rValaszd ki a kes modellt \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \yOldal:\r
+KM_MENU_SELECTED = \y~ \rVALASZ \y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[LVL %i]
+KM_MENU_RANK = \r[RANK: %s]
+KM_MENU_XP = \r[XP: %i]
+
+[de] -- LegacyCode
+KM_CHAT_PREFIX = &x04[Messer Models]&x01
+KM_CHAT_SELECTED = Du hast das Messer &x04%s &x01ausgew�hlt.
+KM_MENU_TITLE = \y< \rW�hle dein Messer aus \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \ySeite:\r
+KM_MENU_SELECTED = \y~ \rAUSGEW�HLT \y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[LVL %i]
+KM_MENU_RANK = \r[RANK: %s]
+KM_MENU_XP = \r[XP: %i]
+
+[tr] -- tarkan00
+KM_CHAT_PREFIX = &x04[Bicak Modelleri]&x01
+KM_CHAT_SELECTED = &x04%s &x01Isimli Bicagi Sectiniz.
+KM_MENU_TITLE = \y< \rBicak Model Menusu \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \yILERI:\r
+KM_MENU_SELECTED = \y~ \rSU ANDA SECILI! \y~
+KM_MENU_VIP_ONLY = \y~ \rYETKILIYE OZEL! \y~
+KM_MENU_LEVEL = \r[LVL %i]
+KM_MENU_RANK = \r[RANK: %s]
+KM_MENU_XP = \r[XP: %i]
+
+[sk] -- Belo95135
+KM_CHAT_PREFIX = &x04[Knife modely]&x01
+KM_CHAT_SELECTED = Vybral si si &x04%s&x01.
+KM_MENU_TITLE = \y< \rVyber si knife \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \yStranka:\r
+KM_MENU_SELECTED = \y~ \rVYBRATE \y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[LVL %i]
+KM_MENU_RANK = \r[RANK: %s]
+KM_MENU_XP = \r[XP: %i]
+
+[cn] -- HNS
+KM_CHAT_PREFIX = &x04[刀皮系统]&x01
+KM_CHAT_SELECTED = 你已选择刀皮 &x04%s&x01。
+KM_MENU_TITLE = \y< \r选择你的刀皮模型 \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \y页码:\r
+KM_MENU_SELECTED = \y~ \r已选择 \y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[等级 %i]
+KM_MENU_RANK = \r[军衔: %s]
+KM_MENU_XP = \r[经验: %i]
+KM_ONLY_DEAD = 你死亡后才能更换刀皮。
+KM_INVALID_KNIFE = * 该刀皮不存在。有效范围是 0 到 %i。
+KM_NO_ACCESS = * 你没有权限使用该刀皮。
+
+[tw] -- HNS
+KM_CHAT_PREFIX = &x04[刀皮系統]&x01
+KM_CHAT_SELECTED = 你已選擇刀皮 &x04%s&x01。
+KM_MENU_TITLE = \y< \r選擇你的刀皮模型 \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \y頁碼:\r
+KM_MENU_SELECTED = \y~ \r已選擇 \y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[等級 %i]
+KM_MENU_RANK = \r[軍階: %s]
+KM_MENU_XP = \r[經驗: %i]
+KM_ONLY_DEAD = 你死亡後才能更換刀皮。
+KM_INVALID_KNIFE = * 該刀皮不存在。有效範圍是 0 到 %i。
+KM_NO_ACCESS = * 你沒有權限使用該刀皮。
+
+[ru] -- HNS
+KM_CHAT_PREFIX = &x04[Модели ножей]&x01
+KM_CHAT_SELECTED = Вы выбрали нож &x04%s&x01.
+KM_MENU_TITLE = \y< \rВыберите модель ножа \y>
+KM_MENU_TITLE_PAGE = ^n\r-- \yСтраница:\r
+KM_MENU_SELECTED = \y~ \rВЫБРАНО \y~
+KM_MENU_VIP_ONLY = \y~ \rVIP \y~
+KM_MENU_LEVEL = \r[УР. %i]
+KM_MENU_RANK = \r[РАНГ: %s]
+KM_MENU_XP = \r[ОПЫТ: %i]
+KM_ONLY_DEAD = Вы не можете сменить нож, пока живы.
+KM_INVALID_KNIFE = * Такого ножа нет. Допустимый диапазон от 0 до %i.
+KM_NO_ACCESS = * У вас нет доступа к этому ножу.
+

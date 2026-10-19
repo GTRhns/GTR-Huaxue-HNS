@@ -1,0 +1,1 @@
+bash: line 1: ./amxxpc.exe: cannot execute binary file: Exec format error

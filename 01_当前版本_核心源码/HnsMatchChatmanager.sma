@@ -369,15 +369,12 @@ public FormatMessage(sender, CsTeams:sender_team, channel, name_color, chat_colo
         len += formatex(text[len], charsmax(text) - len, " ");
     }
     
-    /* HNS MATCH PTS */
-    if (g_ePlayerPtsData[sender][e_bInit]) {
-        len += formatex(text[len], charsmax(text) - len, "^1[^3%s^1] ",g_ePlayerPtsData[sender][e_szRank]);
-    }
-    /* HNS MATCH PTS */
+    len += formatex(text[len], charsmax(text) - len, "%s", g_sPlayerPrefix);
 
-    len += formatex(text[len], charsmax(text) - len, "%s", g_sPlayerPrefix[sender]);
-    
-    len += formatex(text[len], charsmax(text) - len, "%c%s^1 :%c %s", name_color, name, chat_color, message);
+    if (g_ePlayerPtsData[sender][e_bInit] && g_ePlayerPtsData[sender][e_szRank][0])
+        len += formatex(text[len], charsmax(text) - len, "%c%s^1 ^4(%s)^1 :%c %s", name_color, name, g_ePlayerPtsData[sender][e_szRank], chat_color, message);
+    else
+        len += formatex(text[len], charsmax(text) - len, "%c%s^1 :%c %s", name_color, name, chat_color, message);
     
     copy(g_sMessage, charsmax(g_sMessage), text);
 }

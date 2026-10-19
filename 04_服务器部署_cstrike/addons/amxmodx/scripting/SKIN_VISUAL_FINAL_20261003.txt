@@ -1,0 +1,18 @@
+GTR HNS Skin UI visual cleanup - 2026-10-03
+
+Skin menu visual convention:
+- Red = currently selected [已选择]
+- White = owned/available [已获得]
+- Gray = not owned/unavailable
+- Yellow = GBIC/coin price and free labels
+
+Main /skin menu:
+1-4 normal functions
+(blank line)
+5 Administrator Settings (A required on click)
+6 SQL Debug (A or B required on click)
+
+Restricted entries remain visible; permission is checked on click and an explicit permission message is shown.
+
+Role, knife, and grenade skin lists use the same visual convention.
+The menu title shows current team, pool count, and current GBIC balance.

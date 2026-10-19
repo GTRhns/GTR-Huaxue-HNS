@@ -10,6 +10,8 @@
    - 玩家可 /frost 投票关闭或开启 (2/3 人数, 5 秒倒计时, 7 秒计票)
    - 管理员可在 比赛设置 里强制 开/关/自动
    - 死斗换队 / 僵尸感染 / 复活 / 死亡 后立刻解除冰冻
+   - 冻人/光圈只用引擎特效(发光+shockwave光圈), 不预缓存 frostnova/glassgibs,
+     避免和地图刷子模型抢 512 槽导致换图 Host_Error
    ============================================================ */
 
 #include <amxmodx>
@@ -21,7 +23,7 @@
 #include <hns_matchsystem>
 #include <hns_language>
 
-new const VERSION[] = "1.0.0";
+new const VERSION[] = "1.0.1";
 new const PLUGIN_NAME[] = "HNS Frost Smoke";
 
 #define message_begin_fl(%1,%2,%3,%4) engfunc(EngFunc_MessageBegin, %1, %2, %3, %4)
@@ -72,9 +74,6 @@ new const PLUGIN_NAME[] = "HNS Frost Smoke";
 #define FROST_COUNTDOWN		5
 #define FROST_VOTE_SECONDS	7
 
-new const MODEL_FROZEN[]	= "models/frostnova.mdl";
-new const MODEL_GLASSGIBS[]	= "models/glassgibs.mdl";
-
 new const SOUND_EXPLODE[]	= "x/x_shoot1.wav";
 new const SOUND_FROZEN[]	= "debris/glass1.wav";
 new const SOUND_UNFROZEN[]	= "debris/glass3.wav";
@@ -91,7 +90,7 @@ new pcv_enabled, pcv_override, pcv_nadetypes, pcv_teams, pcv_price, pcv_limit, p
 		pcv_freeze_duration, pcv_freeze_variance, pcv_force_mode;
 
 new maxPlayers, gmsgScreenFade, gmsgStatusIcon, gmsgBlinkAcct, gmsgAmmoPickup, gmsgTextMsg,
-		gmsgWeapPickup, glassGibs, trailSpr, smokeSpr, exploSpr, mp_friendlyfire, czero, bot_quota, czBotHams,
+		gmsgWeapPickup, trailSpr, smokeSpr, exploSpr, mp_friendlyfire, czero, bot_quota, czBotHams,
 		fmFwdPPT, fnFwdPlayerChilled, fnFwdPlayerFrozen, bool:roundRestarting;
 
 new isChilled[33], isFrozen[33], frostKilled[33], novaDisplay[33], Float:glowColor[33][3], Float:oldGravity[33],
@@ -101,7 +100,7 @@ new isChilled[33], isFrozen[33], frostKilled[33], novaDisplay[33], Float:glowCol
 /* 开关状态 */
 new g_iForceMode = -1;      // -1 自动, 0 强制关, 1 强制开
 new bool:g_bPlayersOff;     // 玩家投票关闭
-new bool:g_bNoNovaModel;    // frostnova.mdl 不存在, 跳过 nova 实体
+
 
 /* 投票状态 */
 new g_iVoteChoice[MAX_PLAYERS + 1];
@@ -137,32 +136,42 @@ public NativeFilter(const szName[], iIndex, iTrap)
 
 public native_frost_get()
 {
-	return g_bPlayersOff ? 0 : 1;
+	return frost_active() ? 1 : 0;
 }
 
-public native_frost_set(iOn)
+public native_frost_set()
 {
+	new iOn = get_param(1);
 	g_bPlayersOff = (iOn == 0);
+	if (iOn)
+		g_iForceMode = 1;
+	else
+		g_iForceMode = 0;
+
+	if (pcv_force_mode)
+		set_pcvar_num(pcv_force_mode, g_iForceMode);
+
 	apply_state_change();
 	return 1;
 }
 
 public native_frost_get_force()
 {
-	return g_iForceMode;
+	return frost_active() ? 1 : 0;
 }
 
-public native_frost_set_force(iMode)
+public native_frost_set_force()
 {
-	if (iMode < -1)
-		iMode = -1;
-	if (iMode > 1)
+	new iMode = get_param(1);
+	if (iMode > 0)
 		iMode = 1;
+	else
+		iMode = 0;
 
 	g_iForceMode = iMode;
-	set_pcvar_num(pcv_force_mode, iMode);
-	if (iMode != -1)
-		g_bPlayersOff = false;
+	g_bPlayersOff = (iMode == 0);
+	if (pcv_force_mode)
+		set_pcvar_num(pcv_force_mode, iMode);
 
 	apply_state_change();
 	return 1;
@@ -188,7 +197,7 @@ apply_state_change()
 	}
 }
 
-/* 当前是否生效: 管理员强制 > 地图/模式默认 > 玩家投票 */
+/* 当前是否生效: 管理员强制开/关优先, 未强制时走模式默认和玩家投票 */
 bool:frost_active()
 {
 	if (g_iForceMode == 1)
@@ -307,22 +316,8 @@ public plugin_end()
 
 public plugin_precache()
 {
-	if (file_exists(MODEL_FROZEN))
-	{
-		precache_model(MODEL_FROZEN);
-		g_bNoNovaModel = false;
-	}
-	else
-	{
-		// 缺模型不能拦着插件加载, 只是不放 nova 实体
-		g_bNoNovaModel = true;
-	}
-
-	if (file_exists(MODEL_GLASSGIBS))
-		glassGibs = precache_model(MODEL_GLASSGIBS);
-	else
-		glassGibs = 0;
-
+	// 冰块/玻璃碎片会额外占模型槽, 重型 HNS 图换图会顶满 512。
+	// 冻人改玩家发光, 光圈用引擎自带 shockwave.spr (同路径不占新槽)。
 	precache_sound(SOUND_EXPLODE);
 	precache_sound(SOUND_FROZEN);
 	precache_sound(SOUND_UNFROZEN);
@@ -807,17 +802,17 @@ freeze_player(id,attacker,nadeTeam)
 	set_pev(id,pev_velocity,Float:{0.0,0.0,0.0});
 	set_user_chillfreeze_speed(id);
 
+	new rgb[3];
+	get_rgb_colors(nadeTeam,rgb);
+	IVecFVec(rgb, glowColor[id]);
+	set_user_rendering(id, kRenderFxGlowShell, rgb[0], rgb[1], rgb[2], kRenderNormal, floatround(GLOW_AMOUNT));
+	set_beamfollow(id,30,8,rgb,100);
+
 	new Float:duration = get_pcvar_float(pcv_freeze_duration), Float:variance = get_pcvar_float(pcv_freeze_variance);
 	duration += random_float(-variance,variance);
 
 	remove_task(TASK_REMOVE_FREEZE+id);
 	set_task(duration,"task_remove_freeze",TASK_REMOVE_FREEZE+id);
-
-	if(!g_bNoNovaModel)
-	{
-		if(!pev_valid(novaDisplay[id])) create_nova(id);
-		g_bHadNova[id] = true;
-	}
 
 	if(get_pcvar_num(pcv_icon) == ICON_ISCHILLED)
 		show_icon(id, STATUS_FLASH);
@@ -829,10 +824,10 @@ public task_remove_freeze(taskid)
 {
 	new id = taskid-TASK_REMOVE_FREEZE;
 
-	if(pev_valid(novaDisplay[id]))
+	if(is_user_connected(id))
 	{
 		new Float:origin[3];
-		pev(novaDisplay[id],pev_origin,origin);
+		pev(id,pev_origin,origin);
 
 		message_begin_fl(MSG_PVS,SVC_TEMPENTITY,origin,0);
 		write_byte(TE_IMPLOSION);
@@ -851,29 +846,7 @@ public task_remove_freeze(taskid)
 		write_coord_fl(origin[2]);
 		message_end();
 
-		if(glassGibs)
-		{
-			message_begin_fl(MSG_PAS,SVC_TEMPENTITY,origin,0);
-			write_byte(TE_BREAKMODEL);
-			write_coord_fl(origin[0]);
-			write_coord_fl(origin[1]);
-			write_coord_fl(origin[2] + 24.0);
-			write_coord_fl(16.0);
-			write_coord_fl(16.0);
-			write_coord_fl(16.0);
-			write_coord(random_num(-50,50));
-			write_coord(random_num(-50,50));
-			write_coord_fl(25.0);
-			write_byte(10);
-			write_short(glassGibs);
-			write_byte(10);
-			write_byte(25);
-			write_byte(BREAK_GLASS);
-			message_end();
-		}
-
-		emit_sound(novaDisplay[id],CHAN_ITEM,SOUND_UNFROZEN,VOL_NORM,ATTN_NORM,0,PITCH_LOW);
-		set_pev(novaDisplay[id],pev_flags,pev(novaDisplay[id],pev_flags)|FL_KILLME);
+		emit_sound(id,CHAN_ITEM,SOUND_UNFROZEN,VOL_NORM,ATTN_NORM,0,PITCH_LOW);
 	}
 
 	isFrozen[id] = 0;
@@ -991,36 +964,6 @@ public task_remove_chill(taskid)
 
 	if(get_pcvar_num(pcv_icon) == ICON_ISCHILLED && !isFrozen[id])
 		show_icon(id, STATUS_HIDE);
-}
-
-create_nova(id)
-{
-	new nova = engfunc(EngFunc_CreateNamedEntity,engfunc(EngFunc_AllocString,"info_target"));
-	if(!pev_valid(nova)) return;
-
-	engfunc(EngFunc_SetSize,nova,Float:{ -1.0, -1.0, -1.0 }, Float:{ 1.0, 1.0, 1.0 });
-	engfunc(EngFunc_SetModel,nova,MODEL_FROZEN);
-
-	new Float:angles[3];
-	angles[1] = random_float(0.0,360.0);
-	set_pev(nova,pev_angles,angles);
-
-	new Float:novaOrigin[3];
-	pev(id,pev_origin,novaOrigin);
-	if(pev(id, pev_flags) & FL_DUCKING) novaOrigin[2] -= 15.0
-	else novaOrigin[2] -= 35.0
-	engfunc(EngFunc_SetOrigin,nova,novaOrigin);
-
-	new rgb[3];
-	get_rgb_colors(isFrozen[id], rgb);
-	IVecFVec(rgb, angles);
-
-	set_pev(nova,pev_rendercolor,angles);
-	set_pev(nova,pev_rendermode,kRenderTransAlpha);
-	set_pev(nova,pev_renderfx,kRenderFxGlowShell);
-	set_pev(nova,pev_renderamt,128.0);
-
-	novaDisplay[id] = nova;
 }
 
 /****************************************

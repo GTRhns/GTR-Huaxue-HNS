@@ -117,6 +117,8 @@ public plugin_natives() {
 	register_native("hns_match_unpause", "native_match_unpause");
 
 	register_native("hns_get_rules", "native_get_rules");
+	register_native("hns_get_match_team_cs", "native_get_match_team_cs");
+	register_native("hns_get_player_match_team", "native_get_player_match_team");
 
 	//register_native("hns_get_score_tt", "native_get_score_TT");
 	//register_native("hns_get_score_ct", "native_get_score_CT");
@@ -202,9 +204,10 @@ public native_external_set_team_size(amxx, params) {
 }
 
 // 设置比赛规则 (NATCH_RULES: MR/TIMER/DUEL/ROUNDS)
+// argMode 不能叫 iMode: 同名局部变量会遮蔽枚举常量, get_param 读到未初始化下标, 直接把 hlds 打崩
 public native_external_set_match_mode(amxx, params) {
-	enum { iMode = 1 };
-	new iMode = get_param(iMode);
+	enum { argMode = 1 };
+	new iMode = get_param(argMode);
 
 	if (iMode < 0 || iMode > _:RULES_ROUNDS)
 		return 0;
@@ -216,7 +219,7 @@ public native_external_set_match_mode(amxx, params) {
 		if (g_iSettings[MAXROUNDS] <= 0)
 			g_iSettings[MAXROUNDS] = 6;
 	} else if (g_iCurrentRules == RULES_TIMER) {
-		g_eMatchInfo[e_mWintime] = g_iSettings[WINTIME] > 0.0 ? g_iSettings[WINTIME] : 15.0;
+		g_eMatchInfo[e_mWintime] = hns_wintime_minutes();
 	}
 	return 1;
 }
@@ -309,6 +312,25 @@ public native_match_unpause(amxx, params) {
 
 public NATCH_RULES:native_get_rules(amxx, params) {
 	return g_iCurrentRules;
+}
+
+public TeamName:native_get_match_team_cs(amxx, params) {
+	new iMatchTeam = get_param(1);
+	if (iMatchTeam != 1 && iMatchTeam != 2)
+		return TEAM_UNASSIGNED;
+	new HNS_TEAM:logicalTeam = iMatchTeam == 1 ? HNS_TEAM_A : HNS_TEAM_B;
+	return logicalTeam == g_isTeamTT ? TEAM_TERRORIST : TEAM_CT;
+}
+
+public native_get_player_match_team(amxx, params) {
+	new id = get_param(1);
+	if (id < 1 || id > MaxClients || !is_user_connected(id))
+		return 0;
+	switch (g_ePlayerInfo[id][PLAYER_ROLE]) {
+		case ROLE_CAP_A, ROLE_TEAM_A: return 1;
+		case ROLE_CAP_B, ROLE_TEAM_B: return 2;
+	}
+	return 0;
 }
 
 public fwdEmitSoundPre(id, iChannel, szSample[], Float:volume, Float:attenuation, fFlags, pitch) {
@@ -486,10 +508,9 @@ public client_disconnected(id) {
 	g_bNoplay[id] = false;
 	g_eSpecBack[id] = TEAM_UNASSIGNED;
 
-	arrayset(eAfkData[id], 0, AfkData_s);
-	arrayset(flAfkOrigin[id], 0.0, sizeof(flAfkOrigin[]));
 	g_bSurrenderVoted[id] = false;
 	hook[id] = false;
+	arrayset(eAfkData[id], 0, AfkData_s);
 }
 
 public Knife_PrimaryAttack(ent)
@@ -618,23 +639,18 @@ public taskSetPlayerTeam(id) {
 public ShowTimeAsMoney()
 {
 	if (g_iCurrentMode == MODE_MIX && g_iMatchStatus == MATCH_STARTED && g_iCurrentRules == RULES_TIMER) {
-		new Float:flCapTime = floatmul(g_eMatchInfo[e_mWintime], 60.0);
-		if (g_eMatchInfo[e_flSidesTime][g_isTeamTT] >= flCapTime) {
-			MixFinishedWT();
-			return;
-		}
-
 		static players[32], num, id
 		get_players(players, num, "ac");
 		for(--num; num>=0; num--)
 		{
 			id = players[num];
-			new iRemaining = floatround(flCapTime - g_eMatchInfo[e_flSidesTime][g_isTeamTT], floatround_floor);
-			if (iRemaining < 0)
-				iRemaining = 0;
+
+			new iLeft = floatround(hns_wintime_cap_seconds() - g_eMatchInfo[e_flSidesTime][g_isTeamTT], floatround_floor);
+			if (iLeft < 0)
+				iLeft = 0;
 
 			message_begin(MSG_ONE, g_msgMoney, .player=id);
-			write_long(iRemaining);
+			write_long(iLeft);
 			write_byte(0);
 			message_end();
 		}

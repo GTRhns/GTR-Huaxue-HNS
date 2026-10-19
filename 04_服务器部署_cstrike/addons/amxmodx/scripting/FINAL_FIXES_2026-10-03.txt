@@ -1,0 +1,24 @@
+GTR HNS Final Menu/Permission Fixes
+
+1. AI 报名菜单
+- 普通玩家只看到报名、分组、比赛类型、比赛模式等实际可用功能。
+- 队伍人数、重新分队、强制开赛仅对管理员/VIP显示。
+- 重新分队命令本身增加权限校验，防止绕过菜单。
+- 赛制状态继续以 HnsMatchSystem 为唯一运行状态，换图后从 PDS 恢复并同步。
+
+2. Skin 菜单
+- 一级菜单重新整理为角色皮肤、刀皮、投掷物、GBIC、管理员设置、SQL调试。
+- 管理员设置：仅 AMXX A (ADMIN_IMMUNITY)。
+- SQL调试：A 或 B 任一 (ADMIN_IMMUNITY / ADMIN_RESERVATION)。
+- 菜单隐藏不等于权限控制，所有对应 Handler 均再次检查权限。
+- 原有按玩家隔离的菜单状态继续保留。
+
+[2026-10-03 Skin Visual Pass]
+- Skin main menu: items 1-4 are normal functions, one blank row, 5 Admin Settings, 6 SQL Debug; restricted entries remain visible.
+- Admin Settings: requires A (ADMIN_IMMUNITY).
+- SQL Debug: requires A or B (ADMIN_IMMUNITY / ADMIN_RESERVATION).
+- Restricted menu entries show a permission message when clicked instead of being hidden.
+- Character skins: selected = red, owned = white, unowned = gray name + yellow coin price, unavailable map cache = gray notice.
+- Knife skins: selected = red, owned/free = white, unowned = gray name + yellow coin price.
+- Grenade skins: selected = red, owned/free = white, unowned = gray name + yellow coin price.
+- Main Skin title now shows current team, skin pool count, and current GBIC coins.

@@ -1,6 +1,7 @@
 enum _:HNS_MODES
 {
 	MODE_TRAINING,
+	MODE_LOBBY, // 比赛前公共模式: 比赛流程专用, 任何指令/函数/菜单都调不出来
 	MODE_KNIFE,
 	MODE_PUB,
 	MODE_DM,
@@ -36,6 +37,7 @@ public InitGameModes() {
 	zm_init();
 	mode_init();
 	trainingmode_init();
+	lobby_init();
 }
 
 public set_cvars_mode(iMode) {
@@ -45,12 +47,19 @@ public set_cvars_mode(iMode) {
 
 	switch (iMode) {
 		case MODE_TRAINING: server_cmd("exec %s/training.cfg", szPath);
+		case MODE_LOBBY: server_cmd("exec %s/training.cfg", szPath); // 大厅复用训练玩法配置
 		case MODE_KNIFE: server_cmd("exec %s/knife.cfg", szPath);
 		case MODE_PUB: server_cmd("exec %s/public.cfg", szPath);
 		case MODE_DM: server_cmd("exec %s/deathmatch.cfg", szPath);
 		case MODE_MIX: server_cmd("exec %s/match.cfg", szPath);
 		case MODE_ZM: server_cmd("exec %s/zombie.cfg", szPath);
 	}
+
+	// 立即执行排队的 exec: 让 mode cfg 先生效
+	// (否则 server_cmd 排队的 exec 会在帧末执行,
+	//  覆盖后续 loadMapCFG() 从 maps.ini 设置的 mp_freezetime)
+	server_exec();
+	set_cvar_num("mp_flashlight", 1);
 }
 
 stock set_pause_settings() {
@@ -65,8 +74,9 @@ stock set_pause_settings() {
 	}
 
 	set_task(1.0, "taskHudPaused", .id = HUD_PAUSE, .flags = "b");
-	rg_send_audio(0, "fvox/deactivated.wav");
-	
+	remove_task(TASK_PAUSE_SND);
+	set_task(0.4, "taskPlayPauseSound", TASK_PAUSE_SND);
+
 	server_cmd("sv_alltalk 1");
 }
 
@@ -74,10 +84,32 @@ stock set_unpause_settings() {
 	if(task_exists(HUD_PAUSE)) {
 		remove_task(HUD_PAUSE);
 	}
+	remove_task(TASK_PAUSE_SND);
 
 	set_task(1.0, "taskHudUnpaused");
-	rg_send_audio(0, "fvox/activated.wav");
+	play_sound_all(sndUnpauseAcquired);
 	server_cmd("sv_alltalk 3");
+}
+
+public taskPlayPauseSound() {
+	if (g_eMatchState != STATE_PAUSED)
+		return;
+
+	play_sound_all(sndPauseTalk);
+}
+
+stock play_sound_all(const szSample[]) {
+	new szSpk[64];
+	copy(szSpk, charsmax(szSpk), szSample);
+	replace(szSpk, charsmax(szSpk), ".wav", "");
+
+	new iPlayers[MAX_PLAYERS], iNum;
+	get_players(iPlayers, iNum, "ch");
+	for (new i; i < iNum; i++) {
+		if (!is_user_connected(iPlayers[i]))
+			continue;
+		client_cmd(iPlayers[i], "spk %s", szSpk);
+	}
 }
 
 public taskHudPaused() {

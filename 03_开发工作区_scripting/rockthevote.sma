@@ -105,7 +105,7 @@ public rockthevote(id)
 
 	new name[32];
 	get_user_name(id, name, charsmax(name));
-	rtv_print_lang(0, "RTV_VOTED", "玩家 %s 的投票已计入。需要 %d 票，或达到在线人数的 %d%%。", name, num, RTV_REQUIRED_PERCENT);
+	rtv_print_lang(0, "RTV_VOTED", "玩家 %s 的投票已计入。需要在线玩家的 %d%%。", name, RTV_REQUIRED_PERCENT);
 	return PLUGIN_HANDLED;
 }
 
@@ -315,7 +315,7 @@ public execute_map_change()
 	if (!is_map_valid(nextmap))
 	{
 		log_amx("RTV refused invalid map: %s", nextmap);
-		rtv_print_lang(0, "RTV_NO_MAPS", "目标地图无效，取消换图。");
+		rtv_print_lang(0, "RTV_NO_MAPS", "目标地图无效，取消换图。\");
 		return;
 	}
 
